@@ -24,6 +24,11 @@ module.exports = {
             .setTitle('Mot de passe généré')
             .setDescription(`Voici votre mot de passe : \`${password}\``);
 
-        await interaction.reply({ embeds: [embed] });
+        try {
+            await interaction.user.send({ embeds: [embed] });
+            await interaction.reply({ content: 'Le mot de passe a été envoyé en message privé.', ephemeral: true });
+        } catch (error) {
+            await interaction.reply({ content: 'Impossible d\'envoyer un message privé. Veuillez vérifier vos paramètres de confidentialité.', ephemeral: true });
+        }
     },
 };
