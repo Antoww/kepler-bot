@@ -11,7 +11,11 @@ module.exports = {
         const embed = new EmbedBuilder()
             .setColor('#0099ff')
             .setTitle('Pong ! 🏓')
-            .setDescription(`Latence du bot : ${botPing}ms\nLatence de l'API : ${apiPing}ms`);
+            .setDescription(`Latence du bot : ${botPing}ms\nLatence de l'API : ${apiPing}ms`)
+            .setFooter({
+                text: 'Demandé par ' + interaction.user.username
+            })
+            .setTimestamp();
 
         await interaction.reply({ embeds: [embed] });
         console.log("[LOG]", "Commande ping exécutée")

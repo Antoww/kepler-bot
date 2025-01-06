@@ -10,7 +10,11 @@ module.exports = {
             .setColor('#0099ff')
             .setTitle('Crédits')
             .setImage('https://imgur.com/1CsxfGp.png')
-            .setDescription(`Icône du bot : [Freepik](https://www.flaticon.com/authors/freepik)\nBot développé par [Antow](https://github.com/Antoww/).`);
+            .setDescription(`Icône du bot : [Freepik](https://www.flaticon.com/authors/freepik)\nBot développé par [Antow](https://github.com/Antoww/).`)
+            .setFooter({
+                text: 'Demandé par ' + interaction.user.username
+            })
+            .setTimestamp();
 
         await interaction.reply({ embeds: [embed] });
         console.log("[LOG]", "Commande credits exécutée")

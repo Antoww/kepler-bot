@@ -22,7 +22,11 @@ module.exports = {
         const embed = new EmbedBuilder()
             .setColor('#0099ff')
             .setTitle('Mot de passe généré')
-            .setDescription(`Voici votre mot de passe : \`${password}\``);
+            .setDescription(`Voici votre mot de passe : \`${password}\``)
+            .setFooter({
+                text: 'Demandé par ' + interaction.user.username
+            })
+            .setTimestamp();
 
         try {
             await interaction.user.send({ embeds: [embed] });

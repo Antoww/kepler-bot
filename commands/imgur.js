@@ -28,7 +28,11 @@ module.exports = {
                 .setColor('#0099ff')
                 .setTitle('Image uploadée avec succès !')
                 .setDescription(`[Voir l'image sur Imgur](${response.data.data.link})`)
-                .setImage(response.data.data.link);
+                .setImage(response.data.data.link)
+                .setFooter({
+                    text: 'Demandé par ' + interaction.user.username
+                })
+                .setTimestamp();
 
             await interaction.reply({ embeds: [embed] });
         } catch (error) {
