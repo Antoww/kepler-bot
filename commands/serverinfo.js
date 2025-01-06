@@ -17,6 +17,7 @@ module.exports = {
         .setName('serverinfo')
         .setDescription('Donne les stats du serveur.'),
     async execute(interaction) {
+        const owner = await interaction.guild.fetchOwner();
 
         const embed = new EmbedBuilder()
             .setColor('#0099ff')
@@ -28,7 +29,7 @@ module.exports = {
                 { name: 'Nombre de salons :', value: `${interaction.guild.channels.cache.size}`, inline: true },
                 { name: 'Nombre de rôles :', value: `${interaction.guild.roles.cache.size}`, inline: true },
                 { name: 'Nombre d\'emojis :', value: `${interaction.guild.emojis.cache.size}`, inline: true },
-                { name: 'Propriétaire :', value: `${interaction.guild.owner.user.username} *${interaction.guild.owner.user.id}*`, inline: true },
+                { name: 'Propriétaire :', value: `${owner.user.username} *${owner.user.id}*`, inline: true },
                 { name: 'Créé le :', value: `${interaction.guild.createdAt}`, inline: true },
                 { name: 'Région :', value: `${interaction.guild.region}`, inline: true },
                 { name: 'Niveau de vérification :', value: `${interaction.guild.verificationLevel}`, inline: true },
