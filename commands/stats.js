@@ -23,13 +23,14 @@ module.exports = {
         const embed = new EmbedBuilder()
             .setColor('#0099ff')
             .setTitle('Stats')
+            .setThumbnail(interaction.client.user.displayAvatarURL())
             .addFields(
-                { name: 'Mémoire utilisée :', value: `${ram.toFixed(2)} MB`, inline: true },
-                { name: 'Uptime :', value: `${uptimeFormatted}`, inline: true },
-                { name: 'Serveurs :', value: `${interaction.client.guilds.cache.size}`, inline: true },
-                { name: 'Utilisateurs :', value: `${interaction.client.users.cache.size}`, inline: true },
-                {name: 'Bots : ', value: `${interaction.client.users.cache.filter(user => user.bot).size}`, inline: true},
-                {name: 'Salons : ', value: `${interaction.client.channels.cache.size}`, inline: true},
+                { name: '<:cpu:736643846812729446> Mémoire utilisée :', value: `${ram.toFixed(2)} MB`, inline: true },
+                { name: '⏲ Uptime :', value: `${uptimeFormatted}`, inline: true },
+                { name: '<:idle:635159039852019722> Serveurs :', value: `${interaction.client.guilds.cache.size}`, inline: true },
+                { name: '<:hey:635159039831048202> Utilisateurs :', value: `${interaction.client.users.cache.size}`, inline: true },
+                {name: '<:bot:638858747351007233> Bots : ', value: `${interaction.client.users.cache.filter(user => user.bot).size}`, inline: true},
+                {name: '<:textuel:635159053630308391> Salons : ', value: `${interaction.client.channels.cache.size}`, inline: true},
             )
             .setFooter({
                 text: 'Demandé par ' + interaction.user.username

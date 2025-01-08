@@ -1,33 +1,16 @@
+const config = require('../config.json');
+
 module.exports = {
     name: 'ready',
     once: true,
     execute(client) {
         console.log(`${__filename} a été chargé avec succès.`);
 
-        // Définir le statut du bot
-        client.user.setPresence({
-            activities: [
-                { 
-                    name: 'Antow le bg', 
-                    type: 'WATCHING',
-                }
-            ],
-            status: 'online',
-        });
+        const botversion = config.botversion;
 
-      // Autres possibilités de statut :
-        // type: 'PLAYING' -> "Joue à"
-        // type: 'STREAMING' -> "Stream"
-        // type: 'LISTENING' -> "Écoute"
-        // type: 'WATCHING' -> "Regarde"
-        // type: 'COMPETING' -> "Compétitionne dans"
+        const { PresenceUpdateStatus } = require('discord.js');
+        client.user.setPresence({ activities: [{ name: `Version ${botversion}` }], status: PresenceUpdateStatus.Online });
 
-        // Statuts possibles :
-        // status: 'online' -> En ligne
-        // status: 'idle' -> Inactif
-        // status: 'dnd' -> Ne pas déranger
-        // status: 'invisible' -> Invisible
-
-        console.log(`Statut du bot défini : "Regarde Antow le bg" (Ne pas déranger).`);
+        console.log(`Statut du bot défini : "Version ${config.botversion}" (En ligne).`);
     },
 };

@@ -1,16 +1,4 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
-/*const dayjs = require('dayjs');
-const duration = require('dayjs/plugin/duration');
-dayjs.extend(duration);
-const startTime = new Date();
-
-function getUptime() {
-    const now = dayjs();
-    const uptimeDuration = dayjs.duration(now.diff(dayjs(startTime)));
-
-    const uptimeFormatted = `${uptimeDuration.days()}j ${uptimeDuration.hours()}h ${uptimeDuration.minutes()}m ${uptimeDuration.seconds()}s`;
-    return uptimeFormatted;
-}*/
 
 module.exports = {
     data: new SlashCommandBuilder()
