@@ -1,4 +1,7 @@
-const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ChannelType } = require('discord.js');
+const dayjs = require('dayjs');
+require('dayjs/locale/fr');
+dayjs.locale('fr');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -68,15 +71,49 @@ module.exports = {
     },
 };
 
+
+function getChannelTypeName(type) {
+    switch (type) {
+        case ChannelType.AnnouncementThread:
+            return 'News Thread';
+        case ChannelType.DM:
+            return 'DM';
+        case ChannelType.GroupDM:
+            return 'Group DM';
+        case ChannelType.GuildAnnouncement:
+            return 'News';
+        case ChannelType.GuildCategory:
+            return 'Category';
+        case ChannelType.GuildDirectory:
+            return 'Directory';
+        case ChannelType.GuildForum:
+            return 'Forum';
+        case ChannelType.GuildMedia:
+            return 'Media';
+        case ChannelType.GuildStageVoice:
+            return 'Stage Voice';
+        case ChannelType.GuildText:
+            return 'Text';
+        case ChannelType.GuildVoice:
+            return 'Voice';
+        case ChannelType.PrivateThread:
+            return 'Private Thread';
+        case ChannelType.PublicThread:
+            return 'Public Thread';
+    }
+}
+
 async function sendChannelInfo(interaction, channel, isUpdate) {
+    const dateChannel = dayjs(channel.createdAt).format('DD/MM/YYYY à HH:mm:ss');
+
     const embed = new EmbedBuilder()
         .setColor('#0099ff')
         .setTitle('Channel Info')
         .addFields(
             { name: 'Nom du canal :', value: `${channel.name}`, inline: true },
             { name: 'ID :', value: `${channel.id}`, inline: true },
-            { name: 'Type :', value: `${channel.type}`, inline: true },
-            { name: 'Créé le :', value: `${channel.createdAt}`, inline: true },
+            { name: 'Type :', value: `${getChannelTypeName(channel.type)}`, inline: true },
+            { name: 'Créé le :', value: `${dateChannel}`, inline: true },
             { name: 'NSFW :', value: `${channel.nsfw ? 'Oui' : 'Non'}`, inline: true }
         )
         .setFooter({
