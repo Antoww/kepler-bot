@@ -31,12 +31,11 @@ module.exports = {
                 )
                 .setFooter({
                     text: 'Demandé par ' + interaction.user.username,
-                    iconURL : interaction.user.displayAvatarURL({ dynamic: true })
+                    iconURL: interaction.user.displayAvatarURL({ dynamic: true })
                 })
                 .setTimestamp();
 
             await interaction.editReply({ embeds: [embed] });
-            console.log("[LOG]", "Commande whois exécutée");
         } catch (error) {
             console.error(error);
             await interaction.editReply({ content: 'Erreur lors de la récupération des informations WHOIS.', ephemeral: true });

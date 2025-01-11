@@ -25,7 +25,7 @@ module.exports = {
             .setDescription(`Voici votre mot de passe : \`${password}\``)
             .setFooter({
                 text: 'Demandé par ' + interaction.user.username,
-                iconURL : interaction.user.displayAvatarURL({ dynamic: true })
+                iconURL: interaction.user.displayAvatarURL({ dynamic: true })
             })
             .setTimestamp();
 

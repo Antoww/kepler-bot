@@ -34,7 +34,7 @@ module.exports = {
             )
             .setFooter({
                 text: 'Demandé par ' + interaction.user.username,
-                iconURL : interaction.user.displayAvatarURL({ dynamic: true })
+                iconURL: interaction.user.displayAvatarURL({ dynamic: true })
             })
             .setTimestamp();
 

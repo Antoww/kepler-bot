@@ -14,7 +14,7 @@ module.exports = {
             .setDescription(`Latence du bot : ${botPing}ms\nLatence de l'API : ${apiPing}ms`)
             .setFooter({
                 text: 'Demandé par ' + interaction.user.username,
-                iconURL : interaction.user.displayAvatarURL({ dynamic: true })
+                iconURL: interaction.user.displayAvatarURL({ dynamic: true })
             })
             .setTimestamp();
 

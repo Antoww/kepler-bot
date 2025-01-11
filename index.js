@@ -2,7 +2,6 @@ const fs = require('fs');
 const path = require('path');
 const { Client, Collection, GatewayIntentBits, REST, Routes } = require('discord.js');
 require('dotenv').config();
-const { guildId } = require('./config.json');
 
 // Initialisation du client
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
@@ -17,7 +16,11 @@ const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('
 for (const file of commandFiles) {
     const filePath = path.join(commandsPath, file);
     const command = require(filePath);
-    client.commands.set(command.data.name, command);
+    if (command.data && command.data.name) {
+        client.commands.set(command.data.name, command);
+    } else {
+        console.error(`La commande dans ${filePath} n'a pas de propriété 'data' ou 'name' définie.`);
+    }
 }
 
 // Chargement des événements
@@ -55,5 +58,5 @@ client.once('ready', async () => {
     }
 });
 
-// Connexion du bot
+// Connexion du client
 client.login(process.env.TOKEN);
