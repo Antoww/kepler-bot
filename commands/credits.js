@@ -12,7 +12,8 @@ module.exports = {
             .setImage('https://imgur.com/1CsxfGp.png')
             .setDescription(`Icône du bot : [Freepik](https://www.flaticon.com/authors/freepik)\nBot développé par [Antow](https://github.com/Antoww/).`)
             .setFooter({
-                text: 'Demandé par ' + interaction.user.username
+                text: 'Demandé par ' + interaction.user.username,
+                iconURL : interaction.user.displayAvatarURL({ dynamic: true })
             })
             .setTimestamp();
 

@@ -25,7 +25,8 @@ module.exports = {
                 { name: 'Rôles :', value: `${member.roles.cache.map(role => role.name).join(', ')}`, inline: true }
             )
             .setFooter({
-                text: 'Demandé par ' + interaction.user.username
+                text: 'Demandé par ' + interaction.user.username,
+                iconURL : interaction.user.displayAvatarURL({ dynamic: true })
             })
             .setTimestamp();
 

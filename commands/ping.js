@@ -13,7 +13,8 @@ module.exports = {
             .setTitle('Pong ! 🏓')
             .setDescription(`Latence du bot : ${botPing}ms\nLatence de l'API : ${apiPing}ms`)
             .setFooter({
-                text: 'Demandé par ' + interaction.user.username
+                text: 'Demandé par ' + interaction.user.username,
+                iconURL : interaction.user.displayAvatarURL({ dynamic: true })
             })
             .setTimestamp();
 

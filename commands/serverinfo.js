@@ -24,7 +24,8 @@ module.exports = {
                 { name: 'Niveau de notification :', value: `${interaction.guild.defaultMessageNotifications}`, inline: true },
             )
             .setFooter({
-                text: 'Demandé par ' + interaction.user.username
+                text: 'Demandé par ' + interaction.user.username,
+                iconURL : interaction.user.displayAvatarURL({ dynamic: true })
             })
             .setTimestamp();
 

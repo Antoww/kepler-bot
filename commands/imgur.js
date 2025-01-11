@@ -30,7 +30,8 @@ module.exports = {
                 .setDescription(`[Voir l'image sur Imgur](${response.data.data.link})`)
                 .setImage(response.data.data.link)
                 .setFooter({
-                    text: 'Demandé par ' + interaction.user.username
+                    text: 'Demandé par ' + interaction.user.username,
+                    iconURL : interaction.user.displayAvatarURL({ dynamic: true })
                 })
                 .setTimestamp();
 

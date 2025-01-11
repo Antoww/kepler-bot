@@ -33,7 +33,8 @@ module.exports = {
                 {name: '<:textuel:635159053630308391> Salons : ', value: `${interaction.client.channels.cache.size}`, inline: true},
             )
             .setFooter({
-                text: 'Demandé par ' + interaction.user.username
+                text: 'Demandé par ' + interaction.user.username,
+                iconURL : interaction.user.displayAvatarURL({ dynamic: true })
             })
             .setTimestamp();
 

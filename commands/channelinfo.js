@@ -80,7 +80,8 @@ async function sendChannelInfo(interaction, channel, isUpdate) {
             { name: 'NSFW :', value: `${channel.nsfw ? 'Oui' : 'Non'}`, inline: true }
         )
         .setFooter({
-            text: 'Demandé par ' + interaction.user.username
+            text: 'Demandé par ' + interaction.user.username,
+            iconURL : interaction.user.displayAvatarURL({ dynamic: true })
         })
         .setTimestamp();
 

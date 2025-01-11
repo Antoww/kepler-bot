@@ -24,7 +24,8 @@ module.exports = {
             .setTitle('Mot de passe généré')
             .setDescription(`Voici votre mot de passe : \`${password}\``)
             .setFooter({
-                text: 'Demandé par ' + interaction.user.username
+                text: 'Demandé par ' + interaction.user.username,
+                iconURL : interaction.user.displayAvatarURL({ dynamic: true })
             })
             .setTimestamp();
 

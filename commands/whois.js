@@ -30,7 +30,8 @@ module.exports = {
                     { name: 'Name Servers', value: whoisData.nameServers ? whoisData.nameServers.join(', ') : 'N/A', inline: true }
                 )
                 .setFooter({
-                    text: 'Demandé par ' + interaction.user.username
+                    text: 'Demandé par ' + interaction.user.username,
+                    iconURL : interaction.user.displayAvatarURL({ dynamic: true })
                 })
                 .setTimestamp();
 
