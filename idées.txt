@@ -9,3 +9,4 @@
 -Infos jeux
 -Stats Ytb
 -Stats bots
+- VIdéo random YTB (scrap liens sur YTB)

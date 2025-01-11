@@ -45,7 +45,7 @@ client.once('ready', async () => {
         const commands = client.commands.map(command => command.data.toJSON());
 
         await rest.put(
-            Routes.applicationGuildCommands(client.user.id, guildId),
+            Routes.applicationCommands(client.user.id),
             { body: commands }
         );
 
