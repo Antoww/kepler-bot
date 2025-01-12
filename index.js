@@ -4,7 +4,7 @@ const { Client, Collection, GatewayIntentBits, REST, Routes } = require('discord
 require('dotenv').config();
 
 // Initialisation du client
-const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent, GatewayIntentBits.DirectMessages] });
 
 // Collection des commandes
 client.commands = new Collection();
