@@ -35,5 +35,6 @@ module.exports = {
         } catch (error) {
             await interaction.reply({ content: 'Impossible d\'envoyer un message privé. Veuillez vérifier vos paramètres de confidentialité.', ephemeral: true });
         }
+        console.log('[LOG]',`Commande ${__filename} executée par ${interaction.user.tag} (${interaction.user.id})`);
     },
 };

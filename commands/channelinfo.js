@@ -127,5 +127,5 @@ async function sendChannelInfo(interaction, channel, isUpdate) {
     } else {
         await interaction.reply({ embeds: [embed] });
     }
-    console.log("[LOG]", "Commande channelinfo exécutée");
+    console.log('[LOG]',`Commande ${__filename} executée par ${interaction.user.tag} (${interaction.user.id})`);
 }

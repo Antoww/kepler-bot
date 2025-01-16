@@ -39,6 +39,6 @@ module.exports = {
             .setTimestamp();
 
         await interaction.reply({ embeds: [embed] });
-        console.log("[LOG]", "Commande stats exécutée");
+        console.log('[LOG]',`Commande ${__filename} executée par ${interaction.user.tag} (${interaction.user.id})`);
     },
 };

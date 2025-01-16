@@ -36,5 +36,6 @@ module.exports = {
         fs.writeFileSync(bdayFilePath, JSON.stringify(bdays, null, 2));
 
         await interaction.reply({ content: 'Votre anniversaire a été enregistré avec succès!', ephemeral: true });
+        console.log('[LOG]',`Commande ${__filename} executée par ${interaction.user.tag} (${interaction.user.id})`);
     },
 };
