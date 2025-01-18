@@ -34,7 +34,7 @@ module.exports = {
                         const channel = guild.channels.cache.find(ch => ch.name.includes('anniversaire') || ch.name.includes('birthday'));
                         if (channel) {
                             const embed = new EmbedBuilder()
-                                .setColor('#0099ff')
+                                .setColor(`#${Math.floor(Math.random() * 16777215).toString(16)}`)
                                 .setTitle('Joyeux Anniversaire!')
                                 .setDescription(`Joyeux anniversaire <@${userId}>! 🎉🎂`)
                                 .setFooter({

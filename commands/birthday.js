@@ -7,7 +7,7 @@ const bdayFilePath = path.join(__dirname, '../database/bday.json');
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('birthday')
-        .setDescription('Enregistre votre anniversaire.')
+        .setDescription('Enregistre votre anniversaire pour vous le souhaiter !')
         .addStringOption(option => 
             option.setName('date')
                 .setDescription('Entrez votre anniversaire au format JJ/MM ou JJ/MM/AAAA')

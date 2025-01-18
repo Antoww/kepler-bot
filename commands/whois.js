@@ -19,15 +19,16 @@ module.exports = {
 
             const embed = new EmbedBuilder()
                 .setColor('#0099ff')
-                .setTitle(`WHOIS Info for ${site}`)
+                .setTitle(`WHOIS Info de : ${site}`)
                 .addFields(
-                    { name: 'Domain Name', value: whoisData.domainName || 'N/A', inline: true },
+                    { name: 'Nom de domaine', value: whoisData.domainName || 'N/A', inline: true },
                     { name: 'Registrar', value: whoisData.registrar || 'N/A', inline: true },
                     { name: 'Creation Date', value: whoisData.creationDate || 'N/A', inline: true },
                     { name: 'Expiration Date', value: whoisData.expirationDate || 'N/A', inline: true },
                     { name: 'Updated Date', value: whoisData.updatedDate || 'N/A', inline: true },
                     { name: 'Status', value: whoisData.status || 'N/A', inline: true },
-                    { name: 'Name Servers', value: whoisData.nameServers ? whoisData.nameServers.join(', ') : 'N/A', inline: true }
+                    { name: 'Name Servers', value: whoisData.nameServers ? whoisData.nameServers.join(', ') : 'N/A', inline: true },
+                    { name: 'WHOIS Server Registrar', value: whoisData.whoisServerRegistrar || 'N/A', inline: true }
                 )
                 .setFooter({
                     text: 'Demandé par ' + interaction.user.username,
