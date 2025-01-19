@@ -4,9 +4,7 @@ const path = require('path');
 
 const configFilePath = path.join(__dirname, '../database/confserver.json');
 
-let config = {
-    logChannel: null
-};
+let config = {};
 
 // Charger la configuration depuis un fichier
 if (fs.existsSync(configFilePath)) {
@@ -22,7 +20,8 @@ module.exports = {
                 .setDescription('Le paramètre à configurer')
                 .setRequired(true)
                 .addChoices(
-                    { name: 'Salon de log', value: 'logChannel' }
+                    { name: 'Salon de log', value: 'logChannel' },
+                    { name: 'Salon d\'anniversaire', value: 'birthdayChannel' }
                 ))
         .addStringOption(option => 
             option.setName('valeur')
@@ -31,11 +30,16 @@ module.exports = {
     async execute(interaction) {
         const param = interaction.options.getString('paramètre');
         const value = interaction.options.getString('valeur');
+        const guildId = interaction.guild.id;
 
-        if (param === 'logChannel') {
-            config.logChannel = value;
+        if (!config[guildId]) {
+            config[guildId] = {};
+        }
+
+        if (param === 'logChannel' || param === 'birthdayChannel') {
+            config[guildId][param] = value;
             fs.writeFileSync(configFilePath, JSON.stringify(config, null, 2));
-            await interaction.reply(`Le salon de log a été configuré sur ${value}.`);
+            await interaction.reply(`Le paramètre ${param} a été configuré sur ${value} pour cette guilde.`);
         } else {
             await interaction.reply('Paramètre inconnu.', { ephemeral: true });
         }
