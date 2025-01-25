@@ -1,0 +1,10 @@
+{
+    "name": "kepler-bot",
+    "processes": [
+        {
+            "id": "kepler-bot",
+            "cmd" : "demo run --allow-all index.js",
+            "autostart": true
+        }
+    ]
+}
