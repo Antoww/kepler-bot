@@ -39,7 +39,8 @@ for (const file of eventFiles) {
 
 // Enregistrement des commandes après l'événement 'ready'
 client.once('ready', async () => {
-    console.log(`Connecté en tant que ${client.user.tag}`);
+    console.log(`Connecté en tant que ${client.user.tag}, nous sommes le ${new Date().toLocaleDateString()} et il est ${new Date().toLocaleTimeString()}`);
+    console.log(`Prêt à écouter les commandes sur ${client.guilds.cache.size} serveurs.`);
 
     const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
 
