@@ -3,6 +3,8 @@
     "axios": "^1.7.9",
     "discord.js": "^14.17.2",
     "dotenv": "^16.4.7",
-    "whois-json": "^2.0.4"
-  }
+    "whois-json": "^2.0.4",
+    "dayjs": "^1.11.13"
+  },
+  "type": "module"
 }

@@ -1,17 +1,17 @@
-const { EmbedBuilder } = require('discord.js');
-const fs = require('fs');
-const path = require('path');
+import { EmbedBuilder } from 'discord.js';
+import { existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 
-const configFilePath = path.join(__dirname, '../database/confserver.json');
+const configFilePath = join(import.meta.dirname, '../database/confserver.json');
 
 let config = {};
 
 // Charger la configuration depuis un fichier
-if (fs.existsSync(configFilePath)) {
-    config = JSON.parse(fs.readFileSync(configFilePath, 'utf8'));
+if (existsSync(configFilePath)) {
+    config = JSON.parse(readFileSync(configFilePath, 'utf8'));
 }
 
-module.exports = (client) => {
+export default (client) => {
     client.on('guildBanAdd', async (ban) => {
         const guildId = ban.guild.id;
         const guildConfig = config[guildId];
