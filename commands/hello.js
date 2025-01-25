@@ -15,6 +15,6 @@ module.exports = {
         } catch (error) {
             console.error('Erreur lors de l\'ajout de la réaction :', error);
         }
-        console.log('[LOG]',`Commande ${__filename} executée par ${interaction.user.tag} (${interaction.user.id})`);
+        console.log(`[LOG : ${new Date().toLocaleTimeString()}] Commande ${__filename} executée par ${interaction.user.tag} (${interaction.user.id})`);
     },
 };

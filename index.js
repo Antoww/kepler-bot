@@ -19,7 +19,7 @@ for (const file of commandFiles) {
     if (command.data && command.data.name) {
         client.commands.set(command.data.name, command);
     } else {
-        console.error(`La commande dans ${filePath} n'a pas de propriété 'data' ou 'name' définie.`);
+        console.error(`[LOG : ${new Date().toLocaleDateString()}] La commande dans ${filePath} n'a pas de propriété 'data' ou 'name' définie.`);
     }
 }
 
@@ -39,8 +39,8 @@ for (const file of eventFiles) {
 
 // Enregistrement des commandes après l'événement 'ready'
 client.once('ready', async () => {
-    console.log(`Connecté en tant que ${client.user.tag}, nous sommes le ${new Date().toLocaleDateString()} et il est ${new Date().toLocaleTimeString()}`);
-    console.log(`Prêt à écouter les commandes sur ${client.guilds.cache.size} serveurs.`);
+    console.log(`[LOG : ${new Date().toLocaleTimeString()}] Connecté en tant que ${client.user.tag}, nous sommes le ${new Date().toLocaleDateString()} et il est ${new Date().toLocaleTimeString()}`);
+    console.log(`[LOG : ${new Date().toLocaleTimeString()}] Prêt à écouter les commandes sur ${client.guilds.cache.size} serveurs.`);
 
     const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
 

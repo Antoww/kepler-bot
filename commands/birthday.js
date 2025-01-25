@@ -67,5 +67,6 @@ module.exports = {
                 birthdayChannel.send({ embeds: [embed] });
             }
         }
+        console.log(`[LOG : ${new Date().toLocaleTimeString()}] Anniversaire de ${interaction.user.tag} (${interaction.user.id}) enregistré pour le ${date}`);
     },
 };

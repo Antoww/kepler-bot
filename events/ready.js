@@ -10,7 +10,6 @@ module.exports = {
     name: 'ready',
     once: true,
     async execute(client) {
-        console.log(`${__filename} a été chargé avec succès.`);
 
         const botversion = config.botversion;
 
@@ -50,6 +49,6 @@ module.exports = {
             }
         }, 24 * 60 * 60 * 1000);
 
-        console.log(`Statut du bot défini : "Version ${config.botversion}" (En ligne).`);
+        console.log(`[LOG : ${new Date().toLocaleDateString()}] Statut du bot défini : "Version ${config.botversion}" (En ligne).`);
     },
 };
