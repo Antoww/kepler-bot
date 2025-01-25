@@ -1,7 +1,8 @@
 const { SlashCommandBuilder, EmbedBuilder, GuildVerificationLevel, GuildDefaultMessageNotifications } = require('discord.js');
 const dayjs = require('dayjs');
 require('dayjs/locale/fr');
-dayjs.locale('fr');
+dayjs.locale('fr')
+const file = 'serverinfo.js';
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -34,7 +35,7 @@ module.exports = {
             .setTimestamp();
 
         await interaction.reply({ embeds: [embed] });
-        console.log(`[LOG : ${new Date().toLocaleTimeString()}] Commande${file} executée par ${interaction.user.tag} (${interaction.user.id})`);
+        console.log(`[LOG : ${new Date().toLocaleTimeString()}] Commande ${file} executée par ${interaction.user.tag} (${interaction.user.id})`);
     },
 };
 

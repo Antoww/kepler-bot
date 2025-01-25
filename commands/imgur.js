@@ -1,6 +1,7 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const axios = require('axios');
 require('dotenv').config();
+const file = 'imgur.js';
 
 module.exports = {
     data: new SlashCommandBuilder()

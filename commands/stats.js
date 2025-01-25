@@ -3,6 +3,7 @@ const dayjs = require('dayjs');
 const duration = require('dayjs/plugin/duration');
 dayjs.extend(duration);
 const startTime = new Date();
+const file = 'stats.js';
 
 function getUptime() {
     const now = dayjs();

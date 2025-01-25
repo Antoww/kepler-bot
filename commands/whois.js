@@ -1,5 +1,6 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const whois = require('whois-json');
+const file = 'whois.js';
 
 module.exports = {
     data: new SlashCommandBuilder()

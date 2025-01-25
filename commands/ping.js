@@ -1,4 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const file = 'ping.js';
 
 module.exports = {
     data: new SlashCommandBuilder()

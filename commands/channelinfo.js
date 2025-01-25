@@ -2,6 +2,7 @@ const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, Butt
 const dayjs = require('dayjs');
 require('dayjs/locale/fr');
 dayjs.locale('fr');
+const file = 'channelinfo.js';
 
 module.exports = {
     data: new SlashCommandBuilder()

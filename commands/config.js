@@ -1,6 +1,7 @@
 const { SlashCommandBuilder } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
+const file = 'config.js';
 
 const configFilePath = path.join(__dirname, '../database/confserver.json');
 

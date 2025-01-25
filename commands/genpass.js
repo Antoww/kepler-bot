@@ -1,4 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const file = 'genpass.js';
 
 module.exports = {
     data: new SlashCommandBuilder()
