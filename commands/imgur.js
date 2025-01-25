@@ -40,6 +40,6 @@ module.exports = {
             console.error(error);
             await interaction.reply('Une erreur est survenue lors de l\'upload de l\'image.');
         }
-        console.log(`[LOG : ${new Date().toLocaleTimeString()}] Commande ${__filename} executée par ${interaction.user.tag} (${interaction.user.id})`);
+        console.log(`[LOG : ${new Date().toLocaleTimeString()}] Commande ${file} executée par ${interaction.user.tag} (${interaction.user.id})`);
     },
 };

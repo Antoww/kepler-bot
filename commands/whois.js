@@ -41,6 +41,6 @@ module.exports = {
             console.error(error);
             await interaction.editReply({ content: 'Erreur lors de la récupération des informations WHOIS.', ephemeral: true });
         }
-        console.log(`[LOG : ${new Date().toLocaleTimeString()}] Commande ${__filename} executée par ${interaction.user.tag} (${interaction.user.id})`);
+        console.log(`[LOG : ${new Date().toLocaleTimeString()}] Commande ${file} executée par ${interaction.user.tag} (${interaction.user.id})`);
     },
 };

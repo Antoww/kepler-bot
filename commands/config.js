@@ -43,6 +43,6 @@ module.exports = {
         } else {
             await interaction.reply('Paramètre inconnu.', { ephemeral: true });
         }
-        console.log(`[LOG : ${new Date().toLocaleTimeString()}] Commande ${__filename} executée par ${interaction.user.tag} (${interaction.user.id})`);
+        console.log(`[LOG : ${new Date().toLocaleTimeString()}] Commande ${file} executée par ${interaction.user.tag} (${interaction.user.id})`);
     },
 };
