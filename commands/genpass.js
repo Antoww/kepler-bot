@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
+import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
 const file = 'genpass.js';
 
 export const data = new SlashCommandBuilder()
@@ -32,6 +32,7 @@ export async function execute(interaction) {
     try {
         await interaction.user.send({ embeds: [embed] });
         await interaction.reply({ content: 'Le mot de passe a été envoyé en message privé.', ephemeral: true });
+    // deno-lint-ignore no-unused-vars
     } catch (error) {
         await interaction.reply({ content: 'Impossible d\'envoyer un message privé. Veuillez vérifier vos paramètres de confidentialité.', ephemeral: true });
     }

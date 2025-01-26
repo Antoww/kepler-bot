@@ -17,6 +17,7 @@ export async function execute(interaction) {
     // Try to fetch the channel by ID or mention
     try {
         channel = await interaction.guild.channels.fetch(channelInput.replace(/[<#>]/g, ''));
+    // deno-lint-ignore no-unused-vars
     } catch (error) {
         // If not found by ID or mention, search by name
         const channels = interaction.guild.channels.cache.filter(ch => ch.name === channelInput);
