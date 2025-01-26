@@ -57,7 +57,7 @@ export async function execute(interaction) {
     reminders[reminderId] = { userId, message, duration: durationMs, timestamp: reminderId };
     writeFileSync(reminderFilePath, JSON.stringify(reminders, null, 2));
 
-    await interaction.reply({ content: 'Votre rappel a été enregistré avec succès!', ephemeral: true });
+    await interaction.reply({ content: 'Votre rappel a été enregistré avec succès !', ephemeral: true });
 
     // Set a timeout to send the reminder
     setTimeout(async () => {
@@ -82,6 +82,7 @@ export async function execute(interaction) {
 
         try {
             await user.send({ embeds: [embed], components: [row] });
+        // deno-lint-ignore no-unused-vars
         } catch (error) {
             await interaction.followUp({ content: 'Je n\'ai pas pu envoyer le rappel en message privé. Voici votre rappel :', embeds: [embed], components: [row], ephemeral: true });
         }

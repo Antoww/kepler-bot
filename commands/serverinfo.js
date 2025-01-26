@@ -6,7 +6,7 @@ const file = 'serverinfo.js';
 
 export const data = new SlashCommandBuilder()
     .setName('serverinfo')
-    .setDescription('Donne les stats du serveur.');
+    .setDescription('Donne les statistiques du serveur.');
 export async function execute(interaction) {
     const owner = await interaction.guild.fetchOwner();
     const dateServeur = dayjs(interaction.guild.createdAt).format('DD/MM/YYYY à HH:mm:ss');

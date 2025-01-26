@@ -14,7 +14,7 @@ if (existsSync(configFilePath)) {
 
 export const data = new SlashCommandBuilder()
     .setName('timeout')
-    .setDescription('Met un utilisateur en timeout.')
+    .setDescription('Permet de timeout un utilisateur.')
     .addUserOption(option => option.setName('utilisateur')
         .setDescription('L\'utilisateur à mettre en timeout')
         .setRequired(true))

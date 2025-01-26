@@ -5,7 +5,7 @@ export const data = new SlashCommandBuilder()
     .setName('userinfo')
     .setDescription('Donne des informations sur un utilisateur.')
     .addUserOption(option => option.setName('utilisateur')
-        .setDescription('Mentionne un utilisateur ou entre une ID utilisateur')
+        .setDescription('Mentionnez un utilisateur ou entrez une ID utilisateur')
         .setRequired(false));
 export async function execute(interaction) {
     const user = interaction.options.getUser('utilisateur') || interaction.user;

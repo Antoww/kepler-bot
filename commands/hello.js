@@ -3,7 +3,7 @@ const file = 'hello.js';
 
 export const data = new SlashCommandBuilder()
     .setName('hello')
-    .setDescription('Dit bonjour au bot.');
+    .setDescription('Le bot dit "Bonjour !" car il est super sympa.');
 export async function execute(interaction) {
     // Envoie une réponse à l'interaction
     const reply = await interaction.reply({ content: 'Bonjour ! 👋', fetchReply: true });

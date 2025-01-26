@@ -14,7 +14,7 @@ if (existsSync(configFilePath)) {
 
 export const data = new SlashCommandBuilder()
     .setName('config')
-    .setDescription('Configure le bot.')
+    .setDescription('Configurer le bot selon vos besoins.')
     .addStringOption(option => option.setName('paramètre')
         .setDescription('Le paramètre à configurer')
         .setRequired(true)

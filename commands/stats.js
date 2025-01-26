@@ -16,7 +16,7 @@ function getUptime() {
 
 export const data = new SlashCommandBuilder()
     .setName('stats')
-    .setDescription('Donne les stats générales du bot.');
+    .setDescription('Donne les statistiques générales du bot.');
 export async function execute(interaction) {
     const ram = process.memoryUsage().heapUsed / 1024 / 1024;
     const uptimeFormatted = getUptime();

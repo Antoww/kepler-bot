@@ -4,7 +4,7 @@ const file = 'whois.js';
 
 export const data = new SlashCommandBuilder()
     .setName('whois')
-    .setDescription('Donne des informations sur un site web.')
+    .setDescription('Donne des informations WHOIS sur un site web.')
     .addStringOption(option => option.setName('site')
         .setDescription('Entrez le nom de domaine du site web')
         .setRequired(true));

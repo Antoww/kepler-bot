@@ -8,7 +8,7 @@ export const data = new SlashCommandBuilder()
     .setName('channelinfo')
     .setDescription('Donne des informations sur un canal.')
     .addStringOption(option => option.setName('canal')
-        .setDescription('Mentionne un canal, entre une ID de canal ou écris le nom du canal')
+        .setDescription('Mentionnez un canal, entrez une ID de canal ou écrivez le nom du canal')
         .setRequired(true));
 export async function execute(interaction) {
     const channelInput = interaction.options.getString('canal');
@@ -27,7 +27,7 @@ export async function execute(interaction) {
             const embed = new EmbedBuilder()
                 .setColor('#0099ff')
                 .setTitle('Sélectionnez un canal')
-                .setDescription('Plusieurs canaux ont été trouvés avec ce nom. Veuillez choisir le bon canal.');
+                .setDescription('Plusieurs canaux ont été trouvés avec ce nom. Veuillez choisir le canal souhaité.');
 
             const row = new ActionRowBuilder();
             channels.forEach((ch, index) => {

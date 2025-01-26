@@ -3,7 +3,7 @@ const file = 'genpass.js';
 
 export const data = new SlashCommandBuilder()
     .setName('genpass')
-    .setDescription('Génère un mot de passe aléatoire');
+    .setDescription('Génère un mot de passe aléatoire.');
 export async function execute(interaction) {
     const generatePassword = (length, charset) => {
         let password = '';

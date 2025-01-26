@@ -3,7 +3,7 @@ const file = 'credits.js';
 
 export const data = new SlashCommandBuilder()
     .setName('credits')
-    .setDescription('Donne les crédits du bot.');
+    .setDescription('Crédits et remerciments.');
 export async function execute(interaction) {
 
     const embed = new EmbedBuilder()
