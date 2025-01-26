@@ -1,8 +1,9 @@
-import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
+import { type CommandInteraction, SlashCommandBuilder, EmbedBuilder } from 'discord.js';
 import dayjs from 'dayjs';
-import pluginDuration from 'https://cdn.skypack.dev/dayjs@1.11.13/plugin/duration';
-import process from "node:process";
-dayjs.extend(pluginDuration);
+import duration from 'dayjs/plugin/duration.js';
+import process from 'node:process';
+
+dayjs.extend(duration);
 const startTime = new Date();
 
 function getUptime() {
@@ -16,7 +17,8 @@ function getUptime() {
 export const data = new SlashCommandBuilder()
     .setName('stats')
     .setDescription('Donne les statistiques générales du bot.');
-export async function execute(interaction) {
+
+export async function execute(interaction: CommandInteraction) {
     const ram = process.memoryUsage().heapUsed / 1024 / 1024;
     const uptimeFormatted = getUptime();
 
@@ -45,7 +47,7 @@ export async function execute(interaction) {
         )
         .setFooter({
             text: 'Demandé par ' + interaction.user.username,
-            iconURL: interaction.user.displayAvatarURL({ dynamic: true })
+            iconURL: interaction.user.displayAvatarURL({ forceStatic: false })
         })
         .setTimestamp();
 

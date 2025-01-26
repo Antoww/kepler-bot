@@ -1,8 +1,9 @@
-import { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
+import { type CommandInteraction, SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import path from 'node:path';
+import type { Reminders } from "../types.d.ts";
 
-const reminderFilePath = join(import.meta.dirname, '../database/reminders.json');
+const reminderFilePath = path.join(Deno.cwd(), './database/reminders.json');
 
 export const data = new SlashCommandBuilder()
     .setName('reminder')
@@ -21,10 +22,10 @@ export const data = new SlashCommandBuilder()
             { name: 'Heures', value: 'heures' },
             { name: 'Jours', value: 'jours' }
         ));
-export async function execute(interaction) {
-    const message = interaction.options.getString('message');
-    const duration = interaction.options.getInteger('durée');
-    const unit = interaction.options.getString('unité');
+export async function execute(interaction: CommandInteraction) {
+    const message = interaction.options.get('message')?.value as string ?? "";
+    const duration = interaction.options.get('durée')?.value as number | null ?? 0;
+    const unit = interaction.options.get('unité')?.value as string ?? "";
     const userId = interaction.user.id;
 
     // Convert duration to milliseconds
@@ -44,7 +45,7 @@ export async function execute(interaction) {
     }
 
     // Load existing reminders
-    let reminders = {};
+    let reminders: Reminders = {};
     if (existsSync(reminderFilePath)) {
         const fileContent = readFileSync(reminderFilePath, 'utf8');
         if (fileContent) {
@@ -68,11 +69,11 @@ export async function execute(interaction) {
             .setDescription(message)
             .setFooter({
                 text: 'Demandé par ' + interaction.user.username,
-                iconURL: interaction.user.displayAvatarURL({ dynamic: true })
+                iconURL: interaction.user.displayAvatarURL({ forceStatic: false })
             })
             .setTimestamp();
 
-        const row = new ActionRowBuilder()
+        const row = new ActionRowBuilder<ButtonBuilder>()
             .addComponents(
                 new ButtonBuilder()
                     .setCustomId(`repeat_${reminderId}`)
@@ -87,5 +88,4 @@ export async function execute(interaction) {
             await interaction.followUp({ content: 'Je n\'ai pas pu envoyer le rappel en message privé. Voici votre rappel :', embeds: [embed], components: [row], ephemeral: true });
         }
     }, durationMs);
-    console.log(`[LOG : ${new Date().toLocaleTimeString()}] Rappel enregistré pour ${interaction.user.tag} : "${message}" dans ${duration} ${unit}.`);
 }

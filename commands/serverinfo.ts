@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, EmbedBuilder, GuildVerificationLevel, GuildDefaultMessageNotifications } from 'discord.js';
+import { type CommandInteraction, SlashCommandBuilder, EmbedBuilder, GuildVerificationLevel, GuildDefaultMessageNotifications } from 'discord.js';
 import dayjs from 'dayjs';
 import 'https://cdn.skypack.dev/dayjs@1.11.13/locale/fr';
 dayjs.locale('fr')
@@ -6,8 +6,12 @@ dayjs.locale('fr')
 export const data = new SlashCommandBuilder()
     .setName('serverinfo')
     .setDescription('Donne les statistiques du serveur.');
-export async function execute(interaction) {
-    const owner = await interaction.guild.fetchOwner();
+export async function execute(interaction: CommandInteraction) {
+    if (!interaction.guild) {
+        await interaction.reply('Erreur : Impossible de récupérer les informations du serveur.');
+        return;
+    }
+    const owner = await interaction.guild.fetchOwner(); console.log("error");
     const dateServeur = dayjs(interaction.guild.createdAt).format('DD/MM/YYYY à HH:mm:ss');
 
     const embed = new EmbedBuilder()
@@ -27,14 +31,14 @@ export async function execute(interaction) {
         )
         .setFooter({
             text: 'Demandé par ' + interaction.user.username,
-            iconURL: interaction.user.displayAvatarURL({ dynamic: true })
+            iconURL: interaction.user.displayAvatarURL({ forceStatic: false })
         })
         .setTimestamp();
 
     await interaction.reply({ embeds: [embed] });
 }
 
-function getVerificationLevelName(level) {
+function getVerificationLevelName(level: GuildVerificationLevel) {
     switch (level) {
         case GuildVerificationLevel.None:
             return 'Aucune';
@@ -51,7 +55,7 @@ function getVerificationLevelName(level) {
     }
 }
 
-function getDefaultMessageNotificationName(level) {
+function getDefaultMessageNotificationName(level: GuildDefaultMessageNotifications) {
     switch (level) {
         case GuildDefaultMessageNotifications.AllMessages:
             return 'Tous les messages';

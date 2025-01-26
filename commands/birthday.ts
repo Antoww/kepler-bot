@@ -1,11 +1,12 @@
-import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
+import { type CommandInteraction, SlashCommandBuilder, EmbedBuilder } from 'discord.js';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import path from 'node:path';
+import type { Birthdays, Configs } from "../types.d.ts";
 
-const bdayFilePath = join(import.meta.dirname, '../database/bday.json');
-const configFilePath = join(import.meta.dirname, '../database/confserver.json');
+const bdayFilePath = path.join(Deno.cwd(), './database/bday.json');
+const configFilePath = path.join(Deno.cwd(), './database/confserver.json');
 
-let config = {};
+let config: Configs = {};
 
 // Charger la configuration depuis un fichier
 if (existsSync(configFilePath)) {
@@ -18,8 +19,14 @@ export const data = new SlashCommandBuilder()
     .addStringOption(option => option.setName('date')
         .setDescription('Entrez votre anniversaire au format JJ/MM ou JJ/MM/AAAA')
         .setRequired(true));
-export async function execute(interaction) {
-    const date = interaction.options.getString('date');
+export async function execute(interaction: CommandInteraction) {
+
+    if (!interaction.guild) {
+        await interaction.reply('Erreur : Vous devez être sur un serveur Discord.');
+        return;
+    }
+
+    const date = interaction.options.get('date')?.value as string ?? "";
     const userId = interaction.user.id;
     const guildId = interaction.guild.id;
 
@@ -30,7 +37,7 @@ export async function execute(interaction) {
     }
 
     // Load existing birthdays
-    let bdays = {};
+    let bdays: Birthdays = {};
     if (existsSync(bdayFilePath)) {
         const fileContent = readFileSync(bdayFilePath, 'utf8');
         if (fileContent) {
@@ -39,9 +46,9 @@ export async function execute(interaction) {
     }
 
     // Save the birthday
-    if (!bdays[guildId]) {
-        bdays[guildId] = {};
-    }
+  
+    bdays[guildId] ??= {};
+
     bdays[guildId][userId] = date;
     writeFileSync(bdayFilePath, JSON.stringify(bdays, null, 2));
 
@@ -58,10 +65,11 @@ export async function execute(interaction) {
                 .setDescription(`Joyeux anniversaire <@${userId}>! 🎉🎂`)
                 .setFooter({
                     text: `Anniversaire de ${interaction.user.username}`,
-                    iconURL: interaction.user.displayAvatarURL({ dynamic: true })
+                    iconURL: interaction.user.displayAvatarURL({ forceStatic: false })
                 })
                 .setTimestamp();
-
+            
+            if (!birthdayChannel.isTextBased()) return;
             birthdayChannel.send({ embeds: [embed] });
         }
     }

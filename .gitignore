@@ -4,3 +4,7 @@ ressources
 deno.lock
 idées.txt
 package-lock.json
+bday.json
+confserver.json
+reminders.json
+sanctions.json
