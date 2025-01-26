@@ -2,5 +2,5 @@ node_modules
 .env
 ressources
 deno.lock
-idées.text
+idées.txt
 package-lock.json

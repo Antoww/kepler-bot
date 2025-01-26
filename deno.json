@@ -1,3 +1,7 @@
 {
-    "nodeModulesDir": "auto"
+    "nodeModulesDir": "auto",
+    "compilerOptions": {
+        "strict": true,
+        "verbatimModuleSyntax": true
+    }
 }
