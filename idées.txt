@@ -1,12 +1,1 @@
--Chat IA
--Recherche doc
-- Upload : Refonte pour upload sur ton serveur
--WHOIS
--Readme
--Statut Serv Mc
--Statut jeux vidéos
--Météo
--Infos jeux
--Stats Ytb 
--Stats bots
-- VIdéo random YTB (scrap liens sur YTB)
+
