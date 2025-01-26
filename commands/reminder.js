@@ -2,7 +2,7 @@ import { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, But
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-const reminderFilePath = join(import.meta.dirname, '../database/reminder.json');
+const reminderFilePath = join(import.meta.dirname, '../database/reminders.json');
 
 export const data = new SlashCommandBuilder()
     .setName('reminder')

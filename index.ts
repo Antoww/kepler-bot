@@ -1,26 +1,9 @@
 import * as path from "jsr:@std/path";
-import { Client, Collection, GatewayIntentBits, REST, Routes, type SlashCommandBuilder, type BaseInteraction } from 'discord.js';
+import type { Event, Command } from './types.d.ts';
+import { Client, Collection, GatewayIntentBits, REST, Routes } from 'discord.js';
 import process from 'node:process';
 import dotenv from 'dotenv';
 dotenv.config();
-
-interface Command {
-    data: SlashCommandBuilder;
-    execute: (interaction: BaseInteraction) => Promise<void>;
-}
-
-interface Event {
-    name: string;
-    once?: boolean;
-    execute: (...args: any[]) => Promise<void>;
-}
-
-// Add this type declaration
-declare module 'discord.js' {
-    export interface Client {
-        commands: Collection<string, Command>;
-    }
-}
 
 // Initialisation du client
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent, GatewayIntentBits.DirectMessages] });
@@ -32,7 +15,7 @@ client.commands = new Collection();
 const commandsPath = path.join(Deno.cwd(), 'commands');
 
 for (const file of Deno.readDirSync(commandsPath)) {
-    if (!file.isFile || !file.name.endsWith('.js')) continue;
+    if (!file.isFile || (!file.name.endsWith('.js') && !file.name.endsWith('.ts'))) continue;
     const filePath = path.join(commandsPath, file.name);
     const command = await import(`file:${filePath}`) as Command;
 
@@ -47,7 +30,7 @@ for (const file of Deno.readDirSync(commandsPath)) {
 const eventsPath = path.join(Deno.cwd(), 'events');
 
 for (const file of Deno.readDirSync(eventsPath)) {
-    if (!file.isFile || !file.name.endsWith('.js')) continue;
+    if (!file.isFile || (!file.name.endsWith('.js') && !file.name.endsWith('.ts'))) continue;
     const filePath = path.join(eventsPath, file.name);
     const event = await import(`file:${filePath}`) as Event;
     if (event.once) {

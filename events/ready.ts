@@ -1,20 +1,21 @@
 import config from '../config.json' with {type:"json"};
 import { existsSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
-import { EmbedBuilder, PresenceUpdateStatus } from 'discord.js';
+import * as path from "jsr:@std/path";
+import { EmbedBuilder, PresenceUpdateStatus, type Client } from 'discord.js';
 import dayjs from 'dayjs';
+import type { Birthdays } from '../types.d.ts';
 
-const bdayFilePath = join(import.meta.dirname, '../database/bday.json');
+const bdayFilePath = path.join(Deno.cwd(), '../database/bday.json');
 
 export const name = 'ready';
 export const once = true;
-export async function execute(client) {
+export function execute(client: Client<true>) {
 
     client.user.setPresence({ activities: [{ name: `Version ${config.botversion}` }], status: PresenceUpdateStatus.Online });
 
     setInterval(async () => {
         const today = dayjs().format('DD/MM');
-        let bdays = {};
+        let bdays: Birthdays = {};
 
         if (existsSync(bdayFilePath)) {
             bdays = JSON.parse(readFileSync(bdayFilePath, 'utf8'));
@@ -34,10 +35,11 @@ export async function execute(client) {
                             .setDescription(`Joyeux anniversaire <@${userId}>! 🎉🎂`)
                             .setFooter({
                                 text: `Anniversaire de ${user.username}`,
-                                iconURL: user.displayAvatarURL({ dynamic: true })
+                                iconURL: user.displayAvatarURL({ forceStatic: false })
                             })
                             .setTimestamp();
-
+                        
+                        if (!channel.isTextBased()) return;
                         channel.send({ embeds: [embed] });
                     }
                 });
