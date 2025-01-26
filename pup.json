@@ -1,5 +1,11 @@
 {
     "name": "kepler-bot",
+    "watcher": {
+        "interval": 1000,
+        "exts": ["js"],
+        "skip": ["json","**/.git/**"]
+    },
+
     "processes": [
         {
             "id": "kepler-bot",
