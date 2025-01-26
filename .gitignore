@@ -3,3 +3,4 @@ node_modules
 ressources
 idées
 deno.lock
+package-lock.json
