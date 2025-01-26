@@ -2,7 +2,7 @@ services:
   deno:
     image: denoland/deno:2.1.7
     container_name: deno
-    command: ["deno", "run", "--allow-all", "index.js"]
+    command: ["deno", "run", "--allow-all", "index.ts"]
     restart: always
     volumes:
       - .:/app
