@@ -1,0 +1,7 @@
+services:
+  deno:
+    image: denoland/deno:2.1.7
+    container_name: deno
+    command: ["run", "--allow-all", "index.js"]
+    restart: always
+    
