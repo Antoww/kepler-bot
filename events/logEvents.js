@@ -12,6 +12,7 @@ if (existsSync(configFilePath)) {
 }
 
 export default (client) => {
+    // deno-lint-ignore require-await
     client.on('guildBanAdd', async (ban) => {
         const guildId = ban.guild.id;
         const guildConfig = config[guildId];
@@ -29,6 +30,7 @@ export default (client) => {
         }
     });
 
+    // deno-lint-ignore require-await
     client.on('guildBanRemove', async (ban) => {
         const guildId = ban.guild.id;
         const guildConfig = config[guildId];
@@ -46,6 +48,7 @@ export default (client) => {
         }
     });
 
+    // deno-lint-ignore require-await
     client.on('channelCreate', async (channel) => {
         const guildId = channel.guild.id;
         const guildConfig = config[guildId];
@@ -63,6 +66,7 @@ export default (client) => {
         }
     });
 
+    // deno-lint-ignore require-await
     client.on('channelDelete', async (channel) => {
         const guildId = channel.guild.id;
         const guildConfig = config[guildId];
@@ -80,6 +84,7 @@ export default (client) => {
         }
     });
 
+    // deno-lint-ignore require-await
     client.on('channelUpdate', async (oldChannel, newChannel) => {
         const guildId = newChannel.guild.id;
         const guildConfig = config[guildId];
@@ -97,6 +102,7 @@ export default (client) => {
         }
     });
 
+    // deno-lint-ignore require-await
     client.on('guildMemberAdd', async (member) => {
         const guildId = member.guild.id;
         const guildConfig = config[guildId];
@@ -114,6 +120,7 @@ export default (client) => {
         }
     });
 
+    // deno-lint-ignore require-await
     client.on('guildMemberRemove', async (member) => {
         const guildId = member.guild.id;
         const guildConfig = config[guildId];

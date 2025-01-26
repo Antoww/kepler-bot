@@ -1,7 +1,6 @@
 import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-const file = 'birthday.js';
 
 const bdayFilePath = join(import.meta.dirname, '../database/bday.json');
 const configFilePath = join(import.meta.dirname, '../database/confserver.json');
