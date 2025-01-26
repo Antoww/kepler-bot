@@ -4,7 +4,6 @@ import pluginDuration from 'https://cdn.skypack.dev/dayjs@1.11.13/plugin/duratio
 import process from "node:process";
 dayjs.extend(pluginDuration);
 const startTime = new Date();
-const file = 'stats.js';
 
 function getUptime() {
     const now = dayjs();
@@ -51,5 +50,4 @@ export async function execute(interaction) {
         .setTimestamp();
 
     await interaction.reply({ embeds: [embed] });
-    console.log(`[LOG : ${new Date().toLocaleTimeString()}] Commande ${file} executée par ${interaction.user.tag} (${interaction.user.id})`);
 }

@@ -2,7 +2,7 @@ import { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, But
 import dayjs from 'dayjs';
 import 'https://cdn.skypack.dev/dayjs@1.11.13/locale/fr';
 dayjs.locale('fr');
-const file = 'channelinfo.js';
+
 
 export const data = new SlashCommandBuilder()
     .setName('channelinfo')
@@ -126,5 +126,4 @@ async function sendChannelInfo(interaction, channel, isUpdate) {
     } else {
         await interaction.reply({ embeds: [embed] });
     }
-    console.log(`[LOG : ${new Date().toLocaleTimeString()}] Commande ${file} executée par ${interaction.user.tag} (${interaction.user.id})`);
 }

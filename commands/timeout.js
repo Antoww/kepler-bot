@@ -127,7 +127,6 @@ export async function execute(interaction) {
                 logChannel.send({ embeds: [embed] });
             }
         }
-        console.log(`[LOG : ${new Date().toLocaleTimeString()}] Utilisateur ${member.user.tag} (${member.user.id}) mis en timeout pour ${duration} ${unit} par ${interaction.user.tag} (${interaction.user.id})`);
     } catch (error) {
         await interaction.reply({ content: 'Une erreur est survenue lors de la mise en timeout de l\'utilisateur.', ephemeral: true });
         console.error(error);

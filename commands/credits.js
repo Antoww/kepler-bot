@@ -1,5 +1,5 @@
 import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
-const file = 'credits.js';
+
 
 export const data = new SlashCommandBuilder()
     .setName('credits')

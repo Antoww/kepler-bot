@@ -1,5 +1,5 @@
 import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
-const file = 'genpass.js';
+
 
 export const data = new SlashCommandBuilder()
     .setName('genpass')

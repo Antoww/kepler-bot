@@ -1,6 +1,5 @@
-import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
+import { type CommandInteraction, SlashCommandBuilder, EmbedBuilder, MessageFlags, MessagePayload } from 'discord.js';
 import whois from 'whois-json';
-const file = 'whois.js';
 
 export const data = new SlashCommandBuilder()
     .setName('whois')
@@ -8,8 +7,8 @@ export const data = new SlashCommandBuilder()
     .addStringOption(option => option.setName('site')
         .setDescription('Entrez le nom de domaine du site web')
         .setRequired(true));
-export async function execute(interaction) {
-    const site = interaction.options.getString('site');
+export async function execute(interaction: CommandInteraction) {
+    const site = interaction.options.get('site')?.value;
 
     await interaction.deferReply();
 
@@ -31,14 +30,13 @@ export async function execute(interaction) {
             )
             .setFooter({
                 text: 'Demandé par ' + interaction.user.username,
-                iconURL: interaction.user.displayAvatarURL({ dynamic: true })
+                iconURL: interaction.user.displayAvatarURL({ forceStatic: false })
             })
             .setTimestamp();
 
         await interaction.editReply({ embeds: [embed] });
     } catch (error) {
         console.error(error);
-        await interaction.editReply({ content: 'Erreur lors de la récupération des informations WHOIS.', ephemeral: true });
+        await interaction.editReply(MessagePayload.create(interaction.channel || interaction.user, { content: 'Erreur lors de la récupération des informations WHOIS.', flags: MessageFlags.Ephemeral }));
     }
-    console.log(`[LOG : ${new Date().toLocaleTimeString()}] Commande ${file} executée par ${interaction.user.tag} (${interaction.user.id})`);
 }

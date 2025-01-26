@@ -8,6 +8,8 @@ export async function execute(interaction) {
 
     try {
         await command.execute(interaction);
+        console.log(`Commande ${interaction.commandName} exécutée avec succès.`);
+        console.log(`[LOG : ${new Date().toLocaleTimeString()}] Commande ${interaction.commandName} executée par ${interaction.user.tag} (${interaction.user.id})`);
     } catch (error) {
         console.error(error);
         await interaction.reply({ content: 'Il y a eu une erreur en exécutant cette commande.', ephemeral: true });

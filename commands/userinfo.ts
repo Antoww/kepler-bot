@@ -1,5 +1,4 @@
-import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
-const file = 'userinfo.js';
+import { type CommandInteraction, SlashCommandBuilder, EmbedBuilder } from 'discord.js';
 
 export const data = new SlashCommandBuilder()
     .setName('userinfo')
@@ -7,14 +6,19 @@ export const data = new SlashCommandBuilder()
     .addUserOption(option => option.setName('utilisateur')
         .setDescription('Mentionnez un utilisateur ou entrez une ID utilisateur')
         .setRequired(false));
-export async function execute(interaction) {
-    const user = interaction.options.getUser('utilisateur') || interaction.user;
+export async function execute(interaction: CommandInteraction) {
+    const user = interaction.options.get('utilisateur')?.user || interaction.user;
+
+    if (!interaction.guild) {
+        interaction.reply('Erreur : Vous devez être sur un serveur Discord.')
+        return;
+    }
     const member = await interaction.guild.members.fetch(user.id);
 
     const embed = new EmbedBuilder()
         .setColor('#0099ff')
         .setTitle('User Info')
-        .setThumbnail(user.displayAvatarURL({ dynamic: true }))
+        .setThumbnail(user.displayAvatarURL({ forceStatic: false }))
         .addFields(
             { name: 'Nom d\'utilisateur :', value: `${user.username}#${user.discriminator}`, inline: true },
             { name: 'ID :', value: `${user.id}`, inline: true },
@@ -25,10 +29,9 @@ export async function execute(interaction) {
         )
         .setFooter({
             text: 'Demandé par ' + interaction.user.username,
-            iconURL: interaction.user.displayAvatarURL({ dynamic: true })
+            iconURL: interaction.user.displayAvatarURL({ forceStatic: false })
         })
         .setTimestamp();
 
     await interaction.reply({ embeds: [embed] });
-    console.log(`[LOG : ${new Date().toLocaleTimeString()}] Commande ${file} executée par ${interaction.user.tag} (${interaction.user.id})`);
 }

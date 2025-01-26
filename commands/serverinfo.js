@@ -2,7 +2,6 @@ import { SlashCommandBuilder, EmbedBuilder, GuildVerificationLevel, GuildDefault
 import dayjs from 'dayjs';
 import 'https://cdn.skypack.dev/dayjs@1.11.13/locale/fr';
 dayjs.locale('fr')
-const file = 'serverinfo.js';
 
 export const data = new SlashCommandBuilder()
     .setName('serverinfo')
@@ -33,7 +32,6 @@ export async function execute(interaction) {
         .setTimestamp();
 
     await interaction.reply({ embeds: [embed] });
-    console.log(`[LOG : ${new Date().toLocaleTimeString()}] Commande ${file} executée par ${interaction.user.tag} (${interaction.user.id})`);
 }
 
 function getVerificationLevelName(level) {

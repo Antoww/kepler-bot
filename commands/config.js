@@ -1,7 +1,6 @@
 import { SlashCommandBuilder } from 'discord.js';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-const file = 'config.js';
 
 const configFilePath = join(import.meta.dirname, '../database/confserver.json');
 
@@ -41,5 +40,4 @@ export async function execute(interaction) {
     } else {
         await interaction.reply('Paramètre inconnu.', { ephemeral: true });
     }
-    console.log(`[LOG : ${new Date().toLocaleTimeString()}] Commande ${file} executée par ${interaction.user.tag} (${interaction.user.id})`);
 }

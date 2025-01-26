@@ -1,4 +1,4 @@
-import type { SlashCommandBuilder, BaseInteraction, Collection } from "npm:discord.js@^14.17.2";
+import type { SlashCommandBuilder, CommandInteraction, Collection } from "npm:discord.js@^14.17.2";
 
 declare module 'discord.js' {
     export interface Client {
@@ -8,7 +8,7 @@ declare module 'discord.js' {
 
 export interface Command {
     data: SlashCommandBuilder;
-    execute: (interaction: BaseInteraction) => Promise<void>;
+    execute: (interaction: CommandInteraction) => Promise<void>;
 }
 
 export interface Event {
