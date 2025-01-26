@@ -3,7 +3,7 @@
     "processes": [
         {
             "id": "kepler-bot",
-            "cmd" : "demo run --allow-all index.js",
+            "cmd" : "deno run --allow-all index.js",
             "autostart": true
         }
     ]
