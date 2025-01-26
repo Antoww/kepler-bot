@@ -27,6 +27,7 @@ Kepler est un bot Discord actuellement en **alpha**, conçu pour enrichir vos se
 
 ### Alpha
 - **Statut actuel** : Test des fonctionnalités principales, récolte de feedback.
+- **Passage en TypeScript** : Refonte du bot en TypeScript.
 
 ### Beta (Printemps 2025)
 - Intégration de la configuration.
