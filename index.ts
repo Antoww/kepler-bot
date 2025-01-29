@@ -50,16 +50,18 @@ client.once('ready', async (client) => {
     try {
         console.log('Mise à jour des commandes slash...');
         const commands = client.commands.map(command => command.data.toJSON());
-
         await rest.put(
             Routes.applicationCommands(client.user.id),
             { body: commands }
         );
+        console.log(`[LOG : ${new Date().toLocaleTimeString()}] Chargement 50%.`);
 
         console.log('Commandes slash enregistrées avec succès.');
     } catch (error) {
         console.error('Erreur lors de l\'enregistrement des commandes slash :', error);
     }
+    console.log(`[LOG : ${new Date().toLocaleTimeString()}] Chargement 100%.`);
+    console.log(`[LOG : ${new Date().toLocaleTimeString()}] Chargement réussi, bot prêt.`);
 });
 
 // Connexion du client
