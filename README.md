@@ -1,5 +1,7 @@
 # Kepler - Votre compagnon Discord polyvalent 🚀
 
+**WARN : Bot actuellement en développement. Des instabilités et des redémarrages intempestifs sont à prévoir !**
+
 Kepler est un bot Discord actuellement en **alpha**, conçu pour enrichir vos serveurs avec une variété de fonctionnalités techniques, de modération, et des commandes fun pour divertir votre communauté. Simple, efficace, et en constante évolution, Kepler s'adapte à vos besoins pour une expérience utilisateur optimale.
 
 ---
@@ -8,7 +10,7 @@ Kepler est un bot Discord actuellement en **alpha**, conçu pour enrichir vos se
 
 ### 📌 Commandes techniques
 - Récupérez des informations poussées.
-- Fournissez des informations utiles (whois).
+- Obtenez des informations utiles (whois).
 - Ajoutez des intégrations pratiques pour vos besoins techniques.
 
 ### 🛡️ Commandes de modération
@@ -41,7 +43,7 @@ Kepler est un bot Discord actuellement en **alpha**, conçu pour enrichir vos se
 ---
 
 ## 🤝 Contribution
-Votre avis compte ! Partagez vos retours, idées ou rapports de bugs en rejoignant notre serveur Discord ou en créant une issue sur GitHub.
+Votre avis compte ! Partagez vos retours, idées ou rapports de bugs en rejoignant notre serveur [Discord](https://discord.gg/GbavRtUwad) ou en créant une issue sur GitHub.
 
 ---
 
