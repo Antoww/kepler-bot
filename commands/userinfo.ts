@@ -15,8 +15,11 @@ export async function execute(interaction: CommandInteraction) {
         interaction.reply('Erreur : Vous devez être sur un serveur Discord.')
         return;
     }
+
     const user = interaction.options.get('utilisateur')?.user || interaction.user;
     const member = await interaction.guild.members.fetch(user.id);
+    const fetchedUser = await user.fetch();
+    const bannerURL = fetchedUser.bannerURL({ size: 4096, extension: 'webp' });
     const dateUser = dayjs(interaction.user.createdAt).format('DD/MM/YYYY à HH:mm:ss');
     const joinUser = dayjs(member.joinedAt).format('DD/MM/YYYY à HH:mm:ss');
 
@@ -32,11 +35,11 @@ export async function execute(interaction: CommandInteraction) {
             { name: 'Rejoint le :', value: `${joinUser}`, inline: true },
             { name: 'Rôles :', value: `${member.roles.cache.map(role => role.name).join(', ')}`, inline: true }
         )
+        .setImage(bannerURL ?? null)
         .setFooter({
             text: 'Demandé par ' + interaction.user.username,
             iconURL: interaction.user.displayAvatarURL({ forceStatic: false })
         })
         .setTimestamp();
-
     await interaction.reply({ embeds: [embed] });
 }
