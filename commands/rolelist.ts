@@ -18,11 +18,13 @@ export async function execute(interaction: CommandInteraction) {
     const embed = new EmbedBuilder()
         .setColor('Blurple')
         .setTitle('Liste des rôles')
+        .setThumbnail(interaction.guild.iconURL({ forceStatic: false }))
         .addFields(
             //{ name: 'Rôles :', value: roles.join(', '), inline: true },
-            { name: 'Rôles affichés :', value: roles.length > 25 ? '25 premiers rôles' : roles.join(', ') },
+            { name: 'Rôles affichés :', value: roles.length > 25 ? '25 premiers rôles' : roles.join(` \n`) },
             { name: 'Nombre de rôles :', value: roles.length.toString(), inline: true },
         )
+        
         .setFooter({
             text: 'Demandé par ' + interaction.user.username,
             iconURL: interaction.user.displayAvatarURL({ forceStatic: false })
