@@ -1,4 +1,7 @@
 import { type CommandInteraction, SlashCommandBuilder, EmbedBuilder } from 'discord.js';
+import dayjs from 'dayjs';
+import 'https://cdn.skypack.dev/dayjs@1.11.13/locale/fr';
+dayjs.locale('fr')
 
 export const data = new SlashCommandBuilder()
     .setName('userinfo')
@@ -7,13 +10,15 @@ export const data = new SlashCommandBuilder()
         .setDescription('Mentionnez un utilisateur ou entrez une ID utilisateur')
         .setRequired(false));
 export async function execute(interaction: CommandInteraction) {
-    const user = interaction.options.get('utilisateur')?.user || interaction.user;
 
     if (!interaction.guild) {
         interaction.reply('Erreur : Vous devez être sur un serveur Discord.')
         return;
     }
+    const user = interaction.options.get('utilisateur')?.user || interaction.user;
     const member = await interaction.guild.members.fetch(user.id);
+    const dateUser = dayjs(interaction.user.createdAt).format('DD/MM/YYYY à HH:mm:ss');
+    const joinUser = dayjs(member.joinedAt).format('DD/MM/YYYY à HH:mm:ss');
 
     const embed = new EmbedBuilder()
         .setColor('#0099ff')
@@ -23,8 +28,8 @@ export async function execute(interaction: CommandInteraction) {
             { name: 'Nom d\'utilisateur :', value: `${user.username}#${user.discriminator}`, inline: true },
             { name: 'ID :', value: `${user.id}`, inline: true },
             { name: 'Bot :', value: `${user.bot ? 'Oui' : 'Non'}`, inline: true },
-            { name: 'Créé le :', value: `${user.createdAt}`, inline: true },
-            { name: 'Rejoint le :', value: `${member.joinedAt}`, inline: true },
+            { name: 'Créé le :', value: `${dateUser}`, inline: true },
+            { name: 'Rejoint le :', value: `${joinUser}`, inline: true },
             { name: 'Rôles :', value: `${member.roles.cache.map(role => role.name).join(', ')}`, inline: true }
         )
         .setFooter({
