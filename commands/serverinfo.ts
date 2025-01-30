@@ -11,7 +11,7 @@ export async function execute(interaction: CommandInteraction) {
         await interaction.reply('Erreur : Impossible de récupérer les informations du serveur.');
         return;
     }
-    const owner = await interaction.guild.fetchOwner(); console.log("error");
+    const owner = await interaction.guild.fetchOwner();
     const dateServeur = dayjs(interaction.guild.createdAt).format('DD/MM/YYYY à HH:mm:ss');
 
     const embed = new EmbedBuilder()
