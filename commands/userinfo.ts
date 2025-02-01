@@ -28,12 +28,19 @@ export async function execute(interaction: CommandInteraction) {
         .setTitle('User Info')
         .setThumbnail(user.displayAvatarURL({ forceStatic: false }))
         .addFields(
+            { name: 'Nom global :', value: `${user.globalName}`, inline: true },
             { name: 'Nom d\'utilisateur :', value: `${user.username}#${user.discriminator}`, inline: true },
             { name: 'ID :', value: `${user.id}`, inline: true },
             { name: 'Bot :', value: `${user.bot ? 'Oui' : 'Non'}`, inline: true },
-            { name: 'Créé le :', value: `${dateUser}`, inline: true },
+            { name: 'Créé le :', value: `${dateUser} (${dayjs().diff(user.createdAt, 'year')} ans)`, inline: true },
             { name: 'Rejoint le :', value: `${joinUser}`, inline: true },
-            { name: 'Rôles :', value: `${member.roles.cache.map(role => role.name).join(', ')}`, inline: true }
+            { name: 'Rôles :', value: `${member.roles.cache.map(role => role.name).join(', ')}`, inline: true },
+            { name : 'Statut :', value: `${member.presence?.status ?? 'inconnu'}`, inline: true },
+            { name : 'Activité :', value: `${member.presence?.activities.map(activity => activity.name).join(', ') ?? 'inconnu'}`, inline: true },
+            { name : 'Statut personnalisé :', value: `${member.presence?.activities.map(activity => activity.state).join(', ') ?? 'inconnu'}`, inline: true },
+            { name : 'URL de la bannière :', value: `[URL](${bannerURL ?? 'Aucune'})`, inline: true },
+            { name : `URL de l'avatar :`, value: `[URL](${user.displayAvatarURL({ forceStatic: false })})`, inline: true },
+
         )
         .setImage(bannerURL ?? null)
         .setFooter({
