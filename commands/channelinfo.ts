@@ -68,6 +68,7 @@ async function sendChannelInfo(interaction: CommandInteraction<CacheType>, chann
     const dateChannel = dayjs(channel.createdAt).format('DD/MM/YYYY à HH:mm:ss');
 
     const embed = new EmbedBuilder()
+        .setAuthor({ name: interaction.client.user?.username, iconURL: interaction.client.user?.displayAvatarURL({ forceStatic: false }) })
         .setColor('#0099ff')
         .setTitle('Channel Info')
         .addFields(

@@ -15,6 +15,7 @@ export async function execute(interaction: CommandInteraction) {
     const dateServeur = dayjs(interaction.guild.createdAt).format('DD/MM/YYYY à HH:mm:ss');
 
     const embed = new EmbedBuilder()
+        .setAuthor({ name: interaction.client.user?.username, iconURL: interaction.client.user?.displayAvatarURL({ forceStatic: false }) })
         .setColor('#0099ff')
         .setTitle('Server Info')
         .addFields(

@@ -16,6 +16,7 @@ export async function execute(interaction: CommandInteraction) {
         const whoisData = await whois(site);
 
         const embed = new EmbedBuilder()
+            .setAuthor({ name: interaction.client.user?.username, iconURL: interaction.client.user?.displayAvatarURL({ forceStatic: false }) })
             .setColor('#0099ff')
             .setTitle(`WHOIS Info de : ${site}`)
             .addFields(

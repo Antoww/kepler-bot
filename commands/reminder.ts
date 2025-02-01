@@ -64,6 +64,7 @@ export async function execute(interaction: CommandInteraction) {
     setTimeout(async () => {
         const user = await interaction.client.users.fetch(userId);
         const embed = new EmbedBuilder()
+            .setAuthor({ name: interaction.client.user?.username, iconURL: interaction.client.user?.displayAvatarURL({ forceStatic: false }) })
             .setColor('#0099ff')
             .setTitle('Rappel')
             .setDescription(message)

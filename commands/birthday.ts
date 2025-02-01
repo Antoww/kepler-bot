@@ -60,6 +60,7 @@ export async function execute(interaction: CommandInteraction) {
         const birthdayChannel = interaction.guild.channels.cache.get(birthdayChannelId);
         if (birthdayChannel) {
             const embed = new EmbedBuilder()
+                .setAuthor({ name: interaction.client.user?.username, iconURL: interaction.client.user?.displayAvatarURL({ forceStatic: false }) })
                 .setColor('#0099ff')
                 .setTitle('Joyeux Anniversaire!')
                 .setDescription(`Joyeux anniversaire <@${userId}>! 🎉🎂`)

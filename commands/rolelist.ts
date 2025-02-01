@@ -16,6 +16,7 @@ export async function execute(interaction: CommandInteraction) {
         .map(role => role.toString());
 
     const embed = new EmbedBuilder()
+        .setAuthor({ name: interaction.client.user?.username, iconURL: interaction.client.user?.displayAvatarURL({ forceStatic: false }) })
         .setColor('Blurple')
         .setTitle('Liste des rôles')
         .setThumbnail(interaction.guild.iconURL({ forceStatic: false }))

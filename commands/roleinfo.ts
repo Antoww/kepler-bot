@@ -26,6 +26,7 @@ export async function execute(interaction: CommandInteraction) {
     const dateRole = dayjs(role.createdAt).format('DD/MM/YYYY à HH:mm:ss');
     
     const embed = new EmbedBuilder()
+        .setAuthor({ name: interaction.client.user?.username, iconURL: interaction.client.user?.displayAvatarURL({ forceStatic: false }) })
         .setColor('DarkAqua')
         .setTitle('Role Info')
         .setThumbnail(interaction.guild.iconURL({ forceStatic: false }))
