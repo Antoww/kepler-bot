@@ -3,8 +3,21 @@ import { type CommandInteraction, SlashCommandBuilder, EmbedBuilder } from 'disc
 
 export const data = new SlashCommandBuilder()
     .setName('genpass')
-    .setDescription('Génère un mot de passe aléatoire.');
+    .setDescription('Génère un mot de passe aléatoire.')
+    .addStringOption(option => option.setName('longueur')
+        .setDescription('Longueur du mot de passe')
+        .setRequired(false));
+
 export async function execute(interaction: CommandInteraction) {
+    const charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()';
+    const length = interaction.options.get("longueur")?.value as number || 12; // Default length
+
+    if (length > 100) {
+        await interaction.reply({ content: 'La longueur du mot de passe ne peut pas dépasser 100 caractères.', ephemeral: true});
+        return;
+
+    }
+
     const generatePassword = (length: number, charset: string | any[]) => {
         let password = '';
         for (let i = 0; i < length; i++) {
@@ -13,9 +26,6 @@ export async function execute(interaction: CommandInteraction) {
         }
         return password;
     };
-
-    const charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()';
-    const length = 12; // Default length
 
     const password = generatePassword(length, charset);
 
