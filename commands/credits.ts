@@ -8,7 +8,7 @@ export async function execute(interaction: CommandInteraction) {
 
     const embed = new EmbedBuilder()
         .setAuthor({ name: interaction.client.user?.username, iconURL: interaction.client.user?.displayAvatarURL({ forceStatic: false }) })
-        .setColor('#0099ff')
+        .setColor('#FFD700')
         .setTitle('Crédits')
         .setImage('https://imgur.com/1CsxfGp.png')
         .addFields(
