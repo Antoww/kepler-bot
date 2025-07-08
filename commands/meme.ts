@@ -1,6 +1,19 @@
 import { type CommandInteraction, SlashCommandBuilder, EmbedBuilder, Collection } from 'discord.js';
 
-const subreddits = ['FrenchMemes', 'memesfrancais', 'memesfrancophones', 'france'];
+const subreddits = [
+  'FrenchMemes',
+  'memesfrancais',
+  'memesfrancophones',
+  'france',
+  'memesfr',
+  'humour',
+  'humourfr',
+  'MemesFrancaisRepost',
+  'MemesFrance',
+  'MemesFrancais',
+  'memesfrance',
+  'memesfrancaisofficiel'
+];
 const cooldowns = new Collection<string, number>();
 
 export const data = new SlashCommandBuilder()
