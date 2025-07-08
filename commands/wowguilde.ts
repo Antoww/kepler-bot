@@ -3,7 +3,7 @@
 import { ApplicationCommandOptionType, CommandInteraction, EmbedBuilder } from "discord.js";
 import { SlashCommandBuilder } from "npm:@discordjs/builders";
 
-module.exports = {
+export default {
   data: new SlashCommandBuilder()
     .setName("wowguilde")
     .setDescription("Affiche les infos d'une guilde World of Warcraft (membres, avancement, classement)")
