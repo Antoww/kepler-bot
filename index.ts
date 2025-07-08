@@ -21,6 +21,7 @@ for (const file of Deno.readDirSync(commandsPath)) {
 
     if (command.data && command.data.name) {
         client.commands.set(command.data.name, command);
+        console.log(`[LOG : ${new Date().toLocaleTimeString()}] Commande chargée : ${command.data.name}`);
     } else {
         console.error(`[LOG : ${new Date().toLocaleDateString()}] La commande dans ${filePath} n'a pas de propriété 'data' ou 'name' définie.`);
     }
