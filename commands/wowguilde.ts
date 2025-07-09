@@ -58,11 +58,11 @@ export const data = new SlashCommandBuilder()
   );
 
 export async function execute(interaction: ChatInputCommandInteraction) {
+  const nom = interaction.options.getString("nom", true);
+  const serveur = interaction.options.getString("serveur", true);
+  const region = interaction.options.getString("region")?.toLowerCase() || "eu";
+  
   try {
-    const nom = interaction.options.getString("nom", true);
-    const serveur = interaction.options.getString("serveur", true);
-    const region = interaction.options.getString("region")?.toLowerCase() || "eu";
-    
     await interaction.deferReply({ ephemeral: false });
 
     // Générer des variantes pour maximiser les chances
@@ -110,7 +110,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       .filter(r => r.progress && r.progress !== "0/0");
 
     // Emojis décoratifs
-    const emojiWoW = "🛡️"; // Remplace par l'ID de ton emoji WoW custom si tu en as un, sinon laisse vide ou mets un emoji unicode
+    const emojiWoW = "🛡️";
     const emojiRaid = "🗡️";
     const emojiServeur = "🌍";
     const emojiRegion = "🌐";
@@ -155,15 +155,17 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   } catch (error) {
     console.error("Erreur dans la commande wowguilde:", error);
     
-    // Vérifier si l'interaction a déjà été différée
+    // Gestion d'erreur simplifiée
+    const errorMessage = "❌ Une erreur s'est produite lors de l'exécution de la commande.";
+    
     if (!interaction.deferred && !interaction.replied) {
       await interaction.reply({
-        content: "❌ Une erreur s'est produite lors de l'exécution de la commande.",
+        content: errorMessage,
         ephemeral: true
       });
     } else {
       await interaction.editReply({
-        content: "❌ Une erreur s'est produite lors de l'exécution de la commande."
+        content: errorMessage
       });
     }
   }
