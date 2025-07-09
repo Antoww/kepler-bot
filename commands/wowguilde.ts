@@ -4,9 +4,7 @@ import { SlashCommandBuilder, ChatInputCommandInteraction, EmbedBuilder } from "
 import fetch from "npm:node-fetch";
 
 const RAID_MAPPING: Record<string, string> = {
-  "blackrock-depths": "Profondeurs de Rochenoire",
   "liberation-of-undermine": "Libération de Terremine",
-  "manaforge-omega": "Manaforge Oméga",
   "nerubar-palace": "Palais des Nerub'ar",
 };
 const RAID_KEYS = Object.keys(RAID_MAPPING);
@@ -124,7 +122,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       value: raidsTWW.map(r => `• **${r.nom}** : ${r.progress}`).join("\n"),
     });
   } else {
-    embed.addFields({ name: `${emojiRaid} Progression raids The War Within`, value: "Aucune progression trouvée." });
+    embed.addFields({ name: `${emojiRaid} Progression The War Within`, value: "Aucune progression trouvée." });
   }
 
   // Ajout de la section Liens utiles
