@@ -30,12 +30,40 @@ function slugify(str: string) {
     .replace(/(^-|-$)/g, '');
 }
 
+async function fetchWowProgressRank(region: string, serveur: string, nom: string): Promise<{rank: string|null, url: string}> {
+  const slugServeur = slugify(serveur);
+  const slugNom = slugify(nom);
+  const wowpUrl = `https://www.wowprogress.com/guild/${region}/${slugServeur}/${slugNom}/json_rank`;
+  const pageUrl = `https://www.wowprogress.com/guild/${region}/${slugServeur}/${slugNom}`;
+  try {
+    const resWP = await fetch(wowpUrl);
+    if (resWP.ok) {
+      const dataWP = await resWP.json();
+      if (dataWP && dataWP.realm_rank) {
+        return { rank: `#${dataWP.realm_rank}`, url: pageUrl };
+      }
+    }
+  } catch {}
+  // Si pas de JSON, on tente de parser la page HTML
+  try {
+    const resHTML = await fetch(pageUrl);
+    if (resHTML.ok) {
+      const html = await resHTML.text();
+      const match = html.match(/<div[^>]*class="rank[^>]*>\s*Realm Rank:\s*<span[^>]*>(#[0-9]+)<\/span>/i);
+      if (match && match[1]) {
+        return { rank: match[1], url: pageUrl };
+      }
+    }
+  } catch {}
+  return { rank: null, url: pageUrl };
+}
+
 export async function execute(interaction: CommandInteraction) {
   const nom = interaction.options.get("nom")?.value as string;
   const serveur = interaction.options.get("serveur")?.value as string;
   const region = interaction.options.get("region")?.value as string;
 
-  await interaction.reply({ content: `Recherche des infos pour la guilde **${nom}** sur **${serveur}** (${region})...`, ephemeral: true });
+  await interaction.reply({ content: `🔎 Recherche des infos pour la guilde **${nom}** sur **${serveur}** (${region})...`, ephemeral: true });
 
   let classementWowProgress = null;
   let classementWowProgressUrl = null;
@@ -65,39 +93,31 @@ export async function execute(interaction: CommandInteraction) {
       }
     }
 
-    // Récupération du classement WowProgress
-    try {
-      const slugServeur = slugify(serveur);
-      const slugNom = slugify(nom);
-      const wowpUrl = `https://www.wowprogress.com/guild/${region}/${slugServeur}/${slugNom}/json_rank`;
-      classementWowProgressUrl = `https://www.wowprogress.com/guild/${region}/${slugServeur}/${slugNom}`;
-      const resWP = await fetch(wowpUrl);
-      if (resWP.ok) {
-        const dataWP = await resWP.json();
-        if (dataWP && dataWP.realm_rank) {
-          classementWowProgress = `#${dataWP.realm_rank}`;
-        }
-      }
-    } catch (e) {
-      // Ignore erreur WowProgress
-    }
+    // Récupération du classement WowProgress (JSON puis HTML)
+    const wowp = await fetchWowProgressRank(region, serveur, nom);
+    classementWowProgress = wowp.rank;
+    classementWowProgressUrl = wowp.url;
 
-    // Création de l'embed
+    // Thumbnail (logo WoW)
+    const thumbnail = 'https://static.wikia.nocookie.net/wowpedia/images/6/6b/WoW_icon.png';
+
+    // Création de l'embed amélioré
     const embed = new EmbedBuilder()
-      .setTitle(`Guilde : ${data.name}`)
-      .setDescription(`Serveur : ${data.realm} (${data.region.toUpperCase()})`)
-      .setColor(0x0099ff)
+      .setTitle(`🛡️ Guilde : ${data.name}`)
+      .setDescription(`**Serveur :** ${data.realm} (${data.region.toUpperCase()})`)
+      .setColor(0x1a2634)
+      .setThumbnail(thumbnail)
       .addFields(
-        { name: "Nombre de membres", value: `${nbMembres}`, inline: true },
-        { name: "Avancement PvE", value: avancement, inline: true },
-        { name: "Classement serveur (Raider.IO)", value: classement, inline: true },
-        { name: "Classement serveur (WowProgress)", value: classementWowProgress ? classementWowProgress : "Non trouvé", inline: true }
+        { name: "👥 Membres", value: `${nbMembres}`, inline: true },
+        { name: "🏆 Avancement PvE", value: avancement, inline: true },
+        { name: "📊 Classement serveur (Raider.IO)", value: classement, inline: true },
+        { name: "🌍 Classement serveur (WowProgress)", value: classementWowProgress ? `[${classementWowProgress}](${classementWowProgressUrl})` : `[Non trouvé](${classementWowProgressUrl})`, inline: true }
       )
-      .setFooter({ text: "Données Raider.IO & WowProgress" });
+      .setFooter({ text: "Sources : Raider.IO & WowProgress", iconURL: thumbnail });
     if (classementWowProgressUrl) embed.setURL(classementWowProgressUrl);
 
     await interaction.editReply({ content: null, embeds: [embed] });
   } catch (err: any) {
-    await interaction.editReply({ content: `Erreur : ${err.message || err}` });
+    await interaction.editReply({ content: `❌ Erreur : ${err.message || err}` });
   }
 } 
