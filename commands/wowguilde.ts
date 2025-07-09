@@ -87,7 +87,9 @@ export async function execute(interaction: CommandInteraction) {
       const lastRaids = raidKeys.slice(-2); // 2 derniers raids
       for (const raid of lastRaids) {
         const raidData = data.raid_progression[raid];
-        avancements.push(`**${raidData.name}** : ${raidData.summary}`);
+        const raidName = raidData && raidData.name ? raidData.name : raid;
+        const raidSummary = raidData && raidData.summary ? raidData.summary : 'Non disponible';
+        avancements.push(`• **${raidName}** : ${raidSummary}`);
       }
     }
     let avancement = avancements.length > 0 ? avancements.join('\n') : 'Non disponible';
@@ -125,8 +127,6 @@ export async function execute(interaction: CommandInteraction) {
       .addFields(
         { name: "👥 Membres", value: `${nbMembres}`, inline: true },
         { name: "⚔️ Faction", value: faction, inline: true },
-        { name: "📊 Classement serveur (Raider.IO)", value: classement, inline: true },
-        { name: "🌍 Classement serveur (WowProgress)", value: classementWowProgress ? `[${classementWowProgress}](${classementWowProgressUrl})` : `[Non trouvé](${classementWowProgressUrl})`, inline: true },
         { name: "🏆 Avancement PvE (derniers raids)", value: avancement, inline: false },
         { name: "🔗 Lien Raider.IO", value: `[Voir sur Raider.IO](${lienRaiderIO})`, inline: true },
         { name: "🔗 Armurerie Blizzard", value: `[Voir sur l'armurerie](${lienArmurerie})`, inline: true }
