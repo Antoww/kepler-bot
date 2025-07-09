@@ -135,12 +135,14 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
   if (crest) embed.setThumbnail(crest);
 
-  // Footer avec heure, pp de l'utilisateur
+  // Footer avec heure, pp de l'utilisateur, nom et nombre de membres
   const now = new Date();
   const heure = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
   const userPp = interaction.user.displayAvatarURL?.() || undefined;
+  const userName = interaction.user.globalName || interaction.user.username;
+  const nbMembres = raiderData.member_count ? `• Membres : ${raiderData.member_count}` : "";
   embed.setFooter({
-    text: `Exécuté à ${heure}`,
+    text: `Exécuté à ${heure} par ${userName} ${nbMembres}`.trim(),
     iconURL: userPp
   });
 
