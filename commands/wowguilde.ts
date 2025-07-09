@@ -58,6 +58,18 @@ async function fetchWowProgressRank(region: string, serveur: string, nom: string
   return { rank: null, url: pageUrl };
 }
 
+// Mapping noms internes -> noms français (TWW)
+const RAID_FR: Record<string, string> = {
+  "nerub-ar-palace": "Palais des Nerub’ar",
+  "liberation-of-terremine": "La Libération de Terremine"
+};
+
+// Liste des raids de l'extension en cours (The War Within)
+const RAIDS_TWW = [
+  "nerub-ar-palace",
+  "liberation-of-terremine"
+];
+
 export async function execute(interaction: CommandInteraction) {
   const nom = interaction.options.get("nom")?.value as string;
   const serveur = interaction.options.get("serveur")?.value as string;
@@ -80,15 +92,16 @@ export async function execute(interaction: CommandInteraction) {
     const nbMembres = data.members ? data.members.length : "?";
     // Faction
     const faction = data.faction ? (data.faction === 'alliance' ? 'Alliance 🟦' : 'Horde 🟥') : 'Inconnue';
-    // Avancement PvE (2 derniers raids)
+    // Avancement PvE (raids sortis de l'extension en cours, nom FR)
     let avancements = [];
     if (data.raid_progression) {
-      const raidKeys = Object.keys(data.raid_progression);
-      const lastRaids = raidKeys.slice(-2); // 2 derniers raids
-      for (const raid of lastRaids) {
-        const raidData = data.raid_progression[raid];
-        const raidName = raidData && raidData.name ? raidData.name : raid;
-        const raidSummary = raidData && raidData.summary ? raidData.summary : 'Non disponible';
+      for (const raidKey of RAIDS_TWW) {
+        const raidData = data.raid_progression[raidKey];
+        if (!raidData) continue;
+        // On ignore les raids à 0/0 ou sans résumé
+        if (!raidData.summary || raidData.summary.match(/^0\s*\/\s*0/)) continue;
+        const raidName = RAID_FR[raidKey] || raidData.name || raidKey;
+        const raidSummary = raidData.summary || 'Non disponible';
         avancements.push(`• **${raidName}** : ${raidSummary}`);
       }
     }
@@ -115,8 +128,8 @@ export async function execute(interaction: CommandInteraction) {
     const lienRaiderIO = data.profile_url || `https://raider.io/guild/${region}/${encodeURIComponent(serveur)}/${encodeURIComponent(nom)}`;
     // Lien Armurerie Blizzard
     const lienArmurerie = `https://worldofwarcraft.com/${region}/guild/${slugify(serveur)}/${slugify(nom)}`;
-    // Thumbnail (logo WoW)
-    const thumbnail = 'https://static.wikia.nocookie.net/wowpedia/images/6/6b/WoW_icon.png';
+    // Thumbnail (logo de la guilde si dispo, sinon logo WoW)
+    const thumbnail = data.profile_banner_url || 'https://static.wikia.nocookie.net/wowpedia/images/6/6b/WoW_icon.png';
 
     // Création de l'embed amélioré
     const embed = new EmbedBuilder()
