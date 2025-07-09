@@ -19,22 +19,21 @@ function slugify(str: string) {
     .replace(/(^-|-$)/g, '');
 }
 
+// Tente de trouver la guilde sur Raider.IO en testant plusieurs variantes
 async function tryFetchGuild(region: string, realmVariants: string[], guildVariants: string[]) {
-  const tested: string[] = [];
   for (const realm of realmVariants) {
     for (const guild of guildVariants) {
-      const url = `https://raider.io/api/v1/guilds/profile?region=${region}&realm=${encodeURIComponent(realm)}&name=${encodeURIComponent(guild)}&fields=raid_progression,raid_rankings,profile_url,member_count,faction,crest_url`;
-      tested.push(url);
+      const url = `https://raider.io/api/v1/guilds/profile?region=${region}&realm=${encodeURIComponent(realm)}&name=${encodeURIComponent(guild)}&fields=raid_progression,profile_url,faction,crest_url`;
       const resp = await fetch(url);
       if (resp.ok) {
         const data: any = await resp.json();
         if (data && data.name) {
-          return { data, url, tested };
+          return { data, url };
         }
       }
     }
   }
-  return { data: null, url: null, tested };
+  return { data: null, url: null };
 }
 
 export const data = new SlashCommandBuilder()
@@ -78,27 +77,16 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     nom.toLowerCase(),
   ];
 
-  // Essayer toutes les variantes
-  const { data: raiderData, url: foundUrl, tested }: { data: any, url: string|null, tested: string[] } = await tryFetchGuild(region, realmVariants, guildVariants);
+  // Recherche Raider.IO
+  const { data: raiderData, url: foundUrl }: { data: any, url: string|null } = await tryFetchGuild(region, realmVariants, guildVariants);
 
-  // Récupération WowProgress (classement serveur)
+  // Génération des liens utiles
   const wowpUrl = `https://www.wowprogress.com/guild/${region.toUpperCase()}/${encodeURIComponent(serveur.replace(/ /g, "-"))}/${encodeURIComponent(nom.replace(/ /g, "-"))}`;
-  let wowpHtml: string | null = null;
-  let classementWowp: string | null = null;
-  try {
-    const resp = await fetch(wowpUrl);
-    if (resp.ok) {
-      wowpHtml = await resp.text();
-      if (wowpHtml) {
-        const match = wowpHtml.match(/Server Rank:\s*#(\d+)/i);
-        if (match) classementWowp = `#${match[1]}`;
-      }
-    }
-  } catch {}
+  const lienRaider = raiderData?.profile_url || foundUrl || "https://raider.io/";
 
   if (!raiderData) {
     await interaction.editReply({
-      content: `❌ Impossible de trouver la guilde sur Raider.IO après avoir testé plusieurs variantes.\nVariantes testées :\n${tested.map(u => '`' + u + '`').join('\n')}`
+      content: `❌ Impossible de trouver la guilde sur Raider.IO. Vérifie l'orthographe ou la région.`
     });
     return;
   }
@@ -106,39 +94,28 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   // Infos de base
   const nomGuilde = raiderData.name || nom;
   const faction = raiderData.faction === "alliance" ? "Alliance" : raiderData.faction === "horde" ? "Horde" : "?";
-  const membres = raiderData.member_count || "?";
-  const crest = raiderData.crest_url && raiderData.crest_url.startsWith("http") ? raiderData.crest_url : null;
-  const lienRaider = raiderData.profile_url || foundUrl;
-  const armoryUrl = `https://worldofwarcraft.blizzard.com/fr-fr/guild/${region}/${encodeURIComponent(realmVariants[0].replace(/ /g, "-").toLowerCase())}/${encodeURIComponent(guildVariants[0].replace(/ /g, "-").toLowerCase())}`;
+  const crest = (typeof raiderData.crest_url === "string" && /^https?:\/\/.+\.(png|jpg|jpeg|webp|gif)$/i.test(raiderData.crest_url)) ? raiderData.crest_url : null;
 
   // Progression raids TWW
   const raids = raiderData.raid_progression || {};
   const raidsTWW = RAID_KEYS
     .map(key => ({
-      key,
       nom: RAID_MAPPING[key],
       progress: raids[key]?.summary || null,
-      ranking: raiderData.raid_rankings?.[key]?.world || null,
-      rankingServer: raiderData.raid_rankings?.[key]?.realm || null,
     }))
     .filter(r => r.progress && r.progress !== "0/0");
 
   // Construction de l'embed
   const embed = new EmbedBuilder()
-    .setTitle(`Guilde ${nomGuilde} (${serveur})`)
-    .setDescription(`Faction : **${faction}**\nMembres : **${membres}**`)
+    .setTitle(`Guilde ${nomGuilde}`)
+    .setDescription(`Serveur : **${serveur}**\nRégion : **${region.toUpperCase()}**\nFaction : **${faction}**`)
     .setColor(faction === "Alliance" ? 0x0070dd : faction === "Horde" ? 0xc41e3a : 0xaaaaaa)
-    .setURL(lienRaider)
-    .addFields(
-      { name: "Classement serveur (WowProgress)", value: classementWowp || "Non trouvé", inline: true },
-      { name: "Classement serveur (Raider.IO)", value: raidsTWW.length > 0 && raidsTWW[0].rankingServer ? `#${raidsTWW[0].rankingServer}` : "Non trouvé", inline: true },
-      { name: "Liens utiles", value: `[Raider.IO](${lienRaider}) | [Armurerie](${armoryUrl}) | [WowProgress](${wowpUrl})` }
-    );
+    .setFooter({ text: `Raider.IO : ${lienRaider} | WowProgress : ${wowpUrl}` });
 
   if (raidsTWW.length > 0) {
     embed.addFields({
       name: `Progression raids The War Within`,
-      value: raidsTWW.map(r => `**${r.nom}** : ${r.progress} (Serveur: ${r.rankingServer ? `#${r.rankingServer}` : "?"}, Monde: ${r.ranking ? `#${r.ranking}` : "?"})`).join("\n"),
+      value: raidsTWW.map(r => `• **${r.nom}** : ${r.progress}`).join("\n"),
     });
   } else {
     embed.addFields({ name: "Progression raids The War Within", value: "Aucune progression trouvée." });
