@@ -133,17 +133,18 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     value: `[Raider.IO](${lienRaider}) | [WowProgress](${wowpUrl})`
   });
 
-  if (crest) embed.setThumbnail(crest);
+  if (crest && crest.startsWith("http")) embed.setThumbnail(crest);
 
   // Footer avec heure, pp de l'utilisateur, nom et nombre de membres
   const now = new Date();
   const heure = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
   const userPp = interaction.user.displayAvatarURL?.() || undefined;
+  const safeUserPp = (typeof userPp === "string" && userPp.startsWith("http")) ? userPp : undefined;
   const userName = interaction.user.globalName || interaction.user.username;
   const nbMembres = raiderData.member_count ? `• Membres : ${raiderData.member_count}` : "";
   embed.setFooter({
     text: `Exécuté à ${heure} par ${userName} ${nbMembres}`.trim(),
-    iconURL: userPp
+    iconURL: safeUserPp
   });
 
   await interaction.editReply({ embeds: [embed] });
