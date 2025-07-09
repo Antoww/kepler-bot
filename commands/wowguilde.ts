@@ -11,6 +11,32 @@ const RAID_MAPPING: Record<string, string> = {
 };
 const RAID_KEYS = Object.keys(RAID_MAPPING);
 
+function slugify(str: string) {
+  return str
+    .toLowerCase()
+    .normalize('NFD').replace(/\p{Diacritic}/gu, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '');
+}
+
+async function tryFetchGuild(region: string, realmVariants: string[], guildVariants: string[]) {
+  const tested: string[] = [];
+  for (const realm of realmVariants) {
+    for (const guild of guildVariants) {
+      const url = `https://raider.io/api/v1/guilds/profile?region=${region}&realm=${encodeURIComponent(realm)}&name=${encodeURIComponent(guild)}&fields=raid_progression,raid_rankings,profile_url,member_count,faction,crest_url`;
+      tested.push(url);
+      const resp = await fetch(url);
+      if (resp.ok) {
+        const data: any = await resp.json();
+        if (data && data.name) {
+          return { data, url, tested };
+        }
+      }
+    }
+  }
+  return { data: null, url: null, tested };
+}
+
 export const data = new SlashCommandBuilder()
   .setName("wowguilde")
   .setDescription("Affiche les infos d'une guilde World of Warcraft (The War Within)")
@@ -23,57 +49,56 @@ export const data = new SlashCommandBuilder()
     option.setName("serveur")
       .setDescription("Nom du serveur (ex: Ysondre)")
       .setRequired(true)
+  )
+  .addStringOption(option =>
+    option.setName("region")
+      .setDescription("Région (eu, us, kr, tw). Par défaut : eu")
+      .setRequired(true)
   );
 
 export async function execute(interaction: ChatInputCommandInteraction) {
   const nom = interaction.options.getString("nom", true);
   const serveur = interaction.options.getString("serveur", true);
+  const region = interaction.options.getString("region")?.toLowerCase() || "eu";
   await interaction.deferReply({ ephemeral: false });
 
-  // Formatage pour API
-  const region = "eu"; // Peut être adapté si besoin
-  const realm = serveur.replace(/ /g, "-").toLowerCase();
-  const guild = nom.replace(/ /g, "-").toLowerCase();
+  // Générer des variantes pour maximiser les chances
+  const realmVariants = [
+    serveur,
+    serveur.replace(/ /g, "-"),
+    serveur.replace(/ /g, "").toLowerCase(),
+    slugify(serveur),
+    serveur.toLowerCase(),
+  ];
+  const guildVariants = [
+    nom,
+    nom.replace(/ /g, "-"),
+    nom.replace(/ /g, "").toLowerCase(),
+    slugify(nom),
+    nom.toLowerCase(),
+  ];
 
-  // URLs API
-  const raiderUrl = `https://raider.io/api/v1/guilds/profile?region=${region}&realm=${encodeURIComponent(realm)}&name=${encodeURIComponent(guild)}&fields=raid_progression,raid_rankings,profile_url,member_count,faction,crest_url`;
-  const wowpUrl = `https://www.wowprogress.com/guild/${region.toUpperCase()}/${encodeURIComponent(serveur.replace(/ /g, "-"))}/${encodeURIComponent(nom.replace(/ /g, "-"))}`;
-  const armoryUrl = `https://worldofwarcraft.blizzard.com/fr-fr/guild/${region}/${encodeURIComponent(realm)}/${encodeURIComponent(guild)}`;
-
-  let raiderData: any = null;
-  let wowpHtml: string | null = null;
-  let classementWowp: string | null = null;
-  let erreur = false;
-  let erreurMsg = "";
-
-  // Récupération Raider.IO
-  try {
-    const resp = await fetch(raiderUrl);
-    if (!resp.ok) throw new Error("Guilde introuvable sur Raider.IO");
-    raiderData = await resp.json();
-  } catch (e: any) {
-    erreur = true;
-    erreurMsg = `Erreur Raider.IO : ${e.message}`;
-  }
+  // Essayer toutes les variantes
+  const { data: raiderData, url: foundUrl, tested }: { data: any, url: string|null, tested: string[] } = await tryFetchGuild(region, realmVariants, guildVariants);
 
   // Récupération WowProgress (classement serveur)
+  const wowpUrl = `https://www.wowprogress.com/guild/${region.toUpperCase()}/${encodeURIComponent(serveur.replace(/ /g, "-"))}/${encodeURIComponent(nom.replace(/ /g, "-"))}`;
+  let wowpHtml: string | null = null;
+  let classementWowp: string | null = null;
   try {
     const resp = await fetch(wowpUrl);
     if (resp.ok) {
       wowpHtml = await resp.text();
-      if (wowpHtml) { // Correction : wowpHtml peut être null
-        // Extraction du classement serveur (regex sur la page HTML)
+      if (wowpHtml) {
         const match = wowpHtml.match(/Server Rank:\s*#(\d+)/i);
         if (match) classementWowp = `#${match[1]}`;
       }
     }
-  } catch (e) {
-    // Silencieux, pas bloquant
-  }
+  } catch {}
 
-  if (erreur || !raiderData) {
+  if (!raiderData) {
     await interaction.editReply({
-      content: `❌ Impossible de récupérer les infos de la guilde. ${erreurMsg}`
+      content: `❌ Impossible de trouver la guilde sur Raider.IO après avoir testé plusieurs variantes.\nVariantes testées :\n${tested.map(u => '`' + u + '`').join('\n')}`
     });
     return;
   }
@@ -83,7 +108,8 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   const faction = raiderData.faction === "alliance" ? "Alliance" : raiderData.faction === "horde" ? "Horde" : "?";
   const membres = raiderData.member_count || "?";
   const crest = raiderData.crest_url && raiderData.crest_url.startsWith("http") ? raiderData.crest_url : null;
-  const lienRaider = raiderData.profile_url || raiderUrl;
+  const lienRaider = raiderData.profile_url || foundUrl;
+  const armoryUrl = `https://worldofwarcraft.blizzard.com/fr-fr/guild/${region}/${encodeURIComponent(realmVariants[0].replace(/ /g, "-").toLowerCase())}/${encodeURIComponent(guildVariants[0].replace(/ /g, "-").toLowerCase())}`;
 
   // Progression raids TWW
   const raids = raiderData.raid_progression || {};
