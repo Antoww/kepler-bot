@@ -5,9 +5,9 @@ import fetch from "npm:node-fetch";
 
 const RAID_MAPPING: Record<string, string> = {
   "blackrock-depths": "Profondeurs de Rochenoire",
-  "liberation-of-undermine": "Libération d'Undermine",
+  "liberation-of-undermine": "Libération de Terremine",
   "manaforge-omega": "Manaforge Oméga",
-  "nerubar-palace": "Palais nérubien",
+  "nerubar-palace": "Palais des Nerub'ar",
 };
 const RAID_KEYS = Object.keys(RAID_MAPPING);
 
