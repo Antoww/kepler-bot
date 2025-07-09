@@ -93,7 +93,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
   // Infos de base
   const nomGuilde = raiderData.name || nom;
-  const faction = raiderData.faction === "alliance" ? "Alliance" : raiderData.faction === "horde" ? "Horde" : "?";
+  const faction = raiderData.faction === "alliance" ? "Alliance 🟦" : raiderData.faction === "horde" ? "Horde 🟥" : "?";
   const crest = (typeof raiderData.crest_url === "string" && /^https?:\/\/.+\.(png|jpg|jpeg|webp|gif)$/i.test(raiderData.crest_url)) ? raiderData.crest_url : null;
 
   // Progression raids TWW
@@ -105,23 +105,38 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     }))
     .filter(r => r.progress && r.progress !== "0/0");
 
+  // Emojis décoratifs
+  const emojiWoW = "<:wow:606590483694616584>"; // Remplace par l'ID de ton emoji WoW custom si tu en as un, sinon laisse vide ou mets un emoji unicode
+  const emojiRaid = "🗡️";
+  const emojiServeur = "🌍";
+  const emojiRegion = "🌐";
+  const emojiFaction = raiderData.faction === "alliance" ? "🟦" : raiderData.faction === "horde" ? "🟥" : "❔";
+
   // Construction de l'embed
   const embed = new EmbedBuilder()
-    .setTitle(`Guilde ${nomGuilde}`)
-    .setDescription(`Serveur : **${serveur}**\nRégion : **${region.toUpperCase()}**\nFaction : **${faction}**`)
-    .setColor(faction === "Alliance" ? 0x0070dd : faction === "Horde" ? 0xc41e3a : 0xaaaaaa)
-    .setFooter({ text: `Raider.IO : ${lienRaider} | WowProgress : ${wowpUrl}` });
+    .setTitle(`${emojiWoW} Guilde ${nomGuilde}`)
+    .setDescription(`${emojiServeur} Serveur : **${serveur}**\n${emojiRegion} Région : **${region.toUpperCase()}**\n${emojiFaction} Faction : **${faction}**`)
+    .setColor(raiderData.faction === "alliance" ? 0x0070dd : raiderData.faction === "horde" ? 0xc41e3a : 0xaaaaaa);
 
   if (raidsTWW.length > 0) {
     embed.addFields({
-      name: `Progression raids The War Within`,
+      name: `${emojiRaid} Progression raids The War Within`,
       value: raidsTWW.map(r => `• **${r.nom}** : ${r.progress}`).join("\n"),
     });
   } else {
-    embed.addFields({ name: "Progression raids The War Within", value: "Aucune progression trouvée." });
+    embed.addFields({ name: `${emojiRaid} Progression raids The War Within`, value: "Aucune progression trouvée." });
   }
 
   if (crest) embed.setThumbnail(crest);
+
+  // Footer avec heure, pp de l'utilisateur, liens sources formatés
+  const now = new Date();
+  const heure = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  const userPp = interaction.user.displayAvatarURL?.() || undefined;
+  embed.setFooter({
+    text: `Exécuté à ${heure} • Sources : [Raider.IO](${lienRaider}) | [WowProgress](${wowpUrl})`,
+    iconURL: userPp
+  });
 
   await interaction.editReply({ embeds: [embed] });
 } 
