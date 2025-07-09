@@ -106,7 +106,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     .filter(r => r.progress && r.progress !== "0/0");
 
   // Emojis décoratifs
-  const emojiWoW = "<:wow:606590483694616584>"; // Remplace par l'ID de ton emoji WoW custom si tu en as un, sinon laisse vide ou mets un emoji unicode
+  const emojiWoW = "🛡️"; // Remplace par l'ID de ton emoji WoW custom si tu en as un, sinon laisse vide ou mets un emoji unicode
   const emojiRaid = "🗡️";
   const emojiServeur = "🌍";
   const emojiRegion = "🌐";
@@ -114,7 +114,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
   // Construction de l'embed
   const embed = new EmbedBuilder()
-    .setTitle(`${emojiWoW} Guilde ${nomGuilde}`)
+    .setTitle(`🛡️ Guilde ${nomGuilde}`)
     .setDescription(`${emojiServeur} Serveur : **${serveur}**\n${emojiRegion} Région : **${region.toUpperCase()}**\n${emojiFaction} Faction : **${faction}**`)
     .setColor(raiderData.faction === "alliance" ? 0x0070dd : raiderData.faction === "horde" ? 0xc41e3a : 0xaaaaaa);
 
@@ -127,14 +127,20 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     embed.addFields({ name: `${emojiRaid} Progression raids The War Within`, value: "Aucune progression trouvée." });
   }
 
+  // Ajout de la section Liens utiles
+  embed.addFields({
+    name: "🔗 Liens utiles",
+    value: `[Raider.IO](${lienRaider}) | [WowProgress](${wowpUrl})`
+  });
+
   if (crest) embed.setThumbnail(crest);
 
-  // Footer avec heure, pp de l'utilisateur, liens sources formatés
+  // Footer avec heure, pp de l'utilisateur
   const now = new Date();
   const heure = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
   const userPp = interaction.user.displayAvatarURL?.() || undefined;
   embed.setFooter({
-    text: `Exécuté à ${heure} • Sources : [Raider.IO](${lienRaider}) | [WowProgress](${wowpUrl})`,
+    text: `Exécuté à ${heure}`,
     iconURL: userPp
   });
 
