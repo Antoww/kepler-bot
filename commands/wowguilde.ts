@@ -63,7 +63,8 @@ export async function execute(interaction: CommandInteraction) {
   const serveur = interaction.options.get("serveur")?.value as string;
   const region = interaction.options.get("region")?.value as string;
 
-  await interaction.reply({ content: `🔎 Recherche des infos pour la guilde **${nom}** sur **${serveur}** (${region})...`, ephemeral: true });
+  // Réponse publique
+  await interaction.reply({ content: `🔎 Recherche des infos pour la guilde **${nom}** sur **${serveur}** (${region})...`, ephemeral: false });
 
   let classementWowProgress = null;
   let classementWowProgressUrl = null;
@@ -77,16 +78,26 @@ export async function execute(interaction: CommandInteraction) {
 
     // Nombre de membres
     const nbMembres = data.members ? data.members.length : "?";
-    // Avancement PvE (dernier raid de l'extension)
-    let avancement = "Non disponible";
+    // Faction
+    const faction = data.faction ? (data.faction === 'alliance' ? 'Alliance 🟦' : 'Horde 🟥') : 'Inconnue';
+    // Avancement PvE (2 derniers raids)
+    let avancements = [];
+    if (data.raid_progression) {
+      const raidKeys = Object.keys(data.raid_progression);
+      const lastRaids = raidKeys.slice(-2); // 2 derniers raids
+      for (const raid of lastRaids) {
+        const raidData = data.raid_progression[raid];
+        avancements.push(`**${raidData.name}** : ${raidData.summary}`);
+      }
+    }
+    let avancement = avancements.length > 0 ? avancements.join('\n') : 'Non disponible';
+    // Classement serveur (Raider.IO)
     let classement = "Non classée";
     let dernierRaidName = null;
     if (data.raid_progression) {
       const raidKeys = Object.keys(data.raid_progression);
       if (raidKeys.length > 0) {
         dernierRaidName = raidKeys[raidKeys.length - 1];
-        const dernierRaid = data.raid_progression[dernierRaidName];
-        avancement = dernierRaid && dernierRaid.summary ? `${dernierRaid.summary}` : "Non disponible";
         if (data.raid_rank && data.raid_rank[dernierRaidName] && data.raid_rank[dernierRaidName].realm) {
           classement = `#${data.raid_rank[dernierRaidName].realm}`;
         }
@@ -98,6 +109,10 @@ export async function execute(interaction: CommandInteraction) {
     classementWowProgress = wowp.rank;
     classementWowProgressUrl = wowp.url;
 
+    // Lien Raider.IO
+    const lienRaiderIO = data.profile_url || `https://raider.io/guild/${region}/${encodeURIComponent(serveur)}/${encodeURIComponent(nom)}`;
+    // Lien Armurerie Blizzard
+    const lienArmurerie = `https://worldofwarcraft.com/${region}/guild/${slugify(serveur)}/${slugify(nom)}`;
     // Thumbnail (logo WoW)
     const thumbnail = 'https://static.wikia.nocookie.net/wowpedia/images/6/6b/WoW_icon.png';
 
@@ -109,9 +124,12 @@ export async function execute(interaction: CommandInteraction) {
       .setThumbnail(thumbnail)
       .addFields(
         { name: "👥 Membres", value: `${nbMembres}`, inline: true },
-        { name: "🏆 Avancement PvE", value: avancement, inline: true },
+        { name: "⚔️ Faction", value: faction, inline: true },
         { name: "📊 Classement serveur (Raider.IO)", value: classement, inline: true },
-        { name: "🌍 Classement serveur (WowProgress)", value: classementWowProgress ? `[${classementWowProgress}](${classementWowProgressUrl})` : `[Non trouvé](${classementWowProgressUrl})`, inline: true }
+        { name: "🌍 Classement serveur (WowProgress)", value: classementWowProgress ? `[${classementWowProgress}](${classementWowProgressUrl})` : `[Non trouvé](${classementWowProgressUrl})`, inline: true },
+        { name: "🏆 Avancement PvE (derniers raids)", value: avancement, inline: false },
+        { name: "🔗 Lien Raider.IO", value: `[Voir sur Raider.IO](${lienRaiderIO})`, inline: true },
+        { name: "🔗 Armurerie Blizzard", value: `[Voir sur l'armurerie](${lienArmurerie})`, inline: true }
       )
       .setFooter({ text: "Sources : Raider.IO & WowProgress", iconURL: thumbnail });
     if (classementWowProgressUrl) embed.setURL(classementWowProgressUrl);
