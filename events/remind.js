@@ -1,8 +1,5 @@
-import { existsSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
-
-const reminderFilePath = join(import.meta.dirname, '../database/reminder.json');
+import { getReminder } from '../database/db.ts';
 
 export const name = 'interactionCreate';
 export async function execute(interaction) {
@@ -11,21 +8,14 @@ export async function execute(interaction) {
     const [action, reminderId] = interaction.customId.split('_');
     if (action !== 'repeat') return;
 
-    // Load existing reminders
-    let reminders = {};
-    if (existsSync(reminderFilePath)) {
-        const fileContent = readFileSync(reminderFilePath, 'utf8');
-        if (fileContent) {
-            reminders = JSON.parse(fileContent);
+    try {
+        // Get reminder from database
+        const reminder = await getReminder(parseInt(reminderId));
+        if (!reminder) {
+            return interaction.reply({ content: 'Rappel introuvable.', ephemeral: true });
         }
-    }
 
-    const reminder = reminders[reminderId];
-    if (!reminder) {
-        return interaction.reply({ content: 'Rappel introuvable.', ephemeral: true });
-    }
-
-    const { userId, message, duration } = reminder;
+        const { user_id: userId, message, duration_ms: duration } = reminder;
 
     // Set a timeout to send the reminder again
     setTimeout(async () => {
@@ -56,4 +46,8 @@ export async function execute(interaction) {
     }, duration);
 
     await interaction.reply({ content: 'Le rappel a été répété avec succès!', ephemeral: true });
+    } catch (error) {
+        console.error('Erreur lors de la répétition du rappel:', error);
+        await interaction.reply({ content: 'Erreur lors de la répétition du rappel. Veuillez réessayer.', ephemeral: true });
+    }
 }

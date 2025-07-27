@@ -4,6 +4,7 @@
     "dayjs": "^1.11.13",
     "discord.js": "^14.17.2",
     "dotenv": "^16.4.7",
+    "mysql2": "^3.9.2",
     "whois-json": "^2.0.4"
   },
   "type": "module"

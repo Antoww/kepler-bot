@@ -3,6 +3,7 @@ import type { Event, Command } from './types.d.ts';
 import { Client, Collection, GatewayIntentBits, REST, Routes } from 'discord.js';
 import process from 'node:process';
 import dotenv from 'dotenv';
+import { initDatabase } from './database/db.ts';
 dotenv.config();
 
 // Initialisation du client
@@ -45,6 +46,14 @@ for (const file of Deno.readDirSync(eventsPath)) {
 client.once('ready', async (client) => {
     console.log(`[LOG : ${new Date().toLocaleTimeString()}] Connecté en tant que ${client.user.tag}, nous sommes le ${new Date().toLocaleDateString()} et il est ${new Date().toLocaleTimeString()}`);
     console.log(`[LOG : ${new Date().toLocaleTimeString()}] Prêt à écouter les commandes sur ${client.guilds.cache.size} serveurs.`);
+
+    // Initialiser la base de données
+    try {
+        await initDatabase();
+        console.log(`[LOG : ${new Date().toLocaleTimeString()}] Base de données initialisée avec succès.`);
+    } catch (error) {
+        console.error('Erreur lors de l\'initialisation de la base de données:', error);
+    }
 
     const rest = new REST({ version: '10' }).setToken(process.env.TOKEN as string);
 

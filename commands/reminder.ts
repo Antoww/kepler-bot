@@ -1,9 +1,5 @@
 import { type CommandInteraction, SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
-import path from 'node:path';
-import type { Reminders } from "../types.d.ts";
-
-const reminderFilePath = path.join(Deno.cwd(), './database/reminders.json');
+import { createReminder } from '../database/db.ts';
 
 export const data = new SlashCommandBuilder()
     .setName('reminder')
@@ -44,49 +40,46 @@ export async function execute(interaction: CommandInteraction) {
             return interaction.reply({ content: 'Unité de temps invalide.', ephemeral: true });
     }
 
-    // Load existing reminders
-    let reminders: Reminders = {};
-    if (existsSync(reminderFilePath)) {
-        const fileContent = readFileSync(reminderFilePath, 'utf8');
-        if (fileContent) {
-            reminders = JSON.parse(fileContent);
-        }
+    try {
+        // Save the reminder to database
+        const reminderId = Date.now();
+        const timestamp = reminderId + durationMs;
+        
+        await createReminder(reminderId, userId, message, durationMs, timestamp);
+
+        await interaction.reply({ content: 'Votre rappel a été enregistré avec succès !', ephemeral: true });
+
+        // Set a timeout to send the reminder
+        setTimeout(async () => {
+            const user = await interaction.client.users.fetch(userId);
+            const embed = new EmbedBuilder()
+                .setAuthor({ name: interaction.client.user?.username, iconURL: interaction.client.user?.displayAvatarURL({ forceStatic: false }) })
+                .setColor('#0099ff')
+                .setTitle('Rappel')
+                .setDescription(message)
+                .setFooter({
+                    text: 'Demandé par ' + interaction.user.username,
+                    iconURL: interaction.user.displayAvatarURL({ forceStatic: false })
+                })
+                .setTimestamp();
+
+            const row = new ActionRowBuilder<ButtonBuilder>()
+                .addComponents(
+                    new ButtonBuilder()
+                        .setCustomId(`repeat_${reminderId}`)
+                        .setLabel('Répéter')
+                        .setStyle(ButtonStyle.Primary)
+                );
+
+            try {
+                await user.send({ embeds: [embed], components: [row] });
+            // deno-lint-ignore no-unused-vars
+            } catch (error) {
+                await interaction.followUp({ content: 'Je n\'ai pas pu envoyer le rappel en message privé. Voici votre rappel :', embeds: [embed], components: [row], ephemeral: true });
+            }
+        }, durationMs);
+    } catch (error) {
+        console.error('Erreur lors de la création du rappel:', error);
+        await interaction.reply({ content: 'Erreur lors de la création du rappel. Veuillez réessayer.', ephemeral: true });
     }
-
-    // Save the reminder
-    const reminderId = Date.now();
-    reminders[reminderId] = { userId, message, duration: durationMs, timestamp: reminderId };
-    writeFileSync(reminderFilePath, JSON.stringify(reminders, null, 2));
-
-    await interaction.reply({ content: 'Votre rappel a été enregistré avec succès !', ephemeral: true });
-
-    // Set a timeout to send the reminder
-    setTimeout(async () => {
-        const user = await interaction.client.users.fetch(userId);
-        const embed = new EmbedBuilder()
-            .setAuthor({ name: interaction.client.user?.username, iconURL: interaction.client.user?.displayAvatarURL({ forceStatic: false }) })
-            .setColor('#0099ff')
-            .setTitle('Rappel')
-            .setDescription(message)
-            .setFooter({
-                text: 'Demandé par ' + interaction.user.username,
-                iconURL: interaction.user.displayAvatarURL({ forceStatic: false })
-            })
-            .setTimestamp();
-
-        const row = new ActionRowBuilder<ButtonBuilder>()
-            .addComponents(
-                new ButtonBuilder()
-                    .setCustomId(`repeat_${reminderId}`)
-                    .setLabel('Répéter')
-                    .setStyle(ButtonStyle.Primary)
-            );
-
-        try {
-            await user.send({ embeds: [embed], components: [row] });
-        // deno-lint-ignore no-unused-vars
-        } catch (error) {
-            await interaction.followUp({ content: 'Je n\'ai pas pu envoyer le rappel en message privé. Voici votre rappel :', embeds: [embed], components: [row], ephemeral: true });
-        }
-    }, durationMs);
 }
