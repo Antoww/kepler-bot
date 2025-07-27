@@ -24,7 +24,11 @@ export async function execute(interaction: CommandInteraction) {
     if (interaction.channel?.isTextBased() && interaction.channel.type === ChannelType.GuildText) {
         const textChannel = interaction.channel as TextChannel;
         await textChannel.bulkDelete(amount, true)
-            .then(messages => interaction.reply(`Suppression de ${messages.size} messages.`))
+            .then(messages => {
+                const messageCount = messages.size;
+                const messageText = messageCount === 1 ? 'message' : 'messages';
+                interaction.reply(`Suppression de ${messageCount} ${messageText}.`);
+            })
             .catch(error => {
                 console.error('Erreur lors de la suppression des messages :', error);
                 interaction.reply('Erreur lors de la suppression des messages.');
