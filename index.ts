@@ -1,10 +1,7 @@
 import * as path from "jsr:@std/path";
 import type { Event, Command } from './types.d.ts';
 import { Client, Collection, GatewayIntentBits, REST, Routes } from 'discord.js';
-import process from 'node:process';
-import dotenv from 'dotenv';
 import { initDatabase } from './database/supabase.ts';
-dotenv.config();
 
 // Initialisation du client
 const client = new Client({ 
@@ -78,7 +75,7 @@ client.once('ready', async (client) => {
         console.error('Erreur lors de l\'initialisation de la base de données:', error);
     }
 
-    const rest = new REST({ version: '10' }).setToken(process.env.TOKEN as string);
+    const rest = new REST({ version: '10' }).setToken(Deno.env.get('TOKEN') as string);
 
     try {
         console.log('Mise à jour des commandes slash...');
@@ -98,4 +95,4 @@ client.once('ready', async (client) => {
 });
 
 // Connexion du client
-client.login(process.env.TOKEN as string);
+client.login(Deno.env.get('TOKEN') as string);
