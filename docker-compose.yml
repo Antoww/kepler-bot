@@ -1,13 +1,10 @@
 services:
   deno:
-    image: denoland/deno:2.1.7
+    build: .
     container_name: kepler-bot
-    command: ["sh", "-c", "deno cache --reload index.ts && deno run --allow-all index.ts"]
     restart: always
-    volumes:
-      - .:/app
-    working_dir: /app
     environment:
       TOKEN: ${TOKEN}
       SUPABASE_URL: ${SUPABASE_URL}
       SUPABASE_KEY: ${SUPABASE_KEY}
+      BLAGUES_API_TOKEN: ${BLAGUES_API_TOKEN}
