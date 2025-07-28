@@ -21,21 +21,35 @@ const client = new Client({
 // Collection des commandes
 client.commands = new Collection();
 
-// Chargement des commandes
-const commandsPath = path.join(Deno.cwd(), 'commands');
-
-for (const file of Deno.readDirSync(commandsPath)) {
-    if (!file.isFile || (!file.name.endsWith('.js') && !file.name.endsWith('.ts'))) continue;
-    const filePath = path.join(commandsPath, file.name);
-    const command = await import(`file:${filePath}`) as Command;
-
-    if (command.data && command.data.name) {
-        client.commands.set(command.data.name, command);
-        console.log(`[LOG : ${new Date().toLocaleTimeString()}] Commande chargée : ${command.data.name}`);
-    } else {
-        console.error(`[LOG : ${new Date().toLocaleDateString()}] La commande dans ${filePath} n'a pas de propriété 'data' ou 'name' définie.`);
+// Fonction pour charger les commandes récursivement
+async function loadCommands(dirPath: string) {
+    for (const entry of Deno.readDirSync(dirPath)) {
+        const fullPath = path.join(dirPath, entry.name);
+        
+        if (entry.isDirectory) {
+            // Récursivement charger les sous-dossiers
+            await loadCommands(fullPath);
+        } else if (entry.isFile && (entry.name.endsWith('.js') || entry.name.endsWith('.ts'))) {
+            // Charger les fichiers de commandes
+            try {
+                const command = await import(`file:${fullPath}`) as Command;
+                
+                if (command.data && command.data.name) {
+                    client.commands.set(command.data.name, command);
+                    console.log(`[LOG : ${new Date().toLocaleTimeString()}] Commande chargée : ${command.data.name} (${fullPath})`);
+                } else {
+                    console.error(`[LOG : ${new Date().toLocaleDateString()}] La commande dans ${fullPath} n'a pas de propriété 'data' ou 'name' définie.`);
+                }
+            } catch (error) {
+                console.error(`[LOG : ${new Date().toLocaleDateString()}] Erreur lors du chargement de ${fullPath}:`, error);
+            }
+        }
     }
 }
+
+// Chargement des commandes
+const commandsPath = path.join(Deno.cwd(), 'commands');
+await loadCommands(commandsPath);
 
 // Chargement des événements
 const eventsPath = path.join(Deno.cwd(), 'events');

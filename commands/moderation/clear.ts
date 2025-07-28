@@ -37,4 +37,4 @@ export async function execute(interaction: CommandInteraction) {
         interaction.reply('Erreur : Impossible de trouver le canal ou le canal n\'est pas un canal de texte.');
     }
 
-}
+} 
