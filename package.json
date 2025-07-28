@@ -2,7 +2,7 @@
   "dependencies": {
     "axios": "^1.7.9",
     "dayjs": "^1.11.13",
-    "discord.js": "^14.17.2",
+    "discord.js": "14.14.1",
     "dotenv": "^16.4.7",
     "mysql2": "^3.9.2",
     "whois-json": "^2.0.4"
