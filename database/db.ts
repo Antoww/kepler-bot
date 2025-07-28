@@ -125,6 +125,44 @@ export async function getExpiredReminders(): Promise<DatabaseReminder[]> {
     return rows as DatabaseReminder[];
 }
 
+// Interface pour les configurations de serveur
+export interface ServerConfig {
+    guild_id: string;
+    log_channel_id: string;
+    created_at: Date;
+    updated_at: Date;
+}
+
+// Mettre à jour le canal de logs d'un serveur
+export async function updateLogChannel(guildId: string, channelId: string): Promise<void> {
+    if (!pool) {
+        throw new Error('Base de données non initialisée');
+    }
+
+    const query = `
+        INSERT INTO server_configs (guild_id, log_channel_id, created_at, updated_at)
+        VALUES (?, ?, NOW(), NOW())
+        ON DUPLICATE KEY UPDATE 
+        log_channel_id = VALUES(log_channel_id),
+        updated_at = NOW()
+    `;
+    
+    await pool.execute(query, [guildId, channelId]);
+}
+
+// Récupérer le canal de logs d'un serveur
+export async function getLogChannel(guildId: string): Promise<string | null> {
+    if (!pool) {
+        throw new Error('Base de données non initialisée');
+    }
+
+    const query = 'SELECT log_channel_id FROM server_configs WHERE guild_id = ?';
+    const [rows] = await pool.execute(query, [guildId]);
+    
+    const results = rows as any[];
+    return results.length > 0 ? results[0].log_channel_id : null;
+}
+
 // Fermer la connexion à la base de données
 export async function closeDatabase(): Promise<void> {
     if (pool) {

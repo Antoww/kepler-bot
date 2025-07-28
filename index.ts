@@ -7,7 +7,16 @@ import { initDatabase } from './database/db.ts';
 dotenv.config();
 
 // Initialisation du client
-const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent, GatewayIntentBits.DirectMessages] });
+const client = new Client({ 
+    intents: [
+        GatewayIntentBits.Guilds, 
+        GatewayIntentBits.GuildMessages, 
+        GatewayIntentBits.MessageContent, 
+        GatewayIntentBits.DirectMessages,
+        GatewayIntentBits.GuildMembers,
+        GatewayIntentBits.GuildModeration
+    ] 
+});
 
 // Collection des commandes
 client.commands = new Collection();
