@@ -12,7 +12,7 @@ const categories = [
 async function fetchJoke(type: string): Promise<{ joke: string; answer: string }> {
     const response = await fetch(`https://www.blagues-api.fr/api/type/${type}/random`, {
         headers: {
-            'Authorization': `Bearer ${process.env.BLAGUES_API_TOKEN}`
+            'Authorization': `Bearer ${Deno.env.get('BLAGUES_API_TOKEN')}`
         }
     });
 
