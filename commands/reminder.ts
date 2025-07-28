@@ -45,12 +45,16 @@ export async function execute(interaction: CommandInteraction) {
         const reminderId = Date.now();
         const timestamp = reminderId + durationMs;
         
+        console.log(`📝 [RAPPEL CRÉÉ] ID: ${reminderId} | Utilisateur: ${interaction.user.username} (${userId}) | Message: "${message}" | Durée: ${duration} ${unit} | Expire: ${new Date(timestamp).toLocaleString()}`);
+        
         await createReminder(reminderId, userId, message, durationMs, timestamp);
 
         await interaction.reply({ content: 'Votre rappel a été enregistré avec succès !', ephemeral: true });
 
         // Set a timeout to send the reminder
         setTimeout(async () => {
+            console.log(`🔔 [RAPPEL ENVOYÉ] ID: ${reminderId} | Utilisateur: ${interaction.user.username} (${userId}) | Message: "${message}"`);
+            
             const user = await interaction.client.users.fetch(userId);
             const embed = new EmbedBuilder()
                 .setAuthor({ name: interaction.client.user?.username, iconURL: interaction.client.user?.displayAvatarURL({ forceStatic: false }) })
@@ -73,9 +77,11 @@ export async function execute(interaction: CommandInteraction) {
 
             try {
                 await user.send({ embeds: [embed], components: [row] });
+                console.log(`✅ [RAPPEL LIVRÉ] ID: ${reminderId} | Utilisateur: ${interaction.user.username} (${userId}) | Méthode: Message privé`);
             // deno-lint-ignore no-unused-vars
             } catch (error) {
                 await interaction.followUp({ content: 'Je n\'ai pas pu envoyer le rappel en message privé. Voici votre rappel :', embeds: [embed], components: [row], ephemeral: true });
+                console.log(`⚠️ [RAPPEL LIVRÉ] ID: ${reminderId} | Utilisateur: ${interaction.user.username} (${userId}) | Méthode: Message public (MP fermés)`);
             }
         }, durationMs);
     } catch (error) {

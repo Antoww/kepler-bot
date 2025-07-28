@@ -12,13 +12,18 @@ export async function execute(interaction) {
         // Get reminder from database
         const reminder = await getReminder(parseInt(reminderId));
         if (!reminder) {
+            console.log(`❌ [RAPPEL RÉPÉTÉ] ID: ${reminderId} | Erreur: Rappel introuvable en base de données`);
             return interaction.reply({ content: 'Rappel introuvable.', ephemeral: true });
         }
 
         const { user_id: userId, message, duration_ms: duration } = reminder;
+        
+        console.log(`🔄 [RAPPEL RÉPÉTÉ] ID: ${reminderId} | Utilisateur: ${interaction.user.username} | Message: "${message}" | Durée: ${duration}ms`);
 
     // Set a timeout to send the reminder again
     setTimeout(async () => {
+        console.log(`🔔 [RAPPEL RÉPÉTÉ ENVOYÉ] ID: ${reminderId} | Utilisateur: ${interaction.user.username} | Message: "${message}"`);
+        
         const user = await interaction.client.users.fetch(userId);
         const embed = new EmbedBuilder()
             .setColor('#0099ff')
@@ -40,8 +45,10 @@ export async function execute(interaction) {
 
         try {
             await user.send({ embeds: [embed], components: [row] });
+            console.log(`✅ [RAPPEL RÉPÉTÉ LIVRÉ] ID: ${reminderId} | Utilisateur: ${interaction.user.username} | Méthode: Message privé`);
         } catch (error) {
             await interaction.followUp({ content: 'Je n\'ai pas pu envoyer le rappel en message privé. Voici votre rappel :', embeds: [embed], components: [row], ephemeral: true });
+            console.log(`⚠️ [RAPPEL RÉPÉTÉ LIVRÉ] ID: ${reminderId} | Utilisateur: ${interaction.user.username} | Méthode: Message public (MP fermés)`);
         }
     }, duration);
 
