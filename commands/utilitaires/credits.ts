@@ -14,12 +14,11 @@ export async function execute(interaction: CommandInteraction) {
         })
         .setColor('#0099ff')
         .setTitle('👨‍💻 Crédits du Bot')
-        .setDescription('Informations sur le développement de ce bot Discord')
+        .setDescription('Quelques informations relatives au bot Kepler.')
         .addFields(
             { name: '🛠️ Développeur', value: '[Antow](https://github.com/Antoww)', inline: true },
             { name: '📅 Version', value: `${config.botversion}`, inline: true },
-            { name: '🔧 Technologie', value: 'Discord.js + Deno', inline: true },
-            { name: '📚 Base de données', value: 'Supabase', inline: true },
+            { name: '🔧 Technologie', value: '[Discord.js](https://discord.js.org/) & [Deno](https://deno.com/)', inline: true },
         )
         .setFooter({
             text: 'Demandé par ' + interaction.user.username,
