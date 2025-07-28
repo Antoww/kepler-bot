@@ -3,13 +3,21 @@ import { createReminder } from '../../database/supabase.ts';
 
 export const data = new SlashCommandBuilder()
     .setName('reminder')
-    .setDescription('Crée un rappel')
+    .setDescription('Enregistre un rappel.')
     .addStringOption(option => option.setName('message')
         .setDescription('Le message du rappel')
         .setRequired(true))
-    .addIntegerOption(option => option.setName('minutes')
-        .setDescription('Nombre de minutes avant le rappel')
-        .setRequired(true));
+    .addIntegerOption(option => option.setName('durée')
+        .setDescription('La durée du rappel')
+        .setRequired(true))
+    .addStringOption(option => option.setName('unité')
+        .setDescription('L\'unité de temps (minutes, heures, jours)')
+        .setRequired(true)
+        .addChoices(
+            { name: 'Minutes', value: 'minutes' },
+            { name: 'Heures', value: 'heures' },
+            { name: 'Jours', value: 'jours' }
+        ));
 
 export async function execute(interaction: CommandInteraction) {
     const message = interaction.options.getString('message')!;
