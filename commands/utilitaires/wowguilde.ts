@@ -1,5 +1,28 @@
 import { type CommandInteraction, SlashCommandBuilder, EmbedBuilder } from 'discord.js';
 
+interface RaidProgression {
+    summary: string;
+    total_bosses: number;
+    normal_bosses_killed: number;
+    heroic_bosses_killed: number;
+    mythic_bosses_killed: number;
+}
+
+interface RaidRanking {
+    mythic: {
+        world: number;
+        region: number;
+        realm: number;
+    };
+}
+
+interface GuildData {
+    name: string;
+    realm: string;
+    raid_progression: Record<string, RaidProgression>;
+    raid_rankings: Record<string, RaidRanking>;
+}
+
 export const data = new SlashCommandBuilder()
     .setName('wowguilde')
     .setDescription('Affiche les informations d\'une guilde World of Warcraft')
@@ -8,15 +31,48 @@ export const data = new SlashCommandBuilder()
         .setRequired(true))
     .addStringOption(option => option.setName('guilde')
         .setDescription('Le nom de la guilde')
-        .setRequired(true));
+        .setRequired(true))
+    .addStringOption(option => option.setName('region')
+        .setDescription('La région du serveur (eu, us, kr, tw)')
+        .setRequired(false)
+        .addChoices(
+            { name: 'Europe', value: 'eu' },
+            { name: 'Americas', value: 'us' },
+            { name: 'Korea', value: 'kr' },
+            { name: 'Taiwan', value: 'tw' }
+        ));
 
 export async function execute(interaction: CommandInteraction) {
     const server = interaction.options.getString('serveur')!;
     const guild = interaction.options.getString('guilde')!;
 
     try {
-        // Ici vous pouvez intégrer l'API Battle.net pour récupérer les vraies données
-        // Pour l'instant, nous utilisons des données d'exemple
+        const region = interaction.options.getString('region') || 'eu';
+        const encodedGuild = encodeURIComponent(guild);
+        const encodedServer = encodeURIComponent(server);
+        
+        // Récupérer les informations de la guilde via Raider.IO
+        const response = await fetch(`https://raider.io/api/v1/guilds/profile?region=${region}&realm=${encodedServer}&name=${encodedGuild}&fields=raid_progression,raid_rankings`);
+        
+        if (!response.ok) {
+            throw new Error('Guilde non trouvée');
+        }
+        
+        const data = await response.json() as GuildData;
+        
+        // Récupérer la progression du dernier raid
+        const raids = Object.entries(data.raid_progression);
+        const lastRaid = raids.length > 0 ? raids[raids.length - 1] : null;
+        const raidProgress = lastRaid 
+            ? `${lastRaid[0]}: ${lastRaid[1].summary}` 
+            : 'Aucune progression';
+        
+        // Récupérer le classement du dernier raid
+        const raidRankings = data.raid_rankings ? Object.entries(data.raid_rankings) : [];
+        const lastRanking = raidRankings.length > 0 ? raidRankings[raidRankings.length - 1][1] : null;
+        const ranking = lastRanking 
+            ? `World: ${lastRanking.mythic.world || 'N/A'} - Realm: ${lastRanking.mythic.realm || 'N/A'}` 
+            : 'Non classé';
         
         const embed = new EmbedBuilder()
             .setAuthor({ 
@@ -24,15 +80,12 @@ export async function execute(interaction: CommandInteraction) {
                 iconURL: interaction.client.user?.displayAvatarURL({ forceStatic: false }) 
             })
             .setColor('#FFD700')
-            .setTitle(`🏰 Guilde: ${guild}`)
-            .setDescription(`Informations sur la guilde **${guild}** du serveur **${server}**`)
+            .setTitle(`🏰 Guilde: ${data.name}`)
+            .setDescription(`Informations sur la guilde **${data.name}** du serveur **${data.realm}**`)
             .addFields(
-                { name: '🌍 Serveur', value: server, inline: true },
-                { name: '👥 Membres', value: '25/25', inline: true },
-                { name: '🏆 Niveau', value: '25', inline: true },
-                { name: '⚔️ Progression', value: 'Mythique +20', inline: true },
-                { name: '📅 Création', value: '2023', inline: true },
-                { name: '👑 Chef', value: 'NomDuChef', inline: true }
+                { name: '🌍 Serveur', value: `${data.realm} (${region.toUpperCase()})`, inline: true },
+                { name: '⚔️ Progression', value: raidProgress, inline: true },
+                { name: '🏆 Classement', value: ranking, inline: true }
             )
             .setFooter({
                 text: 'Demandé par ' + interaction.user.username,
