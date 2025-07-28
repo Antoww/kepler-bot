@@ -16,18 +16,31 @@ const dbConfig = {
 // Pool de connexions
 let pool: mysql.Pool | null = null;
 
-// Initialiser la connexion à la base de données
+// Initialiser la connexion à la base de données avec retry
 export async function initDatabase(): Promise<void> {
-    try {
-        pool = mysql.createPool(dbConfig);
-        
-        // Tester la connexion
-        const connection = await pool.getConnection();
-        console.log('✅ Connexion à MariaDB établie avec succès');
-        connection.release();
-    } catch (error) {
-        console.error('❌ Erreur lors de la connexion à MariaDB:', error);
-        throw error;
+    const maxRetries = 5;
+    const retryDelay = 5000; // 5 secondes
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+            console.log(`🔄 Tentative de connexion à MariaDB (${attempt}/${maxRetries})...`);
+            pool = mysql.createPool(dbConfig);
+            
+            // Tester la connexion
+            const connection = await pool.getConnection();
+            console.log('✅ Connexion à MariaDB établie avec succès');
+            connection.release();
+            return;
+        } catch (error) {
+            console.error(`❌ Erreur lors de la connexion à MariaDB (tentative ${attempt}/${maxRetries}):`, error);
+            
+            if (attempt === maxRetries) {
+                throw error;
+            }
+            
+            console.log(`⏳ Nouvelle tentative dans ${retryDelay/1000} secondes...`);
+            await new Promise(resolve => setTimeout(resolve, retryDelay));
+        }
     }
 }
 
