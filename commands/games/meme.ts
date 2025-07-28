@@ -6,7 +6,7 @@ interface MemeResponse {
     postLink: string;
     subreddit: string;
 }
-
+ 
 export const data = new SlashCommandBuilder()
     .setName('meme')
     .setDescription('Affiche un meme aléatoire');
