@@ -1,5 +1,5 @@
 import { type CommandInteraction, SlashCommandBuilder, EmbedBuilder } from 'discord.js';
-import { botversion } from '../../config.json';
+import config from '../../config.json' assert { type: 'json' };
 
 export const data = new SlashCommandBuilder()
     .setName('credits')
@@ -17,7 +17,7 @@ export async function execute(interaction: CommandInteraction) {
         .setDescription('Informations sur le développement de ce bot Discord')
         .addFields(
             { name: '🛠️ Développeur', value: '[Antow](https://github.com/Antoww)', inline: true },
-            { name: '📅 Version', value: `${botversion}`, inline: true },
+            { name: '📅 Version', value: `${config.botversion}`, inline: true },
             { name: '🔧 Technologie', value: 'Discord.js + Deno', inline: true },
             { name: '📚 Base de données', value: 'Supabase', inline: true },
         )
