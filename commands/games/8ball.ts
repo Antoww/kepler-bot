@@ -30,7 +30,8 @@ export async function execute(interaction: CommandInteraction) {
         'Ma réponse est non.',
         'Mes sources disent non.',
         'Les perspectives ne sont pas très bonnes.',
-        'Très douteux.'
+        'Très douteux.',
+        'Message de la France : Non.'
     ];
 
     const randomResponse = responses[Math.floor(Math.random() * responses.length)];
