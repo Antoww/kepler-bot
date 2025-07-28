@@ -1,5 +1,4 @@
 import { type CommandInteraction, SlashCommandBuilder, EmbedBuilder } from 'discord.js';
-import fetch from 'node-fetch';
 
 const SAFE_SUBREDDITS = [
     'wholesomememes',
