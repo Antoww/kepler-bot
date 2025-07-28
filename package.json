@@ -4,7 +4,7 @@
     "dayjs": "^1.11.13",
     "discord.js": "14.14.1",
     "dotenv": "^16.4.7",
-    "mysql2": "^3.9.2",
+    "@supabase/supabase-js": "^2.39.0",
     "whois-json": "^2.0.4"
   },
   "type": "module"

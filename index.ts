@@ -3,7 +3,7 @@ import type { Event, Command } from './types.d.ts';
 import { Client, Collection, GatewayIntentBits, REST, Routes } from 'discord.js';
 import process from 'node:process';
 import dotenv from 'dotenv';
-import { initDatabase } from './database/db.ts';
+import { initDatabase } from './database/supabase.ts';
 dotenv.config();
 
 // Initialisation du client

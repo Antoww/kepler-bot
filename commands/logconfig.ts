@@ -1,5 +1,5 @@
 import { type CommandInteraction, SlashCommandBuilder, PermissionFlagsBits, ChannelType } from 'discord.js';
-import { updateLogChannel, getLogChannel } from '../database/db.ts';
+import { updateLogChannel, getLogChannel } from '../database/supabase.ts';
 
 export const data = new SlashCommandBuilder()
     .setName('logconfig')

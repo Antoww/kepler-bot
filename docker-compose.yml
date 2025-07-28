@@ -1,42 +1,13 @@
 services:
   deno:
     image: denoland/deno:2.1.7
-    container_name: deno
-    command: ["sh", "-c", "rm -rf node_modules/.deno && deno cache --reload index.ts && deno run --allow-all index.ts"]
+    container_name: kepler-bot
+    command: ["sh", "-c", "deno cache --reload index.ts && deno run --allow-all index.ts"]
     restart: always
     volumes:
       - .:/app
     working_dir: /app
-    depends_on:
-      mariadb:
-        condition: service_healthy
     environment:
-      DB_HOST: ${DB_HOST}
-      DB_PORT: ${DB_PORT}
-      DB_USER: ${DB_USER}
-      DB_PASSWORD: ${DB_PASSWORD}
-      DB_NAME: ${DB_NAME}
-
-  mariadb:
-    image: mariadb:11.2
-    container_name: kepler_mariadb
-    restart: always
-    environment:
-      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
-      MYSQL_DATABASE: ${DB_NAME}
-      MYSQL_USER: ${DB_USER}
-      MYSQL_PASSWORD: ${DB_PASSWORD}
-    volumes:
-      - mariadb_data:/var/lib/mysql
-      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
-    ports:
-      - "3307:3306"
-    healthcheck:
-      test: ["CMD", "mariadb-admin", "ping", "--user=root", "--password=${DB_ROOT_PASSWORD}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 60s
-
-volumes:
-  mariadb_data: 
+      TOKEN: ${TOKEN}
+      SUPABASE_URL: ${SUPABASE_URL}
+      SUPABASE_KEY: ${SUPABASE_KEY}

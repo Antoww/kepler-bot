@@ -1,5 +1,5 @@
 import { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
-import { getReminder } from '../database/db.ts';
+import { getReminder } from '../database/supabase.ts';
 
 export const name = 'interactionCreate';
 export async function execute(interaction) {

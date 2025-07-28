@@ -1,5 +1,5 @@
 import { type CommandInteraction, SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
-import { createReminder } from '../database/db.ts';
+import { createReminder } from '../database/supabase.ts';
 
 export const data = new SlashCommandBuilder()
     .setName('reminder')
