@@ -20,8 +20,7 @@ export async function execute(interaction: CommandInteraction) {
         .setTitle(`${resultEmoji} Résultat du tirage au sort`)
         .setDescription(`**${resultText}** !`)
         .addFields(
-            { name: '🎲 Tirage', value: 'La pièce a été lancée avec succès !', inline: true },
-            { name: '📊 Probabilité', value: '50% de chance pour chaque côté', inline: true }
+            { name: '🎲 Tirage', value: 'La pièce a été lancée avec succès !', inline: true }
         )
         .setFooter({
             text: `Demandé par ${interaction.user.username}`,
