@@ -2,9 +2,10 @@ import { type CommandInteraction, SlashCommandBuilder, EmbedBuilder } from 'disc
 
 const SAFE_SUBREDDITS = [
     'wholesomememes',
-    'memes',
-    'dankmemes',
-    'funny'
+    'dogmemes',
+    'programmerhumor',
+    'meirl',
+    'antimeme'
 ];
 
 interface RedditPost {
@@ -26,8 +27,23 @@ export async function execute(interaction: CommandInteraction) {
 
     const randomSubreddit = SAFE_SUBREDDITS[Math.floor(Math.random() * SAFE_SUBREDDITS.length)];
     try {
-        const response = await fetch(`https://www.reddit.com/r/${randomSubreddit}/hot.json?limit=50`);
+        const response = await fetch(`https://www.reddit.com/r/${randomSubreddit}/hot.json?limit=50`, {
+            headers: {
+                'User-Agent': 'KeplerBot/1.0 (Discord Bot)',
+                'Accept': 'application/json'
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
         const json = await response.json();
+        
+        if (!json.data || !json.data.children) {
+            throw new Error('Format de réponse Reddit invalide');
+        }
+
         const posts = json.data.children.filter((post: RedditPost) => 
             !post.data.over_18 && 
             post.data.post_hint === 'image' &&
