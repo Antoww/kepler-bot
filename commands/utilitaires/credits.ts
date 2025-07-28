@@ -1,5 +1,5 @@
 import { type CommandInteraction, SlashCommandBuilder, EmbedBuilder } from 'discord.js';
-import config from '../../config.json' assert { type: 'json' };
+import config from '../../config.json' with { type: 'json' };
 
 export const data = new SlashCommandBuilder()
     .setName('credits')
