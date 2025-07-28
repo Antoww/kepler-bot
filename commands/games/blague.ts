@@ -10,17 +10,44 @@ const categories = [
 ];
 
 async function fetchJoke(type: string): Promise<{ joke: string; answer: string }> {
-    const response = await fetch(`https://www.blagues-api.fr/api/type/${type}/random`, {
-        headers: {
-            'Authorization': `Bearer ${Deno.env.get('BLAGUES_API_TOKEN')}`
-        }
-    });
-
-    if (!response.ok) {
-        throw new Error('Failed to fetch joke');
+    // @ts-ignore - Deno global in Deno runtime
+    const token = globalThis.Deno?.env?.get('BLAGUES_API_TOKEN');
+    
+    if (!token) {
+        console.error('BLAGUES_API_TOKEN environment variable is not set');
+        throw new Error('BLAGUES_API_TOKEN environment variable is not set');
     }
 
-    return response.json();
+    console.log(`Fetching joke from category: ${type}`);
+    
+    try {
+        const response = await fetch(`https://www.blagues-api.fr/api/type/${type}/random`, {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        console.log(`Response status: ${response.status}`);
+        
+        if (!response.ok) {
+            let errorText = '';
+            try {
+                errorText = await response.text();
+            } catch (e) {
+                errorText = 'Unable to read error response';
+            }
+            console.error(`API Error: ${response.status} ${response.statusText}`, errorText);
+            throw new Error(`Failed to fetch joke: ${response.status} ${response.statusText} - ${errorText}`);
+        }
+
+        const data = await response.json();
+        console.log('Successfully fetched joke data');
+        return data;
+    } catch (error) {
+        console.error('Error in fetchJoke:', error);
+        throw error;
+    }
 }
 
 export const data = new SlashCommandBuilder()
@@ -76,22 +103,31 @@ export async function execute(interaction: CommandInteraction) {
             }
 
             await i.deferUpdate();
-            const newJoke = await fetchJoke(category);
-            
-            const newEmbed = new EmbedBuilder()
-                .setColor("#FFD700")
-                .setTitle("😄 Blague du jour")
-                .addFields(
-                    { name: "Question", value: newJoke.joke },
-                    { name: "Réponse", value: newJoke.answer }
-                )
-                .setFooter({ text: `Catégorie: ${categories.find(cat => cat.value === category)?.name}` })
-                .setTimestamp();
+            try {
+                const newJoke = await fetchJoke(category);
+                
+                const newEmbed = new EmbedBuilder()
+                    .setColor("#FFD700")
+                    .setTitle("😄 Blague du jour")
+                    .addFields(
+                        { name: "Question", value: newJoke.joke },
+                        { name: "Réponse", value: newJoke.answer }
+                    )
+                    .setFooter({ text: `Catégorie: ${categories.find(cat => cat.value === category)?.name}` })
+                    .setTimestamp();
 
-            await i.editReply({
-                embeds: [newEmbed],
-                components: [row]
-            });
+                await i.editReply({
+                    embeds: [newEmbed],
+                    components: [row]
+                });
+            } catch (error) {
+                console.error('Error fetching new joke:', error);
+                await i.editReply({
+                    content: "Erreur lors de la récupération d'une nouvelle blague.",
+                    embeds: [],
+                    components: [row]
+                });
+            }
         });
 
         collector.on("end", () => {
@@ -102,7 +138,22 @@ export async function execute(interaction: CommandInteraction) {
         });
 
     } catch (error) {
-        console.error(error);
-        await interaction.editReply("Désolé, je n'ai pas pu récupérer de blague pour le moment. Réessayez plus tard !");
+        console.error('Error in execute function:', error);
+        
+        let errorMessage = "Désolé, je n'ai pas pu récupérer de blague pour le moment.";
+        
+        if (error instanceof Error) {
+            if (error.message.includes('BLAGUES_API_TOKEN')) {
+                errorMessage = "Configuration manquante : Le token de l'API blagues n'est pas configuré.";
+            } else if (error.message.includes('401')) {
+                errorMessage = "Erreur d'authentification : Le token de l'API blagues est invalide.";
+            } else if (error.message.includes('429')) {
+                errorMessage = "Trop de requêtes : Veuillez réessayer dans quelques minutes.";
+            } else if (error.message.includes('Failed to fetch joke:')) {
+                errorMessage = `Erreur API : ${error.message}`;
+            }
+        }
+        
+        await interaction.editReply(errorMessage);
     }
 }
