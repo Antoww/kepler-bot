@@ -27,10 +27,11 @@ export async function execute(interaction: CommandInteraction) {
 
     const randomSubreddit = SAFE_SUBREDDITS[Math.floor(Math.random() * SAFE_SUBREDDITS.length)];
     try {
-        const response = await fetch(`https://www.reddit.com/r/${randomSubreddit}/hot.json?limit=50`, {
+        const response = await fetch(`https://old.reddit.com/r/${randomSubreddit}/hot/.json?limit=50`, {
             headers: {
-                'User-Agent': 'KeplerBot/1.0 (Discord Bot)',
-                'Accept': 'application/json'
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) KeplerBot/1.0 (Discord Bot; +https://github.com/Antoww/kepler-bot)',
+                'Accept': 'application/json',
+                'Accept-Language': 'fr,fr-FR;q=0.8,en-US;q=0.5,en;q=0.3'
             }
         });
 
