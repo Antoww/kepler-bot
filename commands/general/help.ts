@@ -17,6 +17,7 @@ interface CommandInfo {
     name: string;
     description: string;
     category: string;
+    id?: string | null;
 }
 
 // Fonction pour charger toutes les commandes automatiquement
@@ -119,7 +120,14 @@ function createCategoryEmbed(client: any, commands: CommandInfo[], category: str
         .setTitle(`${emoji} Commandes - ${displayName}`)
         .setDescription(
             pageCommands.length > 0 
-                ? pageCommands.map(cmd => `</${cmd.name}:0> - ${cmd.description}`).join('\n')
+                ? pageCommands.map(cmd => {
+                    // Si on a l'ID de la commande, créer un lien cliquable
+                    if (cmd.id) {
+                        return `</${cmd.name}:${cmd.id}> - ${cmd.description}`;
+                    } else {
+                        return `**/${cmd.name}** - ${cmd.description}`;
+                    }
+                }).join('\n')
                 : 'Aucune commande trouvée dans cette catégorie.'
         );
     
@@ -215,6 +223,24 @@ export async function execute(interaction: CommandInteraction) {
         // Charger toutes les commandes automatiquement
         const allCommands = await getAllCommands();
         
+        // Récupérer les commandes slash enregistrées avec leurs IDs
+        let applicationCommands;
+        try {
+            applicationCommands = await interaction.client.application?.commands.fetch();
+        } catch (error) {
+            console.error('Erreur lors de la récupération des commandes:', error);
+            applicationCommands = new Map();
+        }
+        
+        // Mapper les commandes avec leurs IDs réels
+        const commandsWithIds = allCommands.map(cmd => {
+            const registeredCommand = applicationCommands?.find(appCmd => appCmd.name === cmd.name);
+            return {
+                ...cmd,
+                id: registeredCommand?.id || null
+            };
+        });
+        
         // Créer et envoyer le menu principal
         const mainEmbed = createMainMenuEmbed(interaction.client);
         const categorySelect = createCategorySelectMenu();
@@ -247,7 +273,7 @@ export async function execute(interaction: CommandInteraction) {
             }
             
             const selectedCategory = selectInteraction.values[0];
-            const categoryCommands = allCommands.filter(cmd => cmd.category === selectedCategory);
+            const categoryCommands = commandsWithIds.filter(cmd => cmd.category === selectedCategory);
             const totalPages = Math.ceil(categoryCommands.length / 10);
             
             const categoryEmbed = createCategoryEmbed(interaction.client, categoryCommands, selectedCategory, 0);
@@ -300,7 +326,7 @@ export async function execute(interaction: CommandInteraction) {
                 const category = parts[2];
                 const page = parseInt(parts[3]);
                 
-                const categoryCommands = allCommands.filter(cmd => cmd.category === category);
+                const categoryCommands = commandsWithIds.filter(cmd => cmd.category === category);
                 const totalPages = Math.ceil(categoryCommands.length / 10);
                 
                 const categoryEmbed = createCategoryEmbed(interaction.client, categoryCommands, category, page);
