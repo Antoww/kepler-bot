@@ -19,41 +19,43 @@ interface CommandInfo {
     category: string;
 }
 
-// Liste statique des commandes (à mettre à jour manuellement ou charger dynamiquement)
-function getAllCommands(): CommandInfo[] {
-    return [
-        // Administration
-        { name: 'annonce', description: 'Fait une annonce', category: 'administration' },
-        { name: 'logconfig', description: 'Configure les logs du serveur', category: 'administration' },
-        
-        // Modération
-        { name: 'clear', description: 'Supprime des messages', category: 'moderation' },
-        
-        // Jeux
-        { name: '8ball', description: 'Pose une question à la boule magique', category: 'games' },
-        { name: 'blague', description: 'Raconte une blague', category: 'games' },
-        { name: 'coinflip', description: 'Lance une pièce', category: 'games' },
-        { name: 'meme', description: 'Affiche un mème aléatoire', category: 'games' },
-        
-        // Utilitaires
-        { name: 'birthday', description: 'Gère les anniversaires', category: 'utilitaires' },
-        { name: 'channelinfo', description: 'Affiche les informations d\'un salon', category: 'utilitaires' },
-        { name: 'credits', description: 'Affiche les crédits du bot', category: 'utilitaires' },
-        { name: 'genpass', description: 'Génère un mot de passe sécurisé', category: 'utilitaires' },
-        { name: 'golem', description: 'Commande liée au golem', category: 'utilitaires' },
-        { name: 'minecraft-uuid', description: 'Obtient l\'UUID Minecraft d\'un joueur', category: 'utilitaires' },
-        { name: 'ping', description: 'Donne la latence du bot et de l\'API Discord', category: 'utilitaires' },
-        { name: 'reminder', description: 'Crée un rappel', category: 'utilitaires' },
-        { name: 'roleinfo', description: 'Affiche les informations d\'un rôle', category: 'utilitaires' },
-        { name: 'rolelist', description: 'Liste tous les rôles du serveur', category: 'utilitaires' },
-        { name: 'serverinfo', description: 'Affiche les informations du serveur', category: 'utilitaires' },
-        { name: 'stats', description: 'Affiche les statistiques du bot', category: 'utilitaires' },
-        { name: 'userinfo', description: 'Affiche les informations d\'un utilisateur', category: 'utilitaires' },
-        { name: 'wowguilde', description: 'Informations sur la guilde WoW', category: 'utilitaires' },
-        
-        // Général
-        { name: 'help', description: 'Affiche l\'aide et la liste des commandes disponibles', category: 'général' }
-    ];
+// Fonction pour charger toutes les commandes automatiquement
+async function getAllCommands(): Promise<CommandInfo[]> {
+    const commands: CommandInfo[] = [];
+    
+    async function loadCommandsFromDir(dirPath: string, category: string) {
+        try {
+            for (const entry of Deno.readDirSync(dirPath)) {
+                const fullPath = dirPath + '/' + entry.name;
+                
+                if (entry.isDirectory) {
+                    // Récursivement charger les sous-dossiers
+                    await loadCommandsFromDir(fullPath, entry.name);
+                } else if (entry.isFile && (entry.name.endsWith('.js') || entry.name.endsWith('.ts'))) {
+                    try {
+                        const command = await import(`file://${fullPath}`);
+                        
+                        if (command.data && command.data.name) {
+                            commands.push({
+                                name: command.data.name,
+                                description: command.data.description || 'Aucune description disponible',
+                                category: category
+                            });
+                        }
+                    } catch (error) {
+                        console.error(`Erreur lors du chargement de ${fullPath}:`, error);
+                    }
+                }
+            }
+        } catch (error) {
+            console.error(`Erreur lors de la lecture du dossier ${dirPath}:`, error);
+        }
+    }
+    
+    const commandsPath = Deno.cwd() + '/commands';
+    await loadCommandsFromDir(commandsPath, 'général');
+    
+    return commands;
 }
 
 // Fonction pour créer l'embed du menu principal
@@ -117,7 +119,7 @@ function createCategoryEmbed(client: any, commands: CommandInfo[], category: str
         .setTitle(`${emoji} Commandes - ${displayName}`)
         .setDescription(
             pageCommands.length > 0 
-                ? pageCommands.map(cmd => `**/${cmd.name}** - ${cmd.description}`).join('\n')
+                ? pageCommands.map(cmd => `</${cmd.name}:0> - ${cmd.description}`).join('\n')
                 : 'Aucune commande trouvée dans cette catégorie.'
         );
     
@@ -210,8 +212,8 @@ function createNavigationButtons(currentPage: number, totalPages: number, catego
 
 export async function execute(interaction: CommandInteraction) {
     try {
-        // Charger toutes les commandes
-        const allCommands = getAllCommands();
+        // Charger toutes les commandes automatiquement
+        const allCommands = await getAllCommands();
         
         // Créer et envoyer le menu principal
         const mainEmbed = createMainMenuEmbed(interaction.client);
