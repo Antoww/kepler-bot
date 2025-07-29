@@ -27,6 +27,9 @@ BEGIN
     END IF;
 END $$;
 
+-- Permettre NULL pour log_channel_id car un serveur peut configurer les anniversaires sans les logs
+ALTER TABLE server_configs ALTER COLUMN log_channel_id DROP NOT NULL;
+
 -- Trigger pour mettre à jour automatiquement updated_at sur birthdays
 CREATE TRIGGER update_birthdays_updated_at 
     BEFORE UPDATE ON birthdays 

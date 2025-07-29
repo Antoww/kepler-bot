@@ -106,32 +106,74 @@ export interface ServerConfig {
 
 // Mettre à jour le canal de logs d'un serveur
 export async function updateLogChannel(guildId: string, channelId: string): Promise<void> {
-    const { error } = await supabase
+    // D'abord, vérifier si une configuration existe déjà
+    const { data: existingConfig } = await supabase
         .from('server_configs')
-        .upsert({
-            guild_id: guildId,
-            log_channel_id: channelId,
-            updated_at: new Date().toISOString()
-        }, {
-            onConflict: 'guild_id'
-        });
-    
-    if (error) throw error;
+        .select('id, birthday_channel_id')
+        .eq('guild_id', guildId)
+        .single();
+
+    if (existingConfig) {
+        // Mettre à jour la configuration existante
+        const { error } = await supabase
+            .from('server_configs')
+            .update({
+                log_channel_id: channelId,
+                updated_at: new Date().toISOString()
+            })
+            .eq('guild_id', guildId);
+        
+        if (error) throw error;
+    } else {
+        // Créer une nouvelle configuration
+        const { error } = await supabase
+            .from('server_configs')
+            .insert({
+                guild_id: guildId,
+                log_channel_id: channelId,
+                birthday_channel_id: null, // Explicitement null
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+            });
+        
+        if (error) throw error;
+    }
 }
 
 // Mettre à jour le canal d'anniversaires d'un serveur
 export async function updateBirthdayChannel(guildId: string, channelId: string): Promise<void> {
-    const { error } = await supabase
+    // D'abord, vérifier si une configuration existe déjà
+    const { data: existingConfig } = await supabase
         .from('server_configs')
-        .upsert({
-            guild_id: guildId,
-            birthday_channel_id: channelId,
-            updated_at: new Date().toISOString()
-        }, {
-            onConflict: 'guild_id'
-        });
-    
-    if (error) throw error;
+        .select('id, log_channel_id')
+        .eq('guild_id', guildId)
+        .single();
+
+    if (existingConfig) {
+        // Mettre à jour la configuration existante
+        const { error } = await supabase
+            .from('server_configs')
+            .update({
+                birthday_channel_id: channelId,
+                updated_at: new Date().toISOString()
+            })
+            .eq('guild_id', guildId);
+        
+        if (error) throw error;
+    } else {
+        // Créer une nouvelle configuration
+        const { error } = await supabase
+            .from('server_configs')
+            .insert({
+                guild_id: guildId,
+                birthday_channel_id: channelId,
+                log_channel_id: null, // Explicitement null
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+            });
+        
+        if (error) throw error;
+    }
 }
 
 // Récupérer le canal de logs d'un serveur
