@@ -202,7 +202,7 @@ function createNavigationButtons(currentPage: number, totalPages: number, catego
         buttons.push(
             new ButtonBuilder()
                 .setCustomId(`help_prev_${category}_${currentPage - 1}`)
-                .setLabel('◀️ Précédent')
+                .setLabel('◀️')
                 .setStyle(ButtonStyle.Primary)
         );
     }
@@ -211,7 +211,7 @@ function createNavigationButtons(currentPage: number, totalPages: number, catego
     buttons.push(
         new ButtonBuilder()
             .setCustomId('help_main_menu')
-            .setLabel('🏠 Menu principal')
+            .setLabel('🏠')
             .setStyle(ButtonStyle.Secondary)
     );
     
@@ -220,7 +220,7 @@ function createNavigationButtons(currentPage: number, totalPages: number, catego
         buttons.push(
             new ButtonBuilder()
                 .setCustomId(`help_next_${category}_${currentPage + 1}`)
-                .setLabel('Suivant ▶️')
+                .setLabel('▶️')
                 .setStyle(ButtonStyle.Primary)
         );
     }
@@ -229,7 +229,7 @@ function createNavigationButtons(currentPage: number, totalPages: number, catego
     buttons.push(
         new ButtonBuilder()
             .setCustomId('help_close')
-            .setLabel('❌ Fermer')
+            .setLabel('❌')
             .setStyle(ButtonStyle.Danger)
     );
     
