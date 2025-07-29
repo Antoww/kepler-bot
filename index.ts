@@ -2,6 +2,7 @@ import * as path from "jsr:@std/path";
 import type { Event, Command } from './types.d.ts';
 import { Client, Collection, GatewayIntentBits, REST, Routes } from 'discord.js';
 import { initDatabase } from './database/supabase.ts';
+import { BirthdayManager } from './events/birthdayManager.ts';
 
 // Initialisation du client
 const client = new Client({ 
@@ -74,6 +75,11 @@ client.once('ready', async (client) => {
     } catch (error) {
         console.error('Erreur lors de l\'initialisation de la base de données:', error);
     }
+
+    // Initialiser le gestionnaire d'anniversaires
+    const birthdayManager = new BirthdayManager(client);
+    birthdayManager.startBirthdayCheck();
+    console.log(`[LOG : ${new Date().toLocaleTimeString()}] Gestionnaire d'anniversaires initialisé.`);
 
     const rest = new REST({ version: '10' }).setToken(Deno.env.get('TOKEN') as string);
 

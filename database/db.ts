@@ -1,55 +1,9 @@
-// @deno-types="npm:mysql2@^3.9.2"
-import mysql from 'npm:mysql2@^3.9.2/promise';
-
-// Configuration de la base de données
-const dbConfig = {
-    host: Deno.env.get('DB_HOST') || 'localhost',
-    port: parseInt(Deno.env.get('DB_PORT') || '3306'),
-    user: Deno.env.get('DB_USER') || 'kepler_bot',
-    password: Deno.env.get('DB_PASSWORD') || 'kepler_password',
-    database: Deno.env.get('DB_NAME') || 'kepler_bot_db',
-    waitForConnections: true,
-    connectionLimit: 10,
-    queueLimit: 0
-};
-
-// Pool de connexions
-let pool: mysql.Pool | null = null;
+import { supabase } from './supabase.ts';
 
 // Initialiser la connexion à la base de données avec retry
 export async function initDatabase(): Promise<void> {
-    const maxRetries = 5;
-    const retryDelay = 5000; // 5 secondes
-
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-        try {
-            console.log(`🔄 Tentative de connexion à MariaDB (${attempt}/${maxRetries})...`);
-            pool = mysql.createPool(dbConfig);
-            
-            // Tester la connexion
-            const connection = await pool.getConnection();
-            console.log('✅ Connexion à MariaDB établie avec succès');
-            connection.release();
-            return;
-        } catch (error) {
-            console.error(`❌ Erreur lors de la connexion à MariaDB (tentative ${attempt}/${maxRetries}):`, error);
-            
-            if (attempt === maxRetries) {
-                throw error;
-            }
-            
-            console.log(`⏳ Nouvelle tentative dans ${retryDelay/1000} secondes...`);
-            await new Promise(resolve => setTimeout(resolve, retryDelay));
-        }
-    }
-}
-
-// Obtenir une connexion du pool
-export async function getConnection() {
-    if (!pool) {
-        throw new Error('Base de données non initialisée');
-    }
-    return pool.getConnection();
+    // Pour l'instant, on utilise Supabase, donc pas besoin d'initialiser MySQL
+    console.log('✅ Base de données (Supabase) prête à être utilisée');
 }
 
 // Interface pour les rappels
@@ -65,109 +19,227 @@ export interface DatabaseReminder {
 
 // Créer un nouveau rappel
 export async function createReminder(reminderId: number, userId: string, message: string, durationMs: number, timestamp: number): Promise<void> {
-    if (!pool) {
-        throw new Error('Base de données non initialisée');
-    }
-
-    const query = `
-        INSERT INTO reminders (reminder_id, user_id, message, duration_ms, timestamp)
-        VALUES (?, ?, ?, ?, ?)
-    `;
+    const { error } = await supabase
+        .from('reminders')
+        .insert({
+            reminder_id: reminderId,
+            user_id: userId,
+            message: message,
+            duration_ms: durationMs,
+            timestamp: timestamp
+        });
     
-    await pool.execute(query, [reminderId, userId, message, durationMs, timestamp]);
+    if (error) throw error;
 }
 
 // Récupérer un rappel par son ID
 export async function getReminder(reminderId: number): Promise<DatabaseReminder | null> {
-    if (!pool) {
-        throw new Error('Base de données non initialisée');
-    }
-
-    const query = 'SELECT * FROM reminders WHERE reminder_id = ?';
-    const [rows] = await pool.execute(query, [reminderId]);
+    const { data, error } = await supabase
+        .from('reminders')
+        .select('*')
+        .eq('reminder_id', reminderId)
+        .single();
     
-    const results = rows as DatabaseReminder[];
-    return results.length > 0 ? results[0] : null;
+    if (error) {
+        if (error.code === 'PGRST116') return null; // Pas trouvé
+        throw error;
+    }
+    
+    return data;
 }
 
 // Récupérer tous les rappels d'un utilisateur
 export async function getUserReminders(userId: string): Promise<DatabaseReminder[]> {
-    if (!pool) {
-        throw new Error('Base de données non initialisée');
-    }
-
-    const query = 'SELECT * FROM reminders WHERE user_id = ? ORDER BY timestamp ASC';
-    const [rows] = await pool.execute(query, [userId]);
+    const { data, error } = await supabase
+        .from('reminders')
+        .select('*')
+        .eq('user_id', userId)
+        .order('timestamp', { ascending: true });
     
-    return rows as DatabaseReminder[];
+    if (error) throw error;
+    return data || [];
 }
 
 // Supprimer un rappel
 export async function deleteReminder(reminderId: number): Promise<void> {
-    if (!pool) {
-        throw new Error('Base de données non initialisée');
-    }
-
-    const query = 'DELETE FROM reminders WHERE reminder_id = ?';
-    await pool.execute(query, [reminderId]);
+    const { error } = await supabase
+        .from('reminders')
+        .delete()
+        .eq('reminder_id', reminderId);
+    
+    if (error) throw error;
 }
 
 // Récupérer tous les rappels expirés
 export async function getExpiredReminders(): Promise<DatabaseReminder[]> {
-    if (!pool) {
-        throw new Error('Base de données non initialisée');
-    }
-
     const currentTime = Date.now();
-    const query = 'SELECT * FROM reminders WHERE timestamp <= ? ORDER BY timestamp ASC';
-    const [rows] = await pool.execute(query, [currentTime]);
+    const { data, error } = await supabase
+        .from('reminders')
+        .select('*')
+        .lte('timestamp', currentTime)
+        .order('timestamp', { ascending: true });
     
-    return rows as DatabaseReminder[];
+    if (error) throw error;
+    return data || [];
+}
+
+// Interface pour les anniversaires
+export interface Birthday {
+    id: number;
+    guild_id: string;
+    user_id: string;
+    birth_day: number;
+    birth_month: number;
+    birth_year?: number;
+    created_at: Date;
+    updated_at: Date;
 }
 
 // Interface pour les configurations de serveur
 export interface ServerConfig {
     guild_id: string;
     log_channel_id: string;
+    birthday_channel_id?: string;
     created_at: Date;
     updated_at: Date;
 }
 
 // Mettre à jour le canal de logs d'un serveur
 export async function updateLogChannel(guildId: string, channelId: string): Promise<void> {
-    if (!pool) {
-        throw new Error('Base de données non initialisée');
-    }
-
-    const query = `
-        INSERT INTO server_configs (guild_id, log_channel_id, created_at, updated_at)
-        VALUES (?, ?, NOW(), NOW())
-        ON DUPLICATE KEY UPDATE 
-        log_channel_id = VALUES(log_channel_id),
-        updated_at = NOW()
-    `;
+    const { error } = await supabase
+        .from('server_configs')
+        .upsert({
+            guild_id: guildId,
+            log_channel_id: channelId,
+            updated_at: new Date().toISOString()
+        }, {
+            onConflict: 'guild_id'
+        });
     
-    await pool.execute(query, [guildId, channelId]);
+    if (error) throw error;
+}
+
+// Mettre à jour le canal d'anniversaires d'un serveur
+export async function updateBirthdayChannel(guildId: string, channelId: string): Promise<void> {
+    const { error } = await supabase
+        .from('server_configs')
+        .upsert({
+            guild_id: guildId,
+            birthday_channel_id: channelId,
+            updated_at: new Date().toISOString()
+        }, {
+            onConflict: 'guild_id'
+        });
+    
+    if (error) throw error;
 }
 
 // Récupérer le canal de logs d'un serveur
 export async function getLogChannel(guildId: string): Promise<string | null> {
-    if (!pool) {
-        throw new Error('Base de données non initialisée');
-    }
-
-    const query = 'SELECT log_channel_id FROM server_configs WHERE guild_id = ?';
-    const [rows] = await pool.execute(query, [guildId]);
+    const { data, error } = await supabase
+        .from('server_configs')
+        .select('log_channel_id')
+        .eq('guild_id', guildId)
+        .single();
     
-    const results = rows as any[];
-    return results.length > 0 ? results[0].log_channel_id : null;
+    if (error) {
+        if (error.code === 'PGRST116') return null; // Pas trouvé
+        throw error;
+    }
+    
+    return data?.log_channel_id || null;
+}
+
+// Récupérer le canal d'anniversaires d'un serveur
+export async function getBirthdayChannel(guildId: string): Promise<string | null> {
+    const { data, error } = await supabase
+        .from('server_configs')
+        .select('birthday_channel_id')
+        .eq('guild_id', guildId)
+        .single();
+    
+    if (error) {
+        if (error.code === 'PGRST116') return null; // Pas trouvé
+        throw error;
+    }
+    
+    return data?.birthday_channel_id || null;
+}
+
+// Ajouter ou mettre à jour un anniversaire
+export async function setBirthday(guildId: string, userId: string, day: number, month: number, year?: number): Promise<void> {
+    const { error } = await supabase
+        .from('birthdays')
+        .upsert({
+            guild_id: guildId,
+            user_id: userId,
+            birth_day: day,
+            birth_month: month,
+            birth_year: year || null,
+            updated_at: new Date().toISOString()
+        }, {
+            onConflict: 'guild_id,user_id'
+        });
+    
+    if (error) throw error;
+}
+
+// Récupérer un anniversaire
+export async function getBirthday(guildId: string, userId: string): Promise<Birthday | null> {
+    const { data, error } = await supabase
+        .from('birthdays')
+        .select('*')
+        .eq('guild_id', guildId)
+        .eq('user_id', userId)
+        .single();
+    
+    if (error) {
+        if (error.code === 'PGRST116') return null; // Pas trouvé
+        throw error;
+    }
+    
+    return data;
+}
+
+// Récupérer tous les anniversaires d'un serveur pour un jour/mois donné
+export async function getBirthdaysForDate(guildId: string, day: number, month: number): Promise<Birthday[]> {
+    const { data, error } = await supabase
+        .from('birthdays')
+        .select('*')
+        .eq('guild_id', guildId)
+        .eq('birth_day', day)
+        .eq('birth_month', month);
+    
+    if (error) throw error;
+    return data || [];
+}
+
+// Supprimer un anniversaire
+export async function deleteBirthday(guildId: string, userId: string): Promise<void> {
+    const { error } = await supabase
+        .from('birthdays')
+        .delete()
+        .eq('guild_id', guildId)
+        .eq('user_id', userId);
+    
+    if (error) throw error;
+}
+
+// Récupérer tous les anniversaires d'un serveur
+export async function getAllBirthdays(guildId: string): Promise<Birthday[]> {
+    const { data, error } = await supabase
+        .from('birthdays')
+        .select('*')
+        .eq('guild_id', guildId)
+        .order('birth_month', { ascending: true })
+        .order('birth_day', { ascending: true });
+    
+    if (error) throw error;
+    return data || [];
 }
 
 // Fermer la connexion à la base de données
 export async function closeDatabase(): Promise<void> {
-    if (pool) {
-        await pool.end();
-        pool = null;
-        console.log('🔌 Connexion à MariaDB fermée');
-    }
+    // Avec Supabase, pas besoin de fermer explicitement la connexion
+    console.log('🔌 Connexion Supabase fermée');
 } 
