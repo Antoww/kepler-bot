@@ -225,6 +225,14 @@ function createNavigationButtons(currentPage: number, totalPages: number, catego
         );
     }
     
+    // Bouton fermer (toujours en dernier)
+    buttons.push(
+        new ButtonBuilder()
+            .setCustomId('help_close')
+            .setLabel('❌ Fermer')
+            .setStyle(ButtonStyle.Danger)
+    );
+    
     return new ActionRowBuilder<ButtonBuilder>().addComponents(buttons);
 }
 
@@ -257,7 +265,15 @@ export async function execute(interaction: CommandInteraction) {
         
         const response = await interaction.reply({
             embeds: [mainEmbed],
-            components: [categorySelect],
+            components: [
+                categorySelect,
+                new ActionRowBuilder<ButtonBuilder>().addComponents(
+                    new ButtonBuilder()
+                        .setCustomId('help_close')
+                        .setLabel('❌ Fermer')
+                        .setStyle(ButtonStyle.Danger)
+                )
+            ],
             ephemeral: true
         });
         
@@ -292,13 +308,17 @@ export async function execute(interaction: CommandInteraction) {
             if (totalPages > 1) {
                 components.push(createNavigationButtons(0, totalPages, selectedCategory));
             } else {
-                // Ajouter seulement le bouton retour au menu principal
+                // Ajouter seulement le bouton retour au menu principal et fermer
                 components.push(
                     new ActionRowBuilder<ButtonBuilder>().addComponents(
                         new ButtonBuilder()
                             .setCustomId('help_main_menu')
                             .setLabel('🏠 Menu principal')
-                            .setStyle(ButtonStyle.Secondary)
+                            .setStyle(ButtonStyle.Secondary),
+                        new ButtonBuilder()
+                            .setCustomId('help_close')
+                            .setLabel('❌ Fermer')
+                            .setStyle(ButtonStyle.Danger)
                     )
                 );
             }
@@ -328,7 +348,22 @@ export async function execute(interaction: CommandInteraction) {
                 
                 await buttonInteraction.update({
                     embeds: [mainEmbed],
-                    components: [categorySelect]
+                    components: [
+                        categorySelect,
+                        new ActionRowBuilder<ButtonBuilder>().addComponents(
+                            new ButtonBuilder()
+                                .setCustomId('help_close')
+                                .setLabel('❌ Fermer')
+                                .setStyle(ButtonStyle.Danger)
+                        )
+                    ]
+                });
+            } else if (customId === 'help_close') {
+                // Fermer le menu
+                await buttonInteraction.update({
+                    content: '✅ Menu d\'aide fermé.',
+                    embeds: [],
+                    components: []
                 });
             } else if (customId.startsWith('help_prev_') || customId.startsWith('help_next_')) {
                 // Navigation entre les pages
@@ -350,7 +385,11 @@ export async function execute(interaction: CommandInteraction) {
                             new ButtonBuilder()
                                 .setCustomId('help_main_menu')
                                 .setLabel('🏠 Menu principal')
-                                .setStyle(ButtonStyle.Secondary)
+                                .setStyle(ButtonStyle.Secondary),
+                            new ButtonBuilder()
+                                .setCustomId('help_close')
+                                .setLabel('❌ Fermer')
+                                .setStyle(ButtonStyle.Danger)
                         )
                     );
                 }
