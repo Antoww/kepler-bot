@@ -54,7 +54,17 @@ async function getAllCommands(): Promise<CommandInfo[]> {
     }
     
     const commandsPath = Deno.cwd() + '/commands';
-    await loadCommandsFromDir(commandsPath, 'général');
+    
+    // Charger chaque dossier de catégorie
+    try {
+        for (const entry of Deno.readDirSync(commandsPath)) {
+            if (entry.isDirectory) {
+                await loadCommandsFromDir(commandsPath + '/' + entry.name, entry.name);
+            }
+        }
+    } catch (error) {
+        console.error(`Erreur lors de la lecture du dossier commands:`, error);
+    }
     
     return commands;
 }
@@ -97,7 +107,7 @@ function createCategoryEmbed(client: any, commands: CommandInfo[], category: str
         'moderation': '🛡️',
         'games': '🎮',
         'utilitaires': '⚙️',
-        'général': '📋'
+        'general': '📋'
     };
     
     const categoryNames: { [key: string]: string } = {
@@ -105,7 +115,7 @@ function createCategoryEmbed(client: any, commands: CommandInfo[], category: str
         'moderation': 'Modération',
         'games': 'Jeux',
         'utilitaires': 'Utilitaires',
-        'général': 'Général'
+        'general': 'Général'
     };
     
     const emoji = categoryEmojis[category] || '📋';
@@ -175,7 +185,7 @@ function createCategorySelectMenu(): ActionRowBuilder<StringSelectMenuBuilder> {
             {
                 label: 'Général',
                 description: 'Commandes générales',
-                value: 'général',
+                value: 'general',
                 emoji: '📋'
             }
         ]);
