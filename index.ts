@@ -51,31 +51,31 @@ async function loadCommands(dirPath: string) {
 }
 
 // Fonction pour charger les événements récursivement
-async function loadEvents(dirPath: string) {
-    for (const entry of Deno.readDirSync(dirPath)) {
-        const fullPath = path.join(dirPath, entry.name);
-        
-        if (entry.isDirectory) {
-            // Récursivement charger les sous-dossiers
-            await loadEvents(fullPath);
-        } else if (entry.isFile && (entry.name.endsWith('.js') || entry.name.endsWith('.ts'))) {
-            // Charger les fichiers d'événements
-            try {
-                const event = await import(`file:${fullPath}`) as Event;
-                
-                if (event.name && event.execute) {
-                    if (event.once) {
-                        client.once(event.name, (...args) => event.execute(...args));
-                    } else {
-                        client.on(event.name, (...args) => event.execute(...args));
-                    }
-                    console.log(`[LOG : ${new Date().toLocaleTimeString()}] Événement chargé : ${event.name} (${fullPath})`);
+async function loadEvents() {
+    // Liste des événements réels à charger (vérifier qu'ils existent)
+    const eventFiles = [
+        'events/core/ready.ts',
+        'events/core/interactionCreate.ts',
+        'events/handlers/emojiCreate.ts'
+    ];
+
+    for (const eventFile of eventFiles) {
+        const fullPath = path.join(Deno.cwd(), eventFile);
+        try {
+            const event = await import(`file:${fullPath}`) as Event;
+            
+            if (event && 'name' in event && 'execute' in event) {
+                if ('once' in event && event.once) {
+                    client.once(event.name as any, (...args: any[]) => (event.execute as any)(...args));
                 } else {
-                    console.error(`[LOG : ${new Date().toLocaleDateString()}] L'événement dans ${fullPath} n'a pas de propriété 'name' ou 'execute' définie.`);
+                    client.on(event.name as any, (...args: any[]) => (event.execute as any)(...args));
                 }
-            } catch (error) {
-                console.error(`[LOG : ${new Date().toLocaleDateString()}] Erreur lors du chargement de ${fullPath}:`, error);
+                console.log(`[LOG : ${new Date().toLocaleTimeString()}] Événement chargé : ${event.name} (${eventFile})`);
+            } else {
+                console.error(`[LOG : ${new Date().toLocaleDateString()}] L'événement dans ${eventFile} n'a pas de propriété 'name' ou 'execute' définie.`);
             }
+        } catch (error) {
+            console.error(`[LOG : ${new Date().toLocaleDateString()}] Erreur lors du chargement de ${eventFile}:`, error);
         }
     }
 }
@@ -85,8 +85,7 @@ const commandsPath = path.join(Deno.cwd(), 'commands');
 await loadCommands(commandsPath);
 
 // Chargement des événements
-const eventsPath = path.join(Deno.cwd(), 'events');
-await loadEvents(eventsPath);
+await loadEvents();
 
 // Enregistrement des commandes après l'événement 'ready'
 client.once('ready', async (client) => {
