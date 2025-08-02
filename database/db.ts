@@ -437,10 +437,31 @@ export interface ModerationHistoryEntry {
     action_type: string;
     reason: string;
     duration?: string;
+    sanction_number?: number;
     created_at: Date;
 }
 
-// Ajouter une entrée à l'historique de modération
+// Interface pour les warnings
+export interface Warning {
+    id: number;
+    guild_id: string;
+    user_id: string;
+    moderator_id: string;
+    reason: string;
+    sanction_number: number;
+    created_at: Date;
+}
+
+// Obtenir le prochain numéro de sanction pour un serveur
+export async function getNextSanctionNumber(guildId: string): Promise<number> {
+    const { data, error } = await supabase
+        .rpc('get_next_sanction_number', { guild_id_param: guildId });
+    
+    if (error) throw error;
+    return data;
+}
+
+// Ajouter une entrée à l'historique de modération avec numéro de sanction
 export async function addModerationHistory(
     guildId: string, 
     userId: string, 
@@ -448,7 +469,10 @@ export async function addModerationHistory(
     actionType: string, 
     reason: string, 
     duration?: string
-): Promise<void> {
+): Promise<number> {
+    // Obtenir le numéro de sanction
+    const sanctionNumber = await getNextSanctionNumber(guildId);
+    
     const { error } = await supabase
         .from('moderation_history')
         .insert({
@@ -458,10 +482,57 @@ export async function addModerationHistory(
             action_type: actionType,
             reason: reason,
             duration: duration,
+            sanction_number: sanctionNumber,
             created_at: new Date().toISOString()
         });
     
     if (error) throw error;
+    return sanctionNumber;
+}
+
+// Créer un warning
+export async function createWarning(guildId: string, userId: string, moderatorId: string, reason: string): Promise<number> {
+    // Obtenir le numéro de sanction
+    const sanctionNumber = await getNextSanctionNumber(guildId);
+    
+    const { error } = await supabase
+        .from('warnings')
+        .insert({
+            guild_id: guildId,
+            user_id: userId,
+            moderator_id: moderatorId,
+            reason: reason,
+            sanction_number: sanctionNumber,
+            created_at: new Date().toISOString()
+        });
+    
+    if (error) throw error;
+    return sanctionNumber;
+}
+
+// Récupérer les warnings d'un utilisateur
+export async function getUserWarnings(guildId: string, userId: string): Promise<Warning[]> {
+    const { data, error } = await supabase
+        .from('warnings')
+        .select('*')
+        .eq('guild_id', guildId)
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+    
+    if (error) throw error;
+    return data || [];
+}
+
+// Supprimer un warning par numéro de sanction
+export async function removeWarningBySanctionNumber(guildId: string, sanctionNumber: number): Promise<boolean> {
+    const { data, error } = await supabase
+        .from('warnings')
+        .delete()
+        .eq('guild_id', guildId)
+        .eq('sanction_number', sanctionNumber);
+    
+    if (error) throw error;
+    return data !== null;
 }
 
 // Récupérer l'historique de modération d'un utilisateur

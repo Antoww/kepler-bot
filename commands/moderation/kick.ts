@@ -61,13 +61,14 @@ export async function execute(interaction: CommandInteraction) {
         await targetMember.kick(`${reason} - Par ${interaction.user.tag}`);
 
         // Ajouter à l'historique de modération
-        await addModerationHistory(interaction.guild.id, target.id, interaction.user.id, 'kick', reason);
+        const sanctionNumber = await addModerationHistory(interaction.guild.id, target.id, interaction.user.id, 'kick', reason);
 
         // Créer l'embed de confirmation
         const embed = new EmbedBuilder()
             .setColor('#ff9900')
             .setTitle('👢 Utilisateur expulsé')
             .addFields(
+                { name: '📋 Sanction N°', value: `#${sanctionNumber}`, inline: true },
                 { name: '👤 Utilisateur', value: `${target.tag} (${target.id})`, inline: true },
                 { name: '🛡️ Modérateur', value: interaction.user.tag, inline: true },
                 { name: '📝 Raison', value: reason, inline: false }
@@ -78,7 +79,7 @@ export async function execute(interaction: CommandInteraction) {
         await interaction.reply({ embeds: [embed] });
 
         // Logger l'action
-        await logModeration(interaction.guild, 'Kick', target, interaction.user, reason);
+        await logModeration(interaction.guild, 'Kick', target, interaction.user, reason, `Sanction #${sanctionNumber}`);
 
     } catch (error) {
         console.error('Erreur lors de l\'expulsion:', error);

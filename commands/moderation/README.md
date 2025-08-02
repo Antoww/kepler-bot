@@ -73,7 +73,37 @@ Annule le mute d'un utilisateur.
 
 ## Commandes d'Information
 
-### `modinfo`
+### `warn`
+Avertir un utilisateur.
+
+**Utilisation :** `/warn utilisateur:@user raison:"Spam"`
+
+**Options :**
+- `utilisateur` : L'utilisateur à avertir (requis)
+- `raison` : La raison de l'avertissement (requis)
+
+**Permissions requises :** Exclure temporairement des membres
+
+### `unwarn`
+Supprimer un avertissement par son numéro de sanction.
+
+**Utilisation :** `/unwarn numero_sanction:123 [raison:"Erreur"]`
+
+**Options :**
+- `numero_sanction` : Le numéro de la sanction à supprimer (requis)
+- `raison` : La raison de la suppression (optionnel)
+
+**Permissions requises :** Exclure temporairement des membres
+
+### `warnings`
+Affiche tous les avertissements d'un utilisateur.
+
+**Utilisation :** `/warnings utilisateur:@user`
+
+**Options :**
+- `utilisateur` : L'utilisateur dont afficher les avertissements (requis)
+
+**Permissions requises :** Exclure temporairement des membres
 Affiche les informations de modération d'un utilisateur (historique et sanctions actives).
 
 **Utilisation :** `/modinfo utilisateur:@user`
@@ -112,3 +142,21 @@ Les durées acceptées utilisent les suffixes suivants :
 - Impossible de se sanctionner soi-même
 - Le bot ne peut pas être sanctionné
 - Vérification des permissions avant chaque action
+
+## Système de Numérotation
+
+Chaque sanction (ban, kick, mute, warn) reçoit un **numéro unique** par serveur :
+- Les numéros commencent à 1 pour chaque serveur
+- Ils sont incrémentés automatiquement pour chaque nouvelle sanction
+- Permet de référencer facilement une sanction spécifique
+- Affiché dans tous les embeds et logs de modération
+
+**Exemple :** `Sanction #42` pour le 42ème avertissement/sanction sur ce serveur.
+
+## Fonctionnalités des Warnings
+
+- **Avertissements persistants** : Les warnings restent jusqu'à suppression manuelle
+- **Numérotation unique** : Chaque warning a un numéro de sanction
+- **Messages privés** : L'utilisateur reçoit un DM avec les détails
+- **Historique complet** : Visible dans `modinfo` et `warnings`
+- **Suppression ciblée** : Utilisation du numéro de sanction pour supprimer

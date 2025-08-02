@@ -83,7 +83,7 @@ export async function execute(interaction: CommandInteraction) {
         }
 
         // Ajouter à l'historique de modération
-        await addModerationHistory(
+        const sanctionNumber = await addModerationHistory(
             interaction.guild.id, 
             target.id, 
             interaction.user.id, 
@@ -97,6 +97,7 @@ export async function execute(interaction: CommandInteraction) {
             .setColor('#ff0000')
             .setTitle('🔨 Utilisateur banni')
             .addFields(
+                { name: '📋 Sanction N°', value: `#${sanctionNumber}`, inline: true },
                 { name: '👤 Utilisateur', value: `${target.tag} (${target.id})`, inline: true },
                 { name: '🛡️ Modérateur', value: interaction.user.tag, inline: true },
                 { name: '📝 Raison', value: reason, inline: false },
@@ -112,7 +113,7 @@ export async function execute(interaction: CommandInteraction) {
         await interaction.reply({ embeds: [embed] });
 
         // Logger l'action
-        await logModeration(interaction.guild, 'Ban', target, interaction.user, reason, durationText);
+        await logModeration(interaction.guild, 'Ban', target, interaction.user, reason, `Sanction #${sanctionNumber} - ${durationText}`);
 
     } catch (error) {
         console.error('Erreur lors du bannissement:', error);
