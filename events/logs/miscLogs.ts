@@ -6,7 +6,7 @@ import {
     GuildEmoji,
     Sticker
 } from 'discord.js';
-import { getLogChannel } from '../database/supabase.ts';
+import { getLogChannel } from '../../database/supabase.ts';
 
 // Fonction utilitaire pour envoyer un log
 async function sendLog(guild: any, embed: EmbedBuilder) {

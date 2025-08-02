@@ -2,7 +2,7 @@ import * as path from "jsr:@std/path";
 import type { Event, Command } from './types.d.ts';
 import { Client, Collection, GatewayIntentBits, REST, Routes } from 'discord.js';
 import { initDatabase } from './database/supabase.ts';
-import { BirthdayManager } from './events/birthdayManager.ts';
+import { BirthdayManager } from './events/core/birthdayManager.ts';
 
 // Initialisation du client
 const client = new Client({ 

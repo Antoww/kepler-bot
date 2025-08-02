@@ -5,7 +5,7 @@
  * Ce script permet de tester les fonctionnalités du système d'anniversaires
  */
 
-import { initDatabase, setBirthday, getBirthday, getBirthdaysForDate, getAllBirthdays, updateBirthdayChannel, getBirthdayChannel } from '../database/db.ts';
+import { initDatabase, setBirthday, getBirthday, getBirthdaysForDate, getAllBirthdays, updateBirthdayChannel, getBirthdayChannel } from './database/db.ts';
 
 async function testBirthdaySystem() {
     console.log('🧪 Début des tests du système d\'anniversaires...\n');
