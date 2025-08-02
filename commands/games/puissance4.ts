@@ -211,20 +211,33 @@ class Puissance4Game {
             .setTimestamp();
     }
 
-    public getButtons(): ActionRowBuilder<ButtonBuilder> {
-        const row = new ActionRowBuilder<ButtonBuilder>();
+    public getButtons(): ActionRowBuilder<ButtonBuilder>[] {
+        const row1 = new ActionRowBuilder<ButtonBuilder>();
+        const row2 = new ActionRowBuilder<ButtonBuilder>();
         
-        for (let i = 0; i < 7; i++) {
+        // Première rangée : colonnes 1-4
+        for (let i = 0; i < 4; i++) {
             const button = new ButtonBuilder()
                 .setCustomId(`p4_${i}`)
                 .setLabel(`${i + 1}`)
                 .setStyle(ButtonStyle.Primary)
                 .setDisabled(this.gameOver || !this.canDrop(i));
             
-            row.addComponents(button);
+            row1.addComponents(button);
         }
         
-        return row;
+        // Deuxième rangée : colonnes 5-7
+        for (let i = 4; i < 7; i++) {
+            const button = new ButtonBuilder()
+                .setCustomId(`p4_${i}`)
+                .setLabel(`${i + 1}`)
+                .setStyle(ButtonStyle.Primary)
+                .setDisabled(this.gameOver || !this.canDrop(i));
+            
+            row2.addComponents(button);
+        }
+        
+        return [row1, row2];
     }
 
     public isPlayerTurn(user: User): boolean {
@@ -262,9 +275,9 @@ export async function execute(interaction: CommandInteraction) {
         return;
     }
     
-    if (adversaire && adversaire.bot && adversaire.id !== interaction.client.user?.id) {
+    if (adversaire && adversaire.bot) {
         await interaction.reply({
-            content: '❌ Vous ne pouvez pas jouer contre un autre bot !',
+            content: '❌ Vous ne pouvez pas jouer contre un bot ! Laissez le champ vide pour jouer contre l\'IA du bot.',
             ephemeral: true
         });
         return;
@@ -274,7 +287,7 @@ export async function execute(interaction: CommandInteraction) {
     
     await interaction.reply({
         embeds: [game.getEmbed()],
-        components: [game.getButtons()]
+        components: game.getButtons()
     });
 
     const filter = (buttonInteraction: ButtonInteraction) => {
@@ -284,10 +297,24 @@ export async function execute(interaction: CommandInteraction) {
     const collector = interaction.channel?.createMessageComponentCollector({
         filter,
         componentType: ComponentType.Button,
-        time: 300000 // 5 minutes
+        time: 300000 // 5 minutes au total
     });
 
+    let lastActivityTime = Date.now();
+    const inactivityTimeout = 60000; // 1 minute d'inactivité
+
+    // Timer d'inactivité
+    const inactivityTimer = setInterval(() => {
+        if (Date.now() - lastActivityTime > inactivityTimeout && !game.isGameOver()) {
+            collector?.stop('inactivity');
+            clearInterval(inactivityTimer);
+        }
+    }, 5000); // Vérifier toutes les 5 secondes
+
     collector?.on('collect', async (buttonInteraction: ButtonInteraction) => {
+        // Réinitialiser le timer d'inactivité
+        lastActivityTime = Date.now();
+        
         // Vérifier si c'est le tour du joueur
         if (!game.isPlayerTurn(buttonInteraction.user)) {
             await buttonInteraction.reply({
@@ -310,12 +337,13 @@ export async function execute(interaction: CommandInteraction) {
         // Mettre à jour l'affichage
         await buttonInteraction.update({
             embeds: [game.getEmbed()],
-            components: [game.getButtons()]
+            components: game.getButtons()
         });
 
-        // Si le jeu est terminé, arrêter le collector
+        // Si le jeu est terminé, arrêter le collector et le timer
         if (game.isGameOver()) {
             collector.stop('game_over');
+            clearInterval(inactivityTimer);
             return;
         }
 
@@ -325,10 +353,13 @@ export async function execute(interaction: CommandInteraction) {
                 const botColumn = game.getBotMove();
                 game.dropToken(botColumn);
                 
+                // Réinitialiser le timer après le coup du bot aussi
+                lastActivityTime = Date.now();
+                
                 try {
                     await buttonInteraction.editReply({
                         embeds: [game.getEmbed()],
-                        components: [game.getButtons()]
+                        components: game.getButtons()
                     });
                 } catch (error) {
                     console.error('Erreur lors de la mise à jour après le coup du bot:', error);
@@ -336,16 +367,26 @@ export async function execute(interaction: CommandInteraction) {
 
                 if (game.isGameOver()) {
                     collector.stop('game_over');
+                    clearInterval(inactivityTimer);
                 }
             }, 1000); // Délai de 1 seconde pour le coup du bot
         }
     });
 
     collector?.on('end', async (collected, reason) => {
+        clearInterval(inactivityTimer); // Nettoyer le timer
+        
+        let message = '';
         if (reason === 'time') {
+            message = '⏰ Le temps maximum (5 minutes) est écoulé ! La partie a été annulée.';
+        } else if (reason === 'inactivity') {
+            message = '😴 Aucune activité depuis 1 minute ! La partie a été annulée.';
+        }
+        
+        if (message) {
             try {
                 await interaction.editReply({
-                    content: '⏰ Le temps est écoulé ! La partie a été annulée.',
+                    content: message,
                     embeds: [],
                     components: []
                 });
