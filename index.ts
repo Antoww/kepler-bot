@@ -3,6 +3,7 @@ import type { Event, Command } from './types.d.ts';
 import { Client, Collection, GatewayIntentBits, REST, Routes } from 'discord.js';
 import { initDatabase } from './database/supabase.ts';
 import { BirthdayManager } from './events/core/birthdayManager.ts';
+import { ModerationManager } from './events/core/moderationManager.ts';
 
 // Initialisation du client
 const client = new Client({ 
@@ -104,6 +105,11 @@ client.once('ready', async (client) => {
     const birthdayManager = new BirthdayManager(client);
     birthdayManager.startBirthdayCheck();
     console.log(`[LOG : ${new Date().toLocaleTimeString()}] Gestionnaire d'anniversaires initialisé.`);
+
+    // Initialiser le gestionnaire de modération
+    const moderationManager = new ModerationManager(client);
+    moderationManager.start();
+    console.log(`[LOG : ${new Date().toLocaleTimeString()}] Gestionnaire de modération initialisé.`);
 
     const rest = new REST({ version: '10' }).setToken(Deno.env.get('TOKEN') as string);
 

@@ -280,6 +280,238 @@ export async function getAllBirthdays(guildId: string): Promise<Birthday[]> {
     return data || [];
 }
 
+// Mettre à jour le canal de modération d'un serveur
+export async function updateModerationChannel(guildId: string, channelId: string): Promise<void> {
+    // D'abord, vérifier si une configuration existe déjà
+    const { data: existingConfig } = await supabase
+        .from('server_configs')
+        .select('id, log_channel_id, birthday_channel_id')
+        .eq('guild_id', guildId)
+        .single();
+
+    if (existingConfig) {
+        // Mettre à jour la configuration existante
+        const { error } = await supabase
+            .from('server_configs')
+            .update({
+                moderation_channel_id: channelId,
+                updated_at: new Date().toISOString()
+            })
+            .eq('guild_id', guildId);
+        
+        if (error) throw error;
+    } else {
+        // Créer une nouvelle configuration
+        const { error } = await supabase
+            .from('server_configs')
+            .insert({
+                guild_id: guildId,
+                log_channel_id: null,
+                birthday_channel_id: null,
+                moderation_channel_id: channelId,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+            });
+        
+        if (error) throw error;
+    }
+}
+
+// Récupérer le canal de modération d'un serveur
+export async function getModerationChannel(guildId: string): Promise<string | null> {
+    const { data, error } = await supabase
+        .from('server_configs')
+        .select('moderation_channel_id')
+        .eq('guild_id', guildId)
+        .single();
+    
+    if (error) {
+        if (error.code === 'PGRST116') return null; // Pas trouvé
+        throw error;
+    }
+    
+    return data?.moderation_channel_id || null;
+}
+
+// Interface pour les sanctions temporaires
+export interface TempBan {
+    id: number;
+    guild_id: string;
+    user_id: string;
+    moderator_id: string;
+    reason: string;
+    end_time: Date;
+    created_at: Date;
+}
+
+export interface TempMute {
+    id: number;
+    guild_id: string;
+    user_id: string;
+    moderator_id: string;
+    reason: string;
+    end_time: Date;
+    created_at: Date;
+}
+
+// Créer un ban temporaire
+export async function createTempBan(guildId: string, userId: string, moderatorId: string, reason: string, endTime: Date): Promise<void> {
+    const { error } = await supabase
+        .from('temp_bans')
+        .insert({
+            guild_id: guildId,
+            user_id: userId,
+            moderator_id: moderatorId,
+            reason: reason,
+            end_time: endTime.toISOString(),
+            created_at: new Date().toISOString()
+        });
+    
+    if (error) throw error;
+}
+
+// Créer un mute temporaire
+export async function createTempMute(guildId: string, userId: string, moderatorId: string, reason: string, endTime: Date): Promise<void> {
+    const { error } = await supabase
+        .from('temp_mutes')
+        .insert({
+            guild_id: guildId,
+            user_id: userId,
+            moderator_id: moderatorId,
+            reason: reason,
+            end_time: endTime.toISOString(),
+            created_at: new Date().toISOString()
+        });
+    
+    if (error) throw error;
+}
+
+// Récupérer les bans temporaires expirés
+export async function getExpiredTempBans(): Promise<TempBan[]> {
+    const { data, error } = await supabase
+        .from('temp_bans')
+        .select('*')
+        .lt('end_time', new Date().toISOString());
+    
+    if (error) throw error;
+    return data || [];
+}
+
+// Récupérer les mutes temporaires expirés
+export async function getExpiredTempMutes(): Promise<TempMute[]> {
+    const { data, error } = await supabase
+        .from('temp_mutes')
+        .select('*')
+        .lt('end_time', new Date().toISOString());
+    
+    if (error) throw error;
+    return data || [];
+}
+
+// Supprimer un ban temporaire
+export async function removeTempBan(id: number): Promise<void> {
+    const { error } = await supabase
+        .from('temp_bans')
+        .delete()
+        .eq('id', id);
+    
+    if (error) throw error;
+}
+
+// Supprimer un mute temporaire
+export async function removeTempMute(id: number): Promise<void> {
+    const { error } = await supabase
+        .from('temp_mutes')
+        .delete()
+        .eq('id', id);
+    
+    if (error) throw error;
+}
+
+// Interface pour l'historique de modération
+export interface ModerationHistoryEntry {
+    id: number;
+    guild_id: string;
+    user_id: string;
+    moderator_id: string;
+    action_type: string;
+    reason: string;
+    duration?: string;
+    created_at: Date;
+}
+
+// Ajouter une entrée à l'historique de modération
+export async function addModerationHistory(
+    guildId: string, 
+    userId: string, 
+    moderatorId: string, 
+    actionType: string, 
+    reason: string, 
+    duration?: string
+): Promise<void> {
+    const { error } = await supabase
+        .from('moderation_history')
+        .insert({
+            guild_id: guildId,
+            user_id: userId,
+            moderator_id: moderatorId,
+            action_type: actionType,
+            reason: reason,
+            duration: duration,
+            created_at: new Date().toISOString()
+        });
+    
+    if (error) throw error;
+}
+
+// Récupérer l'historique de modération d'un utilisateur
+export async function getModerationHistory(guildId: string, userId: string, limit: number = 10): Promise<ModerationHistoryEntry[]> {
+    const { data, error } = await supabase
+        .from('moderation_history')
+        .select('*')
+        .eq('guild_id', guildId)
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(limit);
+    
+    if (error) throw error;
+    return data || [];
+}
+
+// Récupérer un ban temporaire actif
+export async function getActiveTempBan(guildId: string, userId: string): Promise<TempBan | null> {
+    const { data, error } = await supabase
+        .from('temp_bans')
+        .select('*')
+        .eq('guild_id', guildId)
+        .eq('user_id', userId)
+        .gt('end_time', new Date().toISOString())
+        .single();
+    
+    if (error) {
+        if (error.code === 'PGRST116') return null; // Pas trouvé
+        throw error;
+    }
+    return data;
+}
+
+// Récupérer un mute temporaire actif
+export async function getActiveTempMute(guildId: string, userId: string): Promise<TempMute | null> {
+    const { data, error } = await supabase
+        .from('temp_mutes')
+        .select('*')
+        .eq('guild_id', guildId)
+        .eq('user_id', userId)
+        .gt('end_time', new Date().toISOString())
+        .single();
+    
+    if (error) {
+        if (error.code === 'PGRST116') return null; // Pas trouvé
+        throw error;
+    }
+    return data;
+}
+
 // Fermer la connexion à la base de données
 export async function closeDatabase(): Promise<void> {
     // Avec Supabase, pas besoin de fermer explicitement la connexion
