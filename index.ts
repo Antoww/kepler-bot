@@ -12,7 +12,11 @@ const client = new Client({
         GatewayIntentBits.MessageContent, 
         GatewayIntentBits.DirectMessages,
         GatewayIntentBits.GuildMembers,
-        GatewayIntentBits.GuildModeration
+        GatewayIntentBits.GuildModeration,
+        GatewayIntentBits.GuildVoiceStates,
+        GatewayIntentBits.GuildBans,
+        GatewayIntentBits.GuildInvites,
+        GatewayIntentBits.GuildEmojisAndStickers
     ] 
 });
 
@@ -45,23 +49,43 @@ async function loadCommands(dirPath: string) {
     }
 }
 
+// Fonction pour charger les événements récursivement
+async function loadEvents(dirPath: string) {
+    for (const entry of Deno.readDirSync(dirPath)) {
+        const fullPath = path.join(dirPath, entry.name);
+        
+        if (entry.isDirectory) {
+            // Récursivement charger les sous-dossiers
+            await loadEvents(fullPath);
+        } else if (entry.isFile && (entry.name.endsWith('.js') || entry.name.endsWith('.ts'))) {
+            // Charger les fichiers d'événements
+            try {
+                const event = await import(`file:${fullPath}`) as Event;
+                
+                if (event.name && event.execute) {
+                    if (event.once) {
+                        client.once(event.name, (...args) => event.execute(...args));
+                    } else {
+                        client.on(event.name, (...args) => event.execute(...args));
+                    }
+                    console.log(`[LOG : ${new Date().toLocaleTimeString()}] Événement chargé : ${event.name} (${fullPath})`);
+                } else {
+                    console.error(`[LOG : ${new Date().toLocaleDateString()}] L'événement dans ${fullPath} n'a pas de propriété 'name' ou 'execute' définie.`);
+                }
+            } catch (error) {
+                console.error(`[LOG : ${new Date().toLocaleDateString()}] Erreur lors du chargement de ${fullPath}:`, error);
+            }
+        }
+    }
+}
+
 // Chargement des commandes
 const commandsPath = path.join(Deno.cwd(), 'commands');
 await loadCommands(commandsPath);
 
 // Chargement des événements
 const eventsPath = path.join(Deno.cwd(), 'events');
-
-for (const file of Deno.readDirSync(eventsPath)) {
-    if (!file.isFile || (!file.name.endsWith('.js') && !file.name.endsWith('.ts'))) continue;
-    const filePath = path.join(eventsPath, file.name);
-    const event = await import(`file:${filePath}`) as Event;
-    if (event.once) {
-        client.once(event.name, (...args) => event.execute(...args ));
-    } else {
-        client.on(event.name, (...args) => event.execute(...args));
-    }
-}
+await loadEvents(eventsPath);
 
 // Enregistrement des commandes après l'événement 'ready'
 client.once('ready', async (client) => {

@@ -1,5 +1,5 @@
 import { Events, Role } from 'discord.js';
-import { logRoleCreate } from './guildLogs.ts';
+import { logRoleCreate } from '../logs/guildLogs.ts';
 
 export const name = Events.GuildRoleCreate;
 export const once = false;

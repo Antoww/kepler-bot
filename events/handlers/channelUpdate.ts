@@ -1,5 +1,5 @@
 import { Events, GuildChannel } from 'discord.js';
-import { logChannelUpdate } from './guildLogs.ts';
+import { logChannelUpdate } from '../logs/guildLogs.ts';
 
 export const name = Events.ChannelUpdate;
 export const once = false;
