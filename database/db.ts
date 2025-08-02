@@ -583,6 +583,60 @@ export async function getActiveTempMute(guildId: string, userId: string): Promis
     return data;
 }
 
+// Mettre à jour le rôle de mute d'un serveur
+export async function updateMuteRole(guildId: string, roleId: string): Promise<void> {
+    // D'abord, vérifier si une configuration existe déjà
+    const { data: existingConfig } = await supabase
+        .from('server_configs')
+        .select('id, log_channel_id, birthday_channel_id, moderation_channel_id')
+        .eq('guild_id', guildId)
+        .single();
+
+    if (existingConfig) {
+        // Mettre à jour la configuration existante
+        const { error } = await supabase
+            .from('server_configs')
+            .update({
+                mute_role_id: roleId,
+                updated_at: new Date().toISOString()
+            })
+            .eq('guild_id', guildId);
+        
+        if (error) throw error;
+    } else {
+        // Créer une nouvelle configuration
+        const { error } = await supabase
+            .from('server_configs')
+            .insert({
+                guild_id: guildId,
+                log_channel_id: null,
+                birthday_channel_id: null,
+                moderation_channel_id: null,
+                mute_role_id: roleId,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+            });
+        
+        if (error) throw error;
+    }
+}
+
+// Récupérer le rôle de mute d'un serveur
+export async function getMuteRole(guildId: string): Promise<string | null> {
+    const { data, error } = await supabase
+        .from('server_configs')
+        .select('mute_role_id')
+        .eq('guild_id', guildId)
+        .single();
+    
+    if (error) {
+        if (error.code === 'PGRST116') return null; // Pas trouvé
+        throw error;
+    }
+    
+    return data?.mute_role_id || null;
+}
+
 // Fermer la connexion à la base de données
 export async function closeDatabase(): Promise<void> {
     // Avec Supabase, pas besoin de fermer explicitement la connexion

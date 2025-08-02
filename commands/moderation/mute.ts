@@ -1,6 +1,6 @@
-import { type CommandInteraction, SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits, GuildMember } from 'discord.js';
+import { type CommandInteraction, SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits, GuildMember, Role } from 'discord.js';
 import { logModeration } from '../../utils/moderationLogger.ts';
-import { createTempMute, addModerationHistory } from '../../database/db.ts';
+import { createTempMute, addModerationHistory, getMuteRole } from '../../database/db.ts';
 
 export const data = new SlashCommandBuilder()
     .setName('mute')
@@ -68,8 +68,54 @@ export async function execute(interaction: CommandInteraction) {
     }
 
     try {
-        // Rendre muet l'utilisateur
-        await targetMember.timeout(muteDuration.getTime() - Date.now(), `${reason} - Par ${interaction.user.tag}`);
+        // Vérifier la configuration du rôle de mute
+        const muteRoleId = await getMuteRole(interaction.guild.id);
+        let useRole = false;
+        let muteRole: Role | null = null;
+
+        if (muteRoleId) {
+            muteRole = interaction.guild.roles.cache.get(muteRoleId);
+            if (muteRole) {
+                // Vérifier que le bot peut gérer ce rôle
+                const botMember = interaction.guild.members.me;
+                if (botMember && muteRole.position < botMember.roles.highest.position) {
+                    useRole = true;
+                } else {
+                    await interaction.reply('❌ Je ne peux pas gérer le rôle de mute configuré. Vérifiez la hiérarchie des rôles ou reconfigurez avec `/muteroleconfig`.');
+                    return;
+                }
+            } else {
+                await interaction.reply('❌ Le rôle de mute configuré n\'existe plus. Veuillez le reconfigurer avec `/muteroleconfig`.');
+                return;
+            }
+        }
+
+        if (useRole && muteRole) {
+            // Utiliser le système de rôle
+            if (targetMember.roles.cache.has(muteRole.id)) {
+                await interaction.reply('❌ Cet utilisateur est déjà muet avec le rôle.');
+                return;
+            }
+
+            // Ajouter le rôle de mute
+            await targetMember.roles.add(muteRole, `${reason} - Par ${interaction.user.tag}`);
+        } else {
+            // Utiliser le timeout Discord
+            if (targetMember.isCommunicationDisabled()) {
+                await interaction.reply('❌ Cet utilisateur est déjà en timeout.');
+                return;
+            }
+
+            // Vérifier la limite de 28 jours pour le timeout Discord
+            const maxTimeoutDuration = 28 * 24 * 60 * 60 * 1000; // 28 jours en millisecondes
+            if (muteDuration.getTime() - Date.now() > maxTimeoutDuration) {
+                await interaction.reply('❌ La durée du timeout ne peut pas dépasser 28 jours. Utilisez un rôle de mute pour des durées plus longues (`/muteroleconfig`).');
+                return;
+            }
+
+            // Rendre muet l'utilisateur
+            await targetMember.timeout(muteDuration.getTime() - Date.now(), `${reason} - Par ${interaction.user.tag}`);
+        }
 
         // Enregistrer le mute temporaire en base
         await createTempMute(interaction.guild.id, target.id, interaction.user.id, reason, muteDuration);
@@ -87,7 +133,8 @@ export async function execute(interaction: CommandInteraction) {
                 { name: '🛡️ Modérateur', value: interaction.user.tag, inline: true },
                 { name: '📝 Raison', value: reason, inline: false },
                 { name: '⏰ Durée', value: duration, inline: true },
-                { name: '🕐 Fin du mute', value: `<t:${Math.floor(muteDuration.getTime() / 1000)}:F>`, inline: true }
+                { name: '🕐 Fin du mute', value: `<t:${Math.floor(muteDuration.getTime() / 1000)}:F>`, inline: true },
+                { name: '🔧 Méthode', value: useRole ? `Rôle: ${muteRole!.name}` : 'Timeout Discord', inline: true }
             )
             .setThumbnail(target.displayAvatarURL({ forceStatic: false }))
             .setTimestamp();
