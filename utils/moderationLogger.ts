@@ -1,5 +1,5 @@
 import { EmbedBuilder, Guild, User, TextChannel } from 'discord.js';
-import { getModerationChannel } from '../../database/db.ts';
+import { getModerationChannel } from '../database/db.ts';
 
 export async function logModeration(
     guild: Guild,
