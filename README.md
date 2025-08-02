@@ -1,6 +1,6 @@
 # Kepler - Votre compagnon Discord polyvalent 🚀
 
-**WARN : Bot actuellement en alpha. Des instabilités et des redémarrages intempestifs sont à prévoir !**
+**WARN : Bot actuellement en beta. Des instabilités et des redémarrages intempestifs sont à prévoir !**
 
 Kepler est un bot Discord polyvalent en **développement actif**, conçu pour enrichir vos serveurs avec un système de modération avancé, des outils d'administration, la gestion d'anniversaires, et une variété de commandes fun. Écrit en TypeScript avec Deno et utilisant Supabase comme base de données, Kepler offre des performances optimales et une fiabilité accrue.
 
