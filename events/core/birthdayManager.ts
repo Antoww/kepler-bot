@@ -1,5 +1,5 @@
 import { Client, EmbedBuilder, TextChannel } from 'discord.js';
-import { getBirthdaysForDate, getBirthdayChannel } from '../database/db.ts';
+import { getBirthdaysForDate, getBirthdayChannel } from '../../database/db.ts';
 
 export class BirthdayManager {
     private client: Client;
