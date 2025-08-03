@@ -140,7 +140,11 @@ export class WoWAPIClient {
         }
 
         try {
-            const url = `${WOW_API_CONFIG.BLIZZARD.BASE_URL}${WOW_API_CONFIG.BLIZZARD.ENDPOINTS.GUILD}/${realm}/${guild}?namespace=profile-${region}&locale=fr_FR&access_token=${token}`;
+            // Encoder les paramètres URL
+            const encodedRealm = encodeURIComponent(realm);
+            const encodedGuild = encodeURIComponent(guild);
+            
+            const url = `${WOW_API_CONFIG.BLIZZARD.BASE_URL}${WOW_API_CONFIG.BLIZZARD.ENDPOINTS.GUILD}/${encodedRealm}/${encodedGuild}?namespace=profile-${region}&locale=fr_FR&access_token=${token}`;
             console.log(`🌐 [Blizzard API] Appel: ${url}`);
             
             const response = await fetch(url);
