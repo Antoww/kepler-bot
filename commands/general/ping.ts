@@ -8,8 +8,6 @@ export async function execute(interaction: CommandInteraction) {
     const apiPing = Date.now() - interaction.createdTimestamp;
 
     const embed = new EmbedBuilder()
-        .setAuthor({ name: interaction.client.user?.username, iconURL: interaction.client.user?.displayAvatarURL({ forceStatic: false }) })
-        .setColor('#0099ff')
         .setTitle('Pong ! 🏓')
         .setDescription(`Latence du bot : ${botPing}ms\nLatence de l'API : ${apiPing}ms`)
         .setFooter({
