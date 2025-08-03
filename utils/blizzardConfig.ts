@@ -16,17 +16,20 @@ export function getBlizzardCredentials() {
         // @ts-ignore
         const allEnv = globalThis.Deno.env.toObject();
         const blizzardKeys = Object.keys(allEnv).filter(key => 
-            key.toUpperCase().includes('BLIZZARD') || key.toUpperCase().includes('TEST') || key.toUpperCase().includes('BLIZZ')
+            key.toUpperCase().includes('BLIZZARD') || key.toUpperCase().includes('TEST') || key.toUpperCase().includes('BLIZZ') || key.toUpperCase().includes('SIMPLE')
         );
-        console.log('🔧 [Debug] Variables contenant BLIZZARD/TEST/BLIZZ:', blizzardKeys);
+        console.log('🔧 [Debug] Variables contenant BLIZZARD/TEST/BLIZZ/SIMPLE:', blizzardKeys);
         
         // Test avec variables test
         // @ts-ignore
         const testVar1 = globalThis.Deno?.env?.get('TEST_VAR_1');
         // @ts-ignore
         const testVar2 = globalThis.Deno?.env?.get('TEST_VAR_2');
+        // @ts-ignore
+        const testSimple = globalThis.Deno?.env?.get('TEST_SIMPLE');
         console.log('🔧 [Debug] TEST_VAR_1 trouvé:', testVar1 || 'NON');
         console.log('🔧 [Debug] TEST_VAR_2 trouvé:', testVar2 || 'NON');
+        console.log('🔧 [Debug] TEST_SIMPLE trouvé:', testSimple || 'NON');
         
         // Test avec d'autres variables qui fonctionnent
         // @ts-ignore
