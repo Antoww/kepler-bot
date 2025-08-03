@@ -1,4 +1,6 @@
 // Configuration pour les APIs externes WoW
+import { encodeBase64 } from "https://deno.land/std@0.208.0/encoding/base64.ts";
+
 export const WOW_API_CONFIG = {
     // Raider.IO - Gratuit, pas de clé nécessaire
     RAIDER_IO: {
@@ -83,13 +85,14 @@ export class WoWAPIClient {
 
         try {
             const credentials = `${WOW_API_CONFIG.BLIZZARD.CLIENT_ID}:${WOW_API_CONFIG.BLIZZARD.CLIENT_SECRET}`;
-            const encodedCredentials = btoa(credentials);
+            // Utiliser l'utilitaire d'encodage base64 de Deno
+            const base64String = encodeBase64(credentials);
             
             const response = await fetch('https://oauth.battle.net/token', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
-                    'Authorization': `Basic ${encodedCredentials}`
+                    'Authorization': `Basic ${base64String}`
                 },
                 body: 'grant_type=client_credentials'
             });

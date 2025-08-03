@@ -1,5 +1,5 @@
 import { type CommandInteraction, SlashCommandBuilder, EmbedBuilder } from 'discord.js';
-import { WoWAPIClient } from '../../utils/wowApiClient.js';
+import { WoWAPIClient } from '../../utils/wowApiClient.ts';
 
 interface RaidProgression {
     summary: string;
