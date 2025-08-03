@@ -69,8 +69,8 @@ export async function execute(interaction: CommandInteraction) {
             .setTitle('👢 Utilisateur expulsé')
             .addFields(
                 { name: '📋 Sanction N°', value: `#${sanctionNumber}`, inline: true },
-                { name: '👤 Utilisateur', value: `${target.tag} (${target.id})`, inline: true },
-                { name: '🛡️ Modérateur', value: interaction.user.tag, inline: true },
+                { name: '👤 Utilisateur', value: `${target.tag} (${target.id})`},
+                { name: '🛡️ Modérateur', value: interaction.user.tag},
                 { name: '📝 Raison', value: reason, inline: false }
             )
             .setThumbnail(target.displayAvatarURL({ forceStatic: false }))

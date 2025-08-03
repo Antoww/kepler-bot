@@ -120,7 +120,7 @@ export async function execute(interaction: CommandInteraction) {
             .addFields(
                 { name: '📋 Sanction N°', value: `#${sanctionNumber}`, inline: true },
                 { name: '👤 Utilisateur', value: `${target.tag} (${target.id})`},
-                { name: '🛡️ Modérateur', value: interaction.user.tag, inline: true },
+                { name: '🛡️ Modérateur', value: interaction.user.tag},
                 { name: '📝 Raison', value: reason, inline: false },
                 { name: '⏰ Durée', value: durationText, inline: true }
             )
