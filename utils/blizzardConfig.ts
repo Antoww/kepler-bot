@@ -38,6 +38,19 @@ export function getBlizzardCredentials() {
         console.log('🔧 [Debug] BLAGUES_API_TOKEN trouvé:', testBlagues ? 'OUI' : 'NON');
     }
     
+    // WORKAROUND temporaire : Utiliser une variable qui fonctionne
+    // Format: "CLIENT_ID:CLIENT_SECRET"
+    // @ts-ignore
+    const blizzardCombined = globalThis.Deno?.env?.get('BLIZZARD_COMBINED');
+    
+    if (blizzardCombined && blizzardCombined.includes(':')) {
+        const [clientId, clientSecret] = blizzardCombined.split(':');
+        if (clientId && clientSecret) {
+            console.log('✅ [Config] Variables trouvées via BLIZZARD_COMBINED');
+            return { clientId: clientId.trim(), clientSecret: clientSecret.trim() };
+        }
+    }
+    
     // Variables d'environnement Blizzard - Test avec noms alternatifs
     // @ts-ignore - Deno global est disponible à l'exécution
     const envClientId = globalThis.Deno?.env?.get('BLIZZ_ID') || globalThis.Deno?.env?.get('BLIZZARD_CLIENT_ID');
