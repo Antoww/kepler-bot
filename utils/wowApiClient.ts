@@ -76,6 +76,14 @@ export class WoWAPIClient {
     async getBlizzardToken(): Promise<string | null> {
         console.log('🔑 [Blizzard API] Vérification des credentials...');
         
+        // Debug: Lister toutes les variables d'environnement qui commencent par BLIZZARD
+        console.log('🔍 [Debug] Toutes les variables BLIZZARD_*:');
+        for (const [key, value] of Object.entries(Deno.env.toObject())) {
+            if (key.startsWith('BLIZZARD')) {
+                console.log(`   ${key}: ${value ? value.substring(0, 8) + '...' : 'VIDE'}`);
+            }
+        }
+        
         // Récupérer les variables d'environnement à chaque appel
         const clientId = Deno.env.get('BLIZZARD_CLIENT_ID');
         const clientSecret = Deno.env.get('BLIZZARD_CLIENT_SECRET');
