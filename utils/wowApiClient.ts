@@ -20,7 +20,9 @@ export const WOW_API_CONFIG = {
         ENDPOINTS: {
             GUILD: '/data/wow/guild',
             GUILD_ROSTER: '/data/wow/guild/roster',
-            GUILD_ACHIEVEMENTS: '/data/wow/guild/achievements'
+            GUILD_ACHIEVEMENTS: '/data/wow/guild/achievements',
+            GUILD_SEARCH: '/data/wow/search/guild',
+            CONNECTED_REALMS: '/data/wow/connected-realm/index'
         }
     },
     
@@ -130,8 +132,13 @@ export class WoWAPIClient {
         }
     }
 
+    /**
+     * NOUVELLE APPROCHE basée sur la recherche de documentation Blizzard
+     * Utilise les méthodes modernes : API de recherche + Connected Realms
+     */
     async getGuildFromBlizzard(region: string, realm: string, guild: string): Promise<any | null> {
         console.log(`🏰 [Blizzard API] Récupération guilde: ${guild} (${realm}, ${region})`);
+        console.log(`📚 [Blizzard API] Utilisation de la nouvelle approche basée sur mes recherches`);
         
         const token = await this.getBlizzardToken();
         if (!token) {
@@ -144,134 +151,138 @@ export class WoWAPIClient {
             const encodedRealm = encodeURIComponent(realm);
             const encodedGuild = encodeURIComponent(guild);
             
-            // Test: D'abord vérifier si le royaume existe
-            const realmTestUrl = `${WOW_API_CONFIG.BLIZZARD.BASE_URL}/data/wow/realm/${encodedRealm}?namespace=dynamic-${region}&locale=fr_FR&access_token=${token}`;
-            console.log(`🔍 [Blizzard API] Test royaume: ${realmTestUrl}`);
+            // MÉTHODE 1: API de recherche de guildes (recommandée par la documentation)
+            console.log(`🔍 [Blizzard API] Méthode 1: API de recherche de guildes`);
+            const searchUrl = `${WOW_API_CONFIG.BLIZZARD.BASE_URL}${WOW_API_CONFIG.BLIZZARD.ENDPOINTS.GUILD_SEARCH}?namespace=profile-${region}&locale=fr_FR&access_token=${token}&name.fr_FR=${encodedGuild}&realm=${encodedRealm}`;
+            console.log(`🌐 [Blizzard API] URL recherche: ${searchUrl}`);
             
-            const realmResponse = await fetch(realmTestUrl);
-            if (!realmResponse.ok) {
-                console.log(`⚠️ [Blizzard API] Royaume '${realm}' non trouvé (${realmResponse.status})`);
-                
-                // Essayons de trouver le vrai nom du royaume
-                console.log(`🔍 [Blizzard API] Recherche du royaume dans la liste...`);
-                const realmListUrl = `${WOW_API_CONFIG.BLIZZARD.BASE_URL}/data/wow/realm/index?namespace=dynamic-${region}&locale=fr_FR&access_token=${token}`;
-                console.log(`🌐 [Blizzard API] URL liste royaumes: ${realmListUrl}`);
-                
-                try {
-                    const realmListResponse = await fetch(realmListUrl);
-                    console.log(`📡 [Blizzard API] Réponse liste royaumes: ${realmListResponse.status}`);
-                    
-                    if (realmListResponse.ok) {
-                        const realmList = await realmListResponse.json();
-                        console.log(`📊 [Blizzard API] ${realmList.realms?.length || 0} royaumes trouvés`);
-                        console.log(`🔧 [Blizzard API] Structure réponse:`, Object.keys(realmList));
-                        
-                        // Afficher tous les royaumes qui contiennent "kirin", "tor", ou ressemblent au nom recherché
-                        const searchTerms = ['kirin', 'tor', realm.toLowerCase()];
-                        console.log(`🔍 [Blizzard API] Recherche avec termes: ${searchTerms.join(', ')}`);
-                        
-                        const matchingRealms = realmList.realms?.filter((r: any) => 
-                            searchTerms.some(term => 
-                                r.name?.toLowerCase().includes(term) || 
-                                r.slug?.toLowerCase().includes(term)
-                            )
-                        );
-                        
-                        console.log(`🔍 [Blizzard API] Royaumes correspondants trouvés: ${matchingRealms?.length || 0}`);
-                        matchingRealms?.forEach((r: any) => {
-                            console.log(`   - ${r.name} (slug: ${r.slug})`);
-                        });
-                        
-                        // Si aucun royaume trouvé, afficher les 10 premiers pour debug
-                        if (!matchingRealms?.length) {
-                            console.log(`💡 [Blizzard API] Premiers royaumes disponibles:`);
-                            realmList.realms?.slice(0, 10).forEach((r: any) => {
-                                console.log(`   - ${r.name} (slug: ${r.slug})`);
-                            });
-                        }
-                        
-                        const matchingRealm = matchingRealms?.[0];
-                        
-                        if (matchingRealm) {
-                            console.log(`✅ [Blizzard API] Royaume trouvé: ${matchingRealm.name} (slug: ${matchingRealm.slug})`);
-                            const correctSlug = matchingRealm.slug;
-                            
-                            const url = `${WOW_API_CONFIG.BLIZZARD.BASE_URL}${WOW_API_CONFIG.BLIZZARD.ENDPOINTS.GUILD}/${correctSlug}/${encodedGuild}?namespace=profile-${region}&locale=fr_FR&access_token=${token}`;
-                            console.log(`🌐 [Blizzard API] Appel avec le bon slug: ${url}`);
-                            
-                            const response = await fetch(url);
-                            if (!response.ok) {
-                                console.log(`❌ [Blizzard API] Erreur ${response.status}: ${response.statusText}`);
-                                console.log(`💡 [Blizzard API] Le royaume existe mais la guilde '${guild}' n'a pas été trouvée`);
-                                return null;
-                            }
-                            
-                            const data = await response.json();
-                            console.log(`✅ [Blizzard API] Données guilde récupérées avec le bon slug:`, {
-                                name: data.name,
-                                member_count: data.member_count,
-                                faction: data.faction?.name,
-                                achievement_points: data.achievement_points
-                            });
-                            
-                            return data;
-                        } else {
-                            console.log(`❌ [Blizzard API] Aucun royaume correspondant trouvé pour '${realm}'`);
-                        }
-                    } else {
-                        console.log(`❌ [Blizzard API] Erreur récupération liste royaumes: ${realmListResponse.status} ${realmListResponse.statusText}`);
-                    }
-                } catch (listError) {
-                    console.error(`❌ [Blizzard API] Erreur lors de la récupération de la liste des royaumes:`, listError);
-                }
-                
-                // Essayons avec le slug du royaume (ancien code comme fallback)
-                const realmSlug = realm.toLowerCase().replace(/['\s]/g, '');
-                const encodedRealmSlug = encodeURIComponent(realmSlug);
-                console.log(`🔍 [Blizzard API] Dernier essai avec slug: ${realmSlug}`);
-                
-                const url = `${WOW_API_CONFIG.BLIZZARD.BASE_URL}${WOW_API_CONFIG.BLIZZARD.ENDPOINTS.GUILD}/${encodedRealmSlug}/${encodedGuild}?namespace=profile-${region}&locale=fr_FR&access_token=${token}`;
-                console.log(`🌐 [Blizzard API] Appel avec slug: ${url}`);
-                
-                const response = await fetch(url);
-                if (!response.ok) {
-                    console.log(`❌ [Blizzard API] Erreur ${response.status}: ${response.statusText}`);
-                    console.log(`💡 [Blizzard API] Suggestions: Vérifiez le nom exact du royaume et de la guilde`);
-                    return null;
-                }
-                
-                const data = await response.json();
-                console.log(`✅ [Blizzard API] Données guilde récupérées avec slug:`, {
-                    name: data.name,
-                    member_count: data.member_count,
-                    faction: data.faction?.name,
-                    achievement_points: data.achievement_points
+            const searchResponse = await fetch(searchUrl);
+            console.log(`📡 [Blizzard API] Réponse recherche: ${searchResponse.status}`);
+            
+            if (searchResponse.ok) {
+                const searchData = await searchResponse.json();
+                console.log(`✅ [Blizzard API] Recherche réussie:`, {
+                    totalResults: searchData.page?.totalResults || 0,
+                    results: searchData.results?.length || 0
                 });
                 
-                return data;
+                if (searchData.results && searchData.results.length > 0) {
+                    const guildResult = searchData.results[0];
+                    console.log(`🏰 [Blizzard API] Guilde trouvée via recherche:`, {
+                        name: guildResult.data?.name,
+                        realm: guildResult.data?.realm?.name
+                    });
+                    
+                    // Récupérer les détails complets via l'URL fournie
+                    if (guildResult.data?.href) {
+                        const detailUrl = `${guildResult.data.href}?locale=fr_FR&access_token=${token}`;
+                        console.log(`📊 [Blizzard API] Récupération détails: ${detailUrl}`);
+                        
+                        const detailResponse = await fetch(detailUrl);
+                        if (detailResponse.ok) {
+                            const detailData = await detailResponse.json();
+                            console.log(`✅ [Blizzard API] Détails complets récupérés via API de recherche`);
+                            return detailData;
+                        }
+                    }
+                    
+                    // Si pas d'URL de détails, retourner les données de la recherche
+                    return guildResult.data;
+                } else {
+                    console.log(`⚠️ [Blizzard API] Aucun résultat trouvé via l'API de recherche`);
+                }
             } else {
-                console.log(`✅ [Blizzard API] Royaume '${realm}' trouvé`);
+                console.log(`⚠️ [Blizzard API] Échec API de recherche (${searchResponse.status}), passage aux Connected Realms`);
             }
             
-            const url = `${WOW_API_CONFIG.BLIZZARD.BASE_URL}${WOW_API_CONFIG.BLIZZARD.ENDPOINTS.GUILD}/${encodedRealm}/${encodedGuild}?namespace=profile-${region}&locale=fr_FR&access_token=${token}`;
-            console.log(`🌐 [Blizzard API] Appel: ${url}`);
+            // MÉTHODE 2: Connected Realms (structure moderne de WoW)
+            console.log(`🔄 [Blizzard API] Méthode 2: Connected Realms`);
+            const connectedRealmsUrl = `${WOW_API_CONFIG.BLIZZARD.BASE_URL}${WOW_API_CONFIG.BLIZZARD.ENDPOINTS.CONNECTED_REALMS}?namespace=dynamic-${region}&locale=fr_FR&access_token=${token}`;
+            console.log(`🌐 [Blizzard API] URL Connected Realms: ${connectedRealmsUrl}`);
             
-            const response = await fetch(url);
+            const connectedRealmsResponse = await fetch(connectedRealmsUrl);
+            console.log(`📡 [Blizzard API] Réponse Connected Realms: ${connectedRealmsResponse.status}`);
+            
+            if (connectedRealmsResponse.ok) {
+                const connectedRealmsData = await connectedRealmsResponse.json();
+                console.log(`📊 [Blizzard API] ${connectedRealmsData.connected_realms?.length || 0} Connected Realms trouvés`);
+                
+                // Chercher dans les Connected Realms (limiter à 5 pour éviter trop d'appels)
+                if (connectedRealmsData.connected_realms) {
+                    for (const connectedRealm of connectedRealmsData.connected_realms.slice(0, 5)) {
+                        try {
+                            const detailUrl = `${connectedRealm.href}?locale=fr_FR&access_token=${token}`;
+                            console.log(`🔍 [Blizzard API] Vérification Connected Realm: ${detailUrl}`);
+                            
+                            const detailResponse = await fetch(detailUrl);
+                            if (detailResponse.ok) {
+                                const detailData = await detailResponse.json();
+                                
+                                // Vérifier si notre royaume est dans ce connected realm
+                                const foundRealm = detailData.realms?.find((r: any) => 
+                                    r.name?.toLowerCase() === realm.toLowerCase() ||
+                                    r.slug?.toLowerCase() === realm.toLowerCase() ||
+                                    r.name?.toLowerCase().includes(realm.toLowerCase()) ||
+                                    r.slug?.toLowerCase().includes(realm.toLowerCase())
+                                );
+                                
+                                if (foundRealm) {
+                                    console.log(`✅ [Blizzard API] Royaume trouvé dans Connected Realm:`, {
+                                        realmName: foundRealm.name,
+                                        realmSlug: foundRealm.slug,
+                                        connectedRealmId: detailData.id
+                                    });
+                                    
+                                    // Essayer de récupérer la guilde avec le bon slug
+                                    const guildUrl = `${WOW_API_CONFIG.BLIZZARD.BASE_URL}${WOW_API_CONFIG.BLIZZARD.ENDPOINTS.GUILD}/${foundRealm.slug}/${encodedGuild}?namespace=profile-${region}&locale=fr_FR&access_token=${token}`;
+                                    console.log(`🏰 [Blizzard API] Appel guilde avec slug correct: ${guildUrl}`);
+                                    
+                                    const guildResponse = await fetch(guildUrl);
+                                    if (guildResponse.ok) {
+                                        const guildData = await guildResponse.json();
+                                        console.log(`✅ [Blizzard API] Guilde trouvée via Connected Realm`);
+                                        return guildData;
+                                    } else {
+                                        console.log(`❌ [Blizzard API] Guilde '${guild}' non trouvée sur '${foundRealm.name}' (${guildResponse.status})`);
+                                    }
+                                }
+                            }
+                        } catch (e) {
+                            // Continuer avec le prochain Connected Realm
+                            console.log(`⚠️ [Blizzard API] Erreur sur un Connected Realm, passage au suivant`);
+                        }
+                    }
+                }
+                console.log(`❌ [Blizzard API] Royaume '${realm}' non trouvé dans les Connected Realms testés`);
+            } else {
+                console.log(`❌ [Blizzard API] Erreur Connected Realms: ${connectedRealmsResponse.status}`);
+            }
+            
+            // MÉTHODE 3: Fallback avec transformation de slug (ancien système)
+            console.log(`🔄 [Blizzard API] Méthode 3: Fallback avec slug transformé`);
+            const realmSlug = realm.toLowerCase().replace(/['\s]/g, '');
+            const encodedRealmSlug = encodeURIComponent(realmSlug);
+            console.log(`🔧 [Blizzard API] Transformation: '${realm}' → '${realmSlug}'`);
+            
+            const directUrl = `${WOW_API_CONFIG.BLIZZARD.BASE_URL}${WOW_API_CONFIG.BLIZZARD.ENDPOINTS.GUILD}/${encodedRealmSlug}/${encodedGuild}?namespace=profile-${region}&locale=fr_FR&access_token=${token}`;
+            console.log(`🎯 [Blizzard API] Essai direct: ${directUrl}`);
+            
+            const directResponse = await fetch(directUrl);
+            if (directResponse.ok) {
+                const directData = await directResponse.json();
+                console.log(`✅ [Blizzard API] Guilde trouvée via essai direct (fallback)`);
+                return directData;
+            }
+            
+            // Si toutes les méthodes échouent
+            console.log(`❌ [Blizzard API] Toutes les méthodes ont échoué`);
+            console.log(`💡 [Blizzard API] Suggestions de debug:`);
+            console.log(`   - Vérifiez que la guilde '${guild}' existe sur le royaume '${realm}'`);
+            console.log(`   - Essayez avec le nom de royaume complet (ex: "Kirin Tor" au lieu de "kirin-tor")`);
+            console.log(`   - Vérifiez sur le site officiel WoW que la guilde est bien visible publiquement`);
+            console.log(`   - Testez d'abord avec une guilde connue comme "Method" sur "Tarren Mill"`);
+            return null;
 
-            if (!response.ok) {
-                console.log(`❌ [Blizzard API] Erreur ${response.status}: ${response.statusText}`);
-                return null;
-            }
-            
-            const data = await response.json();
-            console.log(`✅ [Blizzard API] Données guilde récupérées:`, {
-                name: data.name,
-                member_count: data.member_count,
-                faction: data.faction?.name,
-                achievement_points: data.achievement_points
-            });
-            
-            return data;
         } catch (error) {
             console.error('❌ [Blizzard API] Erreur lors de la récupération:', error);
             return null;
@@ -348,14 +359,14 @@ export class WoWAPIClient {
                 return false;
             }
 
-            // Test simple : récupérer la liste des royaumes
+            // Test simple : récupérer les connected realms (nouvelle approche)
             const response = await fetch(
-                `${WOW_API_CONFIG.BLIZZARD.BASE_URL}/data/wow/realm/index?namespace=dynamic-eu&locale=fr_FR&access_token=${token}`
+                `${WOW_API_CONFIG.BLIZZARD.BASE_URL}${WOW_API_CONFIG.BLIZZARD.ENDPOINTS.CONNECTED_REALMS}?namespace=dynamic-eu&locale=fr_FR&access_token=${token}`
             );
 
             if (response.ok) {
                 const data = await response.json();
-                console.log(`✅ API Blizzard opérationnelle (${data.realms?.length || 0} royaumes disponibles)`);
+                console.log(`✅ API Blizzard opérationnelle (${data.connected_realms?.length || 0} Connected Realms disponibles)`);
                 return true;
             } else {
                 console.log(`❌ Erreur API Blizzard: ${response.status}`);
