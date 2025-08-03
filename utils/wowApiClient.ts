@@ -74,14 +74,22 @@ export class WoWAPIClient {
     private tokenExpiry: number = 0;
 
     async getBlizzardToken(): Promise<string | null> {
+        console.log('🔑 [Blizzard API] Vérification des credentials...');
+        
         if (!WOW_API_CONFIG.BLIZZARD.CLIENT_ID || !WOW_API_CONFIG.BLIZZARD.CLIENT_SECRET) {
+            console.log('❌ [Blizzard API] Variables d\'environnement manquantes');
             return null;
         }
 
+        console.log('✅ [Blizzard API] Credentials trouvés');
+
         // Vérifier si le token est encore valide
         if (this.blizzardToken && Date.now() < this.tokenExpiry) {
+            console.log('♻️ [Blizzard API] Réutilisation du token existant');
             return this.blizzardToken;
         }
+
+        console.log('🔄 [Blizzard API] Demande d\'un nouveau token...');
 
         try {
             const credentials = `${WOW_API_CONFIG.BLIZZARD.CLIENT_ID}:${WOW_API_CONFIG.BLIZZARD.CLIENT_SECRET}`;
@@ -98,6 +106,7 @@ export class WoWAPIClient {
             });
 
             if (!response.ok) {
+                console.log(`❌ [Blizzard API] Erreur authentification: ${response.status} ${response.statusText}`);
                 throw new Error('Failed to get Blizzard token');
             }
 
@@ -105,31 +114,51 @@ export class WoWAPIClient {
             this.blizzardToken = data.access_token;
             this.tokenExpiry = Date.now() + (data.expires_in * 1000) - 60000; // -1 minute de sécurité
 
+            console.log(`✅ [Blizzard API] Token obtenu avec succès (expire dans ${Math.round(data.expires_in / 3600)}h)`);
             return this.blizzardToken;
         } catch (error) {
-            console.error('Erreur lors de l\'obtention du token Blizzard:', error);
+            console.error('❌ [Blizzard API] Erreur lors de l\'obtention du token:', error);
             return null;
         }
     }
 
     async getGuildFromBlizzard(region: string, realm: string, guild: string): Promise<any | null> {
+        console.log(`🏰 [Blizzard API] Récupération guilde: ${guild} (${realm}, ${region})`);
+        
         const token = await this.getBlizzardToken();
-        if (!token) return null;
+        if (!token) {
+            console.log('❌ [Blizzard API] Pas de token disponible');
+            return null;
+        }
 
         try {
-            const response = await fetch(
-                `${WOW_API_CONFIG.BLIZZARD.BASE_URL}${WOW_API_CONFIG.BLIZZARD.ENDPOINTS.GUILD}/${realm}/${guild}?namespace=profile-${region}&locale=fr_FR&access_token=${token}`
-            );
+            const url = `${WOW_API_CONFIG.BLIZZARD.BASE_URL}${WOW_API_CONFIG.BLIZZARD.ENDPOINTS.GUILD}/${realm}/${guild}?namespace=profile-${region}&locale=fr_FR&access_token=${token}`;
+            console.log(`🌐 [Blizzard API] Appel: ${url}`);
+            
+            const response = await fetch(url);
 
-            if (!response.ok) return null;
-            return await response.json();
+            if (!response.ok) {
+                console.log(`❌ [Blizzard API] Erreur ${response.status}: ${response.statusText}`);
+                return null;
+            }
+            
+            const data = await response.json();
+            console.log(`✅ [Blizzard API] Données guilde récupérées:`, {
+                name: data.name,
+                member_count: data.member_count,
+                faction: data.faction?.name,
+                achievement_points: data.achievement_points
+            });
+            
+            return data;
         } catch (error) {
-            console.error('Erreur API Blizzard:', error);
+            console.error('❌ [Blizzard API] Erreur lors de la récupération:', error);
             return null;
         }
     }
 
     async getEnhancedGuildData(region: string, realm: string, guild: string): Promise<EnhancedGuildData | null> {
+        console.log(`📊 [WoW API] Début récupération données pour: ${guild} (${realm}, ${region})`);
         const dataSources: string[] = [];
         
         // 1. Données principales de Raider.IO
@@ -137,24 +166,32 @@ export class WoWAPIClient {
         const encodedRealm = encodeURIComponent(realm);
         
         try {
+            console.log('🔍 [Raider.IO] Récupération données principales...');
             const raiderResponse = await fetch(
                 `${WOW_API_CONFIG.RAIDER_IO.BASE_URL}${WOW_API_CONFIG.RAIDER_IO.ENDPOINTS.GUILD_PROFILE}?region=${region}&realm=${encodedRealm}&name=${encodedGuild}&fields=raid_progression,raid_rankings,mythic_plus_ranks`
             );
 
             if (!raiderResponse.ok) {
+                console.log(`❌ [Raider.IO] Erreur ${raiderResponse.status}: ${raiderResponse.statusText}`);
                 throw new Error('Guilde non trouvée sur Raider.IO');
             }
 
             const raiderData = await raiderResponse.json();
+            console.log(`✅ [Raider.IO] Données récupérées pour: ${raiderData.name}`);
             dataSources.push('Raider.IO');
 
             // 2. Données supplémentaires de Blizzard (si configuré)
+            console.log('🔍 [Blizzard API] Tentative récupération données supplémentaires...');
             const blizzardData = await this.getGuildFromBlizzard(region, realm, guild);
             if (blizzardData) {
+                console.log('✅ [Blizzard API] Données supplémentaires ajoutées');
                 dataSources.push('Blizzard API');
+            } else {
+                console.log('ℹ️ [Blizzard API] Pas de données supplémentaires (normal si non configuré)');
             }
 
             // 3. Construire la réponse combinée
+            console.log('🔧 [WoW API] Construction des données finales...');
             const enhancedData: EnhancedGuildData = {
                 name: raiderData.name,
                 realm: raiderData.realm,
@@ -172,10 +209,11 @@ export class WoWAPIClient {
                 last_updated: new Date()
             };
 
+            console.log(`✅ [WoW API] Données finales compilées avec sources: ${dataSources.join(', ')}`);
             return enhancedData;
 
         } catch (error) {
-            console.error('Erreur lors de la récupération des données de guilde:', error);
+            console.error('❌ [WoW API] Erreur lors de la récupération des données de guilde:', error);
             return null;
         }
     }

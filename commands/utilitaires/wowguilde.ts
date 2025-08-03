@@ -67,14 +67,24 @@ export async function execute(interaction: CommandInteraction) {
 
     try {
         const region = interaction.options.getString('region') || 'eu';
+        console.log(`🎮 [WoWGuilde] Commande exécutée: ${guild} sur ${server} (${region})`);
+        
         const apiClient = new WoWAPIClient();
         
         // Récupérer les données enrichies (Raider.IO + Blizzard API si configuré)
         const guildData = await apiClient.getEnhancedGuildData(region, server, guild);
         
         if (!guildData) {
+            console.log(`❌ [WoWGuilde] Aucune donnée trouvée pour: ${guild}`);
             throw new Error('Guilde non trouvée');
         }
+
+        console.log(`✅ [WoWGuilde] Données reçues avec sources: ${guildData.data_sources.join(', ')}`);
+        console.log(`📊 [WoWGuilde] Données Blizzard disponibles:`, {
+            membre_count: !!guildData.member_count,
+            faction: !!guildData.faction,
+            achievement_points: !!guildData.achievement_points
+        });
         
         // Analyser les données de progression
         const raids = Object.entries(guildData.raid_progression);
