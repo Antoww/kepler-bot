@@ -76,7 +76,16 @@ export class WoWAPIClient {
     async getBlizzardToken(): Promise<string | null> {
         console.log('🔑 [Blizzard API] Vérification des credentials...');
         
-        if (!WOW_API_CONFIG.BLIZZARD.CLIENT_ID || !WOW_API_CONFIG.BLIZZARD.CLIENT_SECRET) {
+        // Récupérer les variables d'environnement à chaque appel
+        const clientId = Deno.env.get('BLIZZARD_CLIENT_ID');
+        const clientSecret = Deno.env.get('BLIZZARD_CLIENT_SECRET');
+        
+        console.log('🔍 [Blizzard API] Variables d\'environnement:', {
+            clientId: clientId ? `${clientId.substring(0, 8)}...` : 'NON TROUVÉ',
+            clientSecret: clientSecret ? `${clientSecret.substring(0, 8)}...` : 'NON TROUVÉ'
+        });
+        
+        if (!clientId || !clientSecret) {
             console.log('❌ [Blizzard API] Variables d\'environnement manquantes');
             return null;
         }
@@ -92,7 +101,7 @@ export class WoWAPIClient {
         console.log('🔄 [Blizzard API] Demande d\'un nouveau token...');
 
         try {
-            const credentials = `${WOW_API_CONFIG.BLIZZARD.CLIENT_ID}:${WOW_API_CONFIG.BLIZZARD.CLIENT_SECRET}`;
+            const credentials = `${clientId}:${clientSecret}`;
             // Utiliser l'utilitaire d'encodage base64 de Deno
             const base64String = encodeBase64(credentials);
             
