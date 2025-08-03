@@ -9,7 +9,7 @@
     "compilerOptions": {
         "strict": true,
         "allowJs": true,
-        "lib": ["deno.window"],
+        "lib": ["deno.ns", "deno.window"],
         "types": ["./types.d.ts"]
     }
 }
