@@ -270,7 +270,7 @@ export async function execute(interaction: CommandInteraction) {
                 new ActionRowBuilder<ButtonBuilder>().addComponents(
                     new ButtonBuilder()
                         .setCustomId('help_close')
-                        .setLabel('❌ Fermer')
+                        .setLabel('❌')
                         .setStyle(ButtonStyle.Danger)
                 )
             ],
