@@ -1,5 +1,6 @@
 // Configuration pour les APIs externes WoW
 import { encodeBase64 } from "https://deno.land/std@0.208.0/encoding/base64.ts";
+import { getBlizzardCredentials } from "./blizzardConfig.ts";
 
 export const WOW_API_CONFIG = {
     // Raider.IO - Gratuit, pas de clé nécessaire
@@ -15,8 +16,7 @@ export const WOW_API_CONFIG = {
     // Pour obtenir une clé: https://develop.battle.net/
     BLIZZARD: {
         BASE_URL: 'https://eu.api.blizzard.com',
-        CLIENT_ID: Deno.env.get('BLIZZARD_CLIENT_ID') || '',
-        CLIENT_SECRET: Deno.env.get('BLIZZARD_CLIENT_SECRET') || '',
+        // Variables lues dynamiquement dans les fonctions
         ENDPOINTS: {
             GUILD: '/data/wow/guild',
             GUILD_ROSTER: '/data/wow/guild/roster',
@@ -28,7 +28,7 @@ export const WOW_API_CONFIG = {
     // API: https://www.warcraftlogs.com/api/docs
     WARCRAFTLOGS: {
         BASE_URL: 'https://www.warcraftlogs.com/v1',
-        API_KEY: Deno.env.get('WARCRAFTLOGS_API_KEY') || '',
+        // Variable lue dynamiquement
         ENDPOINTS: {
             REPORTS: '/reports/guild',
             RANKINGS: '/rankings/guild'
@@ -74,27 +74,18 @@ export class WoWAPIClient {
     private tokenExpiry: number = 0;
 
     async getBlizzardToken(): Promise<string | null> {
-        console.log('🔑 [Blizzard API] Vérification des credentials...');
+        console.log('🔑 [Blizzard API] Récupération des credentials...');
         
-        // Debug: Lister toutes les variables d'environnement qui commencent par BLIZZARD
-        console.log('🔍 [Debug] Toutes les variables BLIZZARD_*:');
-        for (const [key, value] of Object.entries(Deno.env.toObject())) {
-            if (key.startsWith('BLIZZARD')) {
-                console.log(`   ${key}: ${value ? value.substring(0, 8) + '...' : 'VIDE'}`);
-            }
-        }
+        // Utiliser la fonction centralisée pour récupérer les credentials
+        const { clientId, clientSecret } = getBlizzardCredentials();
         
-        // Récupérer les variables d'environnement à chaque appel
-        const clientId = Deno.env.get('BLIZZARD_CLIENT_ID');
-        const clientSecret = Deno.env.get('BLIZZARD_CLIENT_SECRET');
-        
-        console.log('🔍 [Blizzard API] Variables d\'environnement:', {
+        console.log('🔍 [Blizzard API] Credentials trouvés:', {
             clientId: clientId ? `${clientId.substring(0, 8)}...` : 'NON TROUVÉ',
             clientSecret: clientSecret ? `${clientSecret.substring(0, 8)}...` : 'NON TROUVÉ'
         });
         
         if (!clientId || !clientSecret) {
-            console.log('❌ [Blizzard API] Variables d\'environnement manquantes');
+            console.log('❌ [Blizzard API] Credentials manquants - utilisation de Raider.IO seulement');
             return null;
         }
 
