@@ -37,10 +37,6 @@ export async function execute(interaction: CommandInteraction) {
     const randomResponse = responses[Math.floor(Math.random() * responses.length)];
 
     const embed = new EmbedBuilder()
-        .setAuthor({ 
-            name: interaction.client.user?.username, 
-            iconURL: interaction.client.user?.displayAvatarURL({ forceStatic: false }) 
-        })
         .setColor('#9B59B6')
         .setTitle('🔮 Boule Magique')
         .addFields(
