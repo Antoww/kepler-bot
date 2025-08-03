@@ -1,4 +1,13 @@
-import { type CommandInteraction, SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } from 'discord.js';
+import { 
+    type CommandInteraction, 
+    SlashCommandBuilder, 
+    EmbedBuilder, 
+    PermissionFlagsBits,
+    ActionRowBuilder,
+    ButtonBuilder,
+    ButtonStyle,
+    ComponentType
+} from 'discord.js';
 import { getModerationHistory, getActiveTempBan, getActiveTempMute, getUserWarnings } from '../../database/db.ts';
 
 export const data = new SlashCommandBuilder()
@@ -68,17 +77,50 @@ export async function execute(interaction: CommandInteraction) {
             });
         }
 
-        // Historique récent
+        // Historique récent avec pagination
         if (history && history.length > 0) {
-            const historyText = history.slice(0, 5).map((entry, index) => {
-                const date = new Date(entry.created_at);
-                const timestamp = Math.floor(date.getTime() / 1000);
-                const duration = entry.duration ? ` (${entry.duration})` : '';
-                const sanctionNum = entry.sanction_number ? `#${entry.sanction_number}` : '';
-                return `**${sanctionNum}** ${getActionEmoji(entry.action_type)} ${entry.action_type.toUpperCase()}${duration}\n📝 ${entry.reason}\n🕐 <t:${timestamp}:R>`;
-            }).join('\n\n');
+            let currentPage = 0;
+            const itemsPerPage = 5;
+            const totalPages = Math.ceil(history.length / itemsPerPage);
 
-            embed.addFields({ name: `📜 Historique récent (${history.length} total)`, value: historyText, inline: false });
+            const generateHistoryEmbed = (baseEmbed: EmbedBuilder, page: number) => {
+                const start = page * itemsPerPage;
+                const end = start + itemsPerPage;
+                const currentHistory = history.slice(start, end);
+
+                const historyText = currentHistory.map((entry, index) => {
+                    const date = new Date(entry.created_at);
+                    const timestamp = Math.floor(date.getTime() / 1000);
+                    const duration = entry.duration ? ` (${entry.duration})` : '';
+                    const sanctionNum = entry.sanction_number ? `#${entry.sanction_number}` : '';
+                    return `**${sanctionNum}** ${getActionEmoji(entry.action_type)} ${entry.action_type.toUpperCase()}${duration}\n📝 ${entry.reason}\n🕐 <t:${timestamp}:R>`;
+                }).join('\n\n');
+
+                const newEmbed = EmbedBuilder.from(baseEmbed.toJSON());
+                newEmbed.addFields({ 
+                    name: `📜 Historique (Page ${page + 1}/${totalPages}) - ${history.length} total`, 
+                    value: historyText, 
+                    inline: false 
+                });
+
+                return newEmbed;
+            };
+
+            const generateButtons = (page: number) => {
+                return new ActionRowBuilder<ButtonBuilder>()
+                    .addComponents(
+                        new ButtonBuilder()
+                            .setCustomId('previous_history')
+                            .setLabel('⬅️ Précédent')
+                            .setStyle(ButtonStyle.Secondary)
+                            .setDisabled(page === 0),
+                        new ButtonBuilder()
+                            .setCustomId('next_history')
+                            .setLabel('➡️ Suivant')
+                            .setStyle(ButtonStyle.Secondary)
+                            .setDisabled(page === totalPages - 1)
+                    );
+            };
 
             // Statistiques
             const stats = {
@@ -90,11 +132,56 @@ export async function execute(interaction: CommandInteraction) {
 
             const statsText = `🔨 Bans: **${stats.ban}**\n👢 Kicks: **${stats.kick}**\n🔇 Mutes: **${stats.mute}**\n⚠️ Warns: **${stats.warn}**`;
             embed.addFields({ name: '📈 Statistiques', value: statsText, inline: true });
+
+            const finalEmbed = generateHistoryEmbed(embed, currentPage);
+            const components = totalPages > 1 ? [generateButtons(currentPage)] : [];
+
+            const response = await interaction.reply({ 
+                embeds: [finalEmbed], 
+                components,
+                fetchReply: true 
+            });
+
+            if (totalPages > 1) {
+                const collector = response.createMessageComponentCollector({
+                    componentType: ComponentType.Button,
+                    time: 300000 // 5 minutes
+                });
+
+                collector.on('collect', async i => {
+                    if (i.user.id !== interaction.user.id) {
+                        await i.reply({ content: 'Vous ne pouvez pas utiliser ces boutons.', ephemeral: true });
+                        return;
+                    }
+
+                    switch (i.customId) {
+                        case 'previous_history':
+                            currentPage = Math.max(0, currentPage - 1);
+                            break;
+                        case 'next_history':
+                            currentPage = Math.min(totalPages - 1, currentPage + 1);
+                            break;
+                    }
+
+                    const updatedEmbed = generateHistoryEmbed(embed, currentPage);
+                    await i.update({ 
+                        embeds: [updatedEmbed], 
+                        components: [generateButtons(currentPage)] 
+                    });
+                });
+
+                collector.on('end', async () => {
+                    try {
+                        await interaction.editReply({ components: [] });
+                    } catch (error) {
+                        // Message peut être supprimé
+                    }
+                });
+            }
         } else {
             embed.addFields({ name: '📜 Historique', value: 'Aucune action de modération enregistrée', inline: false });
+            await interaction.reply({ embeds: [embed] });
         }
-
-        await interaction.reply({ embeds: [embed] });
 
     } catch (error) {
         console.error('Erreur lors de la récupération des informations de modération:', error);
