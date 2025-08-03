@@ -12,6 +12,14 @@ export function getBlizzardCredentials() {
         console.log('🔧 [Debug] Type de Deno.env:', typeof globalThis.Deno.env);
         console.log('🔧 [Debug] Deno.env existe:', !!globalThis.Deno.env);
         
+        // Lister toutes les variables qui contiennent "BLIZZARD"
+        // @ts-ignore
+        const allEnv = globalThis.Deno.env.toObject();
+        const blizzardKeys = Object.keys(allEnv).filter(key => 
+            key.toUpperCase().includes('BLIZZARD')
+        );
+        console.log('🔧 [Debug] Variables contenant BLIZZARD:', blizzardKeys);
+        
         // Test avec d'autres variables qui fonctionnent
         // @ts-ignore
         const testToken = globalThis.Deno?.env?.get('TOKEN');
