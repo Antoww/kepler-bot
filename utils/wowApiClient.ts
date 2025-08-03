@@ -159,12 +159,31 @@ export class WoWAPIClient {
                 
                 if (realmListResponse.ok) {
                     const realmList = await realmListResponse.json();
-                    const matchingRealm = realmList.realms?.find((r: any) => 
-                        r.name?.toLowerCase().includes('kirin') || 
-                        r.slug?.toLowerCase().includes('kirin') ||
-                        r.name?.toLowerCase().includes(realm.toLowerCase()) ||
-                        r.slug?.toLowerCase().includes(realm.toLowerCase())
+                    console.log(`📊 [Blizzard API] ${realmList.realms?.length || 0} royaumes trouvés`);
+                    
+                    // Afficher tous les royaumes qui contiennent "kirin", "tor", ou ressemblent au nom recherché
+                    const searchTerms = ['kirin', 'tor', realm.toLowerCase()];
+                    const matchingRealms = realmList.realms?.filter((r: any) => 
+                        searchTerms.some(term => 
+                            r.name?.toLowerCase().includes(term) || 
+                            r.slug?.toLowerCase().includes(term)
+                        )
                     );
+                    
+                    console.log(`🔍 [Blizzard API] Royaumes correspondants trouvés: ${matchingRealms?.length || 0}`);
+                    matchingRealms?.forEach((r: any) => {
+                        console.log(`   - ${r.name} (slug: ${r.slug})`);
+                    });
+                    
+                    // Si aucun royaume trouvé, afficher les 10 premiers pour debug
+                    if (!matchingRealms?.length) {
+                        console.log(`💡 [Blizzard API] Premiers royaumes disponibles:`);
+                        realmList.realms?.slice(0, 10).forEach((r: any) => {
+                            console.log(`   - ${r.name} (slug: ${r.slug})`);
+                        });
+                    }
+                    
+                    const matchingRealm = matchingRealms?.[0];
                     
                     if (matchingRealm) {
                         console.log(`✅ [Blizzard API] Royaume trouvé: ${matchingRealm.name} (slug: ${matchingRealm.slug})`);
@@ -191,8 +210,6 @@ export class WoWAPIClient {
                         return data;
                     } else {
                         console.log(`❌ [Blizzard API] Aucun royaume correspondant trouvé pour '${realm}'`);
-                        const sampleRealms = realmList.realms?.slice(0, 5).map((r: any) => `${r.name} (${r.slug})`);
-                        console.log(`💡 [Blizzard API] Exemples de royaumes: ${sampleRealms?.join(', ')}`);
                     }
                 }
                 
