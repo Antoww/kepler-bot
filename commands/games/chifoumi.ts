@@ -55,10 +55,6 @@ export async function execute(interaction: CommandInteraction) {
     }
 
     const embed = new EmbedBuilder()
-        .setAuthor({ 
-            name: interaction.client.user?.username, 
-            iconURL: interaction.client.user?.displayAvatarURL({ forceStatic: false }) 
-        })
         .setColor(color)
         .setTitle(`${resultEmoji} ${result}`)
         .setDescription('Résultat du chifoumi')
