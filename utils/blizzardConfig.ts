@@ -12,13 +12,21 @@ export function getBlizzardCredentials() {
         console.log('🔧 [Debug] Type de Deno.env:', typeof globalThis.Deno.env);
         console.log('🔧 [Debug] Deno.env existe:', !!globalThis.Deno.env);
         
-        // Lister toutes les variables qui contiennent "BLIZZARD"
+        // Lister toutes les variables qui contiennent "BLIZZARD" ou "TEST"
         // @ts-ignore
         const allEnv = globalThis.Deno.env.toObject();
         const blizzardKeys = Object.keys(allEnv).filter(key => 
-            key.toUpperCase().includes('BLIZZARD')
+            key.toUpperCase().includes('BLIZZARD') || key.toUpperCase().includes('TEST') || key.toUpperCase().includes('BLIZZ')
         );
-        console.log('🔧 [Debug] Variables contenant BLIZZARD:', blizzardKeys);
+        console.log('🔧 [Debug] Variables contenant BLIZZARD/TEST/BLIZZ:', blizzardKeys);
+        
+        // Test avec variables test
+        // @ts-ignore
+        const testVar1 = globalThis.Deno?.env?.get('TEST_VAR_1');
+        // @ts-ignore
+        const testVar2 = globalThis.Deno?.env?.get('TEST_VAR_2');
+        console.log('🔧 [Debug] TEST_VAR_1 trouvé:', testVar1 || 'NON');
+        console.log('🔧 [Debug] TEST_VAR_2 trouvé:', testVar2 || 'NON');
         
         // Test avec d'autres variables qui fonctionnent
         // @ts-ignore
@@ -30,14 +38,16 @@ export function getBlizzardCredentials() {
         console.log('🔧 [Debug] BLAGUES_API_TOKEN trouvé:', testBlagues ? 'OUI' : 'NON');
     }
     
-    // Variables d'environnement Blizzard
+    // Variables d'environnement Blizzard - Test avec noms alternatifs
     // @ts-ignore - Deno global est disponible à l'exécution
-    const envClientId = globalThis.Deno?.env?.get('BLIZZARD_CLIENT_ID');
+    const envClientId = globalThis.Deno?.env?.get('BLIZZ_ID') || globalThis.Deno?.env?.get('BLIZZARD_CLIENT_ID');
     // @ts-ignore - Deno global est disponible à l'exécution  
-    const envClientSecret = globalThis.Deno?.env?.get('BLIZZARD_CLIENT_SECRET');
+    const envClientSecret = globalThis.Deno?.env?.get('BLIZZ_SECRET') || globalThis.Deno?.env?.get('BLIZZARD_CLIENT_SECRET');
     
-    console.log('🔧 [Debug] BLIZZARD_CLIENT_ID brut:', envClientId);
-    console.log('🔧 [Debug] BLIZZARD_CLIENT_SECRET brut:', envClientSecret);
+    console.log('🔧 [Debug] BLIZZ_ID brut:', globalThis.Deno?.env?.get('BLIZZ_ID'));
+    console.log('🔧 [Debug] BLIZZ_SECRET brut:', globalThis.Deno?.env?.get('BLIZZ_SECRET'));
+    console.log('🔧 [Debug] BLIZZARD_CLIENT_ID brut:', globalThis.Deno?.env?.get('BLIZZARD_CLIENT_ID'));
+    console.log('🔧 [Debug] BLIZZARD_CLIENT_SECRET brut:', globalThis.Deno?.env?.get('BLIZZARD_CLIENT_SECRET'));
     
     if (envClientId && envClientSecret) {
         console.log('✅ [Config] Variables d\'environnement trouvées');
