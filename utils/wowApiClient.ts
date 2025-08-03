@@ -144,6 +144,41 @@ export class WoWAPIClient {
             const encodedRealm = encodeURIComponent(realm);
             const encodedGuild = encodeURIComponent(guild);
             
+            // Test: D'abord vérifier si le royaume existe
+            const realmTestUrl = `${WOW_API_CONFIG.BLIZZARD.BASE_URL}/data/wow/realm/${encodedRealm}?namespace=dynamic-${region}&locale=fr_FR&access_token=${token}`;
+            console.log(`🔍 [Blizzard API] Test royaume: ${realmTestUrl}`);
+            
+            const realmResponse = await fetch(realmTestUrl);
+            if (!realmResponse.ok) {
+                console.log(`⚠️ [Blizzard API] Royaume '${realm}' non trouvé (${realmResponse.status})`);
+                // Essayons avec le slug du royaume
+                const realmSlug = realm.toLowerCase().replace(/['\s]/g, '');
+                const encodedRealmSlug = encodeURIComponent(realmSlug);
+                console.log(`🔍 [Blizzard API] Essai avec slug: ${realmSlug}`);
+                
+                const url = `${WOW_API_CONFIG.BLIZZARD.BASE_URL}${WOW_API_CONFIG.BLIZZARD.ENDPOINTS.GUILD}/${encodedRealmSlug}/${encodedGuild}?namespace=profile-${region}&locale=fr_FR&access_token=${token}`;
+                console.log(`🌐 [Blizzard API] Appel avec slug: ${url}`);
+                
+                const response = await fetch(url);
+                if (!response.ok) {
+                    console.log(`❌ [Blizzard API] Erreur ${response.status}: ${response.statusText}`);
+                    console.log(`💡 [Blizzard API] Suggestions: Vérifiez le nom exact du royaume et de la guilde`);
+                    return null;
+                }
+                
+                const data = await response.json();
+                console.log(`✅ [Blizzard API] Données guilde récupérées avec slug:`, {
+                    name: data.name,
+                    member_count: data.member_count,
+                    faction: data.faction?.name,
+                    achievement_points: data.achievement_points
+                });
+                
+                return data;
+            } else {
+                console.log(`✅ [Blizzard API] Royaume '${realm}' trouvé`);
+            }
+            
             const url = `${WOW_API_CONFIG.BLIZZARD.BASE_URL}${WOW_API_CONFIG.BLIZZARD.ENDPOINTS.GUILD}/${encodedRealm}/${encodedGuild}?namespace=profile-${region}&locale=fr_FR&access_token=${token}`;
             console.log(`🌐 [Blizzard API] Appel: ${url}`);
             
