@@ -1,4 +1,4 @@
-import { type CommandInteraction, SlashCommandBuilder, EmbedBuilder } from 'discord.js';
+import { SlashCommandBuilder, EmbedBuilder, ChatInputCommandInteraction } from 'discord.js';
 import { WoWAPIClient } from '../../utils/wowApiClient.ts';
 
 interface RaidProgression {
@@ -59,9 +59,9 @@ export const data = new SlashCommandBuilder()
             { name: 'Taiwan', value: 'tw' }
         ));
 
-export async function execute(interaction: CommandInteraction) {
-    const server = interaction.options.getString('serveur')!;
-    const guild = interaction.options.getString('guilde')!;
+export async function execute(interaction: ChatInputCommandInteraction) {
+    const server = interaction.options.getString('serveur', true);
+    const guild = interaction.options.getString('guilde', true);
 
     await interaction.deferReply(); // Défère la réponse car les appels API peuvent prendre du temps
 
@@ -71,7 +71,7 @@ export async function execute(interaction: CommandInteraction) {
         
         const apiClient = new WoWAPIClient();
         
-        // Récupérer les données enrichies (Raider.IO + Blizzard API si configuré)
+        // Récupérer les données enrichies (Blizzard API en priorité, puis Raider.IO)
         const guildData = await apiClient.getEnhancedGuildData(region, server, guild);
         
         if (!guildData) {
