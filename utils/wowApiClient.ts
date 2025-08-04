@@ -17,24 +17,120 @@ function normalizeRealmName(realmName: string): string[] {
     // 3. Avec tirets pour les espaces
     variations.push(input.replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''));
     
-    // 4. Cas spéciaux connus
+    // 4. Cas spéciaux connus - SERVEURS FRANÇAIS EN PRIORITÉ
     const commonMappings: Record<string, string> = {
+        // === SERVEURS FRANÇAIS POPULAIRES ===
         'kirintor': 'kirin-tor',
         'kirin tor': 'kirin-tor',
-        'tarren mill': 'tarren-mill',
-        'area 52': 'area-52',
-        'mal\'ganis': 'malganis',
-        'kil\'jaeden': 'kiljaeden',
-        'kel\'thuzad': 'kelthuzad',
+        'kirin-tor': 'kirin-tor',
+        'hyjal': 'hyjal',
+        'dalaran': 'dalaran',
+        'elune': 'elune',
+        'culte de la rive noire': 'culte-de-la-rive-noire',
+        'cultedelarivenoire': 'culte-de-la-rive-noire',
+        'ysondre': 'ysondre',
+        'archimonde': 'archimonde',
+        'illidan': 'illidan',
+        'confrérie du thorium': 'confrerie-du-thorium',
+        'confrerie du thorium': 'confrerie-du-thorium',
+        'confrérieduthorium': 'confrerie-du-thorium',
+        'confrerieduthorium': 'confrerie-du-thorium',
         'cho\'gall': 'chogall',
+        'chogall': 'chogall',
+        'sargeras': 'sargeras',
+        'varimathras': 'varimathras',
         'eldre\'thalas': 'eldrethalas',
+        'eldrethalas': 'eldrethalas',
+        'conseil des ombres': 'conseil-des-ombres',
+        'conseildesombres': 'conseil-des-ombres',
+        'sinstralis': 'sinstralis',
+        'rashgarroth': 'rashgarroth',
+        'mal\'ganis': 'malganis',
+        'malganis': 'malganis',
         'ner\'zhul': 'nerzhul',
-        'burning legion': 'burning-legion',
+        'nerzhul': 'nerzhul',
+        'throk\'tar': 'throktar',
+        'throktar': 'throktar',
+        'drek\'thar': 'drekthar',
+        'drekthar': 'drekthar',
+        'krasus': 'krasus',
+        'medivh': 'medivh',
+        'suramar': 'suramar',
+        'les clairvoyants': 'les-clairvoyants',
+        'lesclairvoyants': 'les-clairvoyants',
+        'les sentinelles': 'les-sentinelles',
+        'lessentinelles': 'les-sentinelles',
+        'marécage de zangar': 'marecage-de-zangar',
+        'marecagedezangar': 'marecage-de-zangar',
+        'temple noir': 'temple-noir',
+        'templenoir': 'temple-noir',
+        'la croisade écarlate': 'la-croisade-ecarlate',
+        'lacroisadeecarlate': 'la-croisade-ecarlate',
+        'fordragon': 'fordragon',
+        'kael\'thas': 'kaelthas',
+        'kaelthas': 'kaelthas',
+        'garona': 'garona',
+        'vol\'jin': 'voljin',
+        'voljin': 'voljin',
+        
+        // === SERVEURS ANGLAIS POPULAIRES ===
+        'tarren mill': 'tarren-mill',
+        'tarrenmill': 'tarren-mill',
+        'silvermoon': 'silvermoon',
+        'outland': 'outland',
+        'kazzak': 'kazzak',
         'twisting nether': 'twisting-nether',
+        'twistingnether': 'twisting-nether',
+        'ragnaros': 'ragnaros',
+        'draenor': 'draenor',
+        'burning legion': 'burning-legion',
+        'burninglegion': 'burning-legion',
+        'stormscale': 'stormscale',
+        'frostmourne': 'frostmourne',
+        'chamber of aspects': 'chamber-of-aspects',
+        'chamberofaspects': 'chamber-of-aspects',
+        'sylvanas': 'sylvanas',
+        'ravencrest': 'ravencrest',
+        'doomhammer': 'doomhammer',
+        'defias brotherhood': 'defias-brotherhood',
+        'defiasbrotherhood': 'defias-brotherhood',
+        'the maelstrom': 'the-maelstrom',
+        'themaelstrom': 'the-maelstrom',
+        'earthen ring': 'earthen-ring',
+        'earthenring': 'earthen-ring',
+        'area 52': 'area-52',
+        'area52': 'area-52',
+        'kil\'jaeden': 'kiljaeden',
+        'kiljaeden': 'kiljaeden',
+        'kel\'thuzad': 'kelthuzad',
+        'kelthuzad': 'kelthuzad',
         'blade\'s edge': 'blades-edge',
+        'bladesedge': 'blades-edge',
         'lightning\'s blade': 'lightnings-blade',
+        'lightningsblade': 'lightnings-blade',
         'shattered hand': 'shattered-hand',
-        'shattered halls': 'shattered-halls'
+        'shatteredhand': 'shattered-hand',
+        'shattered halls': 'shattered-halls',
+        'shatteredhalls': 'shattered-halls',
+        
+        // === SERVEURS ALLEMANDS ===
+        'antonidas': 'antonidas',
+        'blackhand': 'blackhand',
+        'blackmoore': 'blackmoore',
+        'blackrock': 'blackrock',
+        'destromath': 'destromath',
+        'die aldor': 'die-aldor',
+        'diealdor': 'die-aldor',
+        'eredar': 'eredar',
+        'frostwolf': 'frostwolf',
+        'gilneas': 'gilneas',
+        'lothar': 'lothar',
+        'malfurion': 'malfurion',
+        'mannoroth': 'mannoroth',
+        'nathrezim': 'nathrezim',
+        'norgannon': 'norgannon',
+        'thrall': 'thrall',
+        'tirion': 'tirion'
     };
     
     if (commonMappings[input]) {
@@ -286,7 +382,7 @@ export class WoWAPIClient {
             
             // MÉTHODE 3: Connected Realms (structure moderne de WoW)
             console.log(`🔄 [Blizzard API] Méthode 3: Connected Realms`);
-            const connectedRealmsUrl = `${WOW_API_CONFIG.BLIZZARD.BASE_URL}${WOW_API_CONFIG.BLIZZARD.ENDPOINTS.CONNECTED_REALMS}?namespace=dynamic-${region}&locale=fr_FR&access_token=${token}`;
+            const connectedRealmsUrl = `${WOW_API_CONFIG.BLIZZARD.BASE_URL}/data/wow/connected-realm/index?namespace=dynamic-${region}&locale=fr_FR&access_token=${token}`;
             console.log(`🌐 [Blizzard API] URL Connected Realms: ${connectedRealmsUrl}`);
             
             try {
@@ -350,6 +446,59 @@ export class WoWAPIClient {
                     console.log(`❌ [Blizzard API] Royaume '${realm}' non trouvé dans les Connected Realms testés`);
                 } else {
                     console.log(`❌ [Blizzard API] Erreur Connected Realms: ${connectedRealmsResponse.status}`);
+                    
+                    // MÉTHODE 3B: Essayer avec l'API des royaumes simple en fallback
+                    console.log(`🔄 [Blizzard API] Méthode 3B: Fallback avec API des royaumes simple`);
+                    try {
+                        const realmIndexUrl = `${WOW_API_CONFIG.BLIZZARD.BASE_URL}/data/wow/realm/index?namespace=dynamic-${region}&locale=fr_FR&access_token=${token}`;
+                        console.log(`🌐 [Blizzard API] URL realm index: ${realmIndexUrl}`);
+                        
+                        const realmIndexResponse = await fetch(realmIndexUrl);
+                        if (realmIndexResponse.ok) {
+                            const realmIndexData = await realmIndexResponse.json();
+                            console.log(`📊 [Blizzard API] ${realmIndexData.realms?.length || 0} royaumes disponibles`);
+                            
+                            // Chercher notre royaume dans la liste
+                            if (realmIndexData.realms) {
+                                const foundRealm = realmIndexData.realms.find((r: RealmInfo) => 
+                                    r.name?.toLowerCase() === realm.toLowerCase() ||
+                                    r.slug?.toLowerCase() === realm.toLowerCase() ||
+                                    r.name?.toLowerCase().includes(realm.toLowerCase()) ||
+                                    r.slug?.toLowerCase().includes(realm.toLowerCase()) ||
+                                    realmVariations.some(variation => 
+                                        r.slug?.toLowerCase() === variation.toLowerCase() ||
+                                        r.name?.toLowerCase() === variation.toLowerCase()
+                                    )
+                                );
+                                
+                                if (foundRealm) {
+                                    console.log(`✅ [Blizzard API] Royaume trouvé dans l'index:`, {
+                                        realmName: foundRealm.name,
+                                        realmSlug: foundRealm.slug
+                                    });
+                                    
+                                    // Essayer de récupérer la guilde avec le bon slug
+                                    const guildUrl = `${WOW_API_CONFIG.BLIZZARD.BASE_URL}${WOW_API_CONFIG.BLIZZARD.ENDPOINTS.GUILD}/${foundRealm.slug}/${encodedGuild}?namespace=profile-${region}&locale=fr_FR&access_token=${token}`;
+                                    console.log(`🏰 [Blizzard API] Appel guilde via index: ${guildUrl}`);
+                                    
+                                    const guildResponse = await fetch(guildUrl);
+                                    if (guildResponse.ok) {
+                                        const guildData = await guildResponse.json();
+                                        console.log(`✅ [Blizzard API] Guilde trouvée via index des royaumes`);
+                                        return guildData;
+                                    } else {
+                                        console.log(`❌ [Blizzard API] Guilde '${guild}' non trouvée via index (${guildResponse.status})`);
+                                    }
+                                } else {
+                                    console.log(`❌ [Blizzard API] Royaume '${realm}' non trouvé dans l'index`);
+                                }
+                            }
+                        } else {
+                            console.log(`❌ [Blizzard API] Erreur realm index: ${realmIndexResponse.status}`);
+                        }
+                    } catch (realmIndexError) {
+                        console.log(`❌ [Blizzard API] Erreur lors de la récupération de l'index des royaumes:`, realmIndexError instanceof Error ? realmIndexError.message : realmIndexError);
+                    }
                 }
             } catch (connectedError) {
                 console.log(`❌ [Blizzard API] Erreur lors de la récupération des Connected Realms:`, connectedError instanceof Error ? connectedError.message : connectedError);
