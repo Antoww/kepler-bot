@@ -158,9 +158,9 @@ export const WOW_API_CONFIG = {
         // Variables lues dynamiquement dans les fonctions
         ENDPOINTS: {
             // Profile APIs - utilisent le namespace profile-{region}
-            GUILD: '/profile/wow/guild',
-            GUILD_ROSTER: '/profile/wow/guild/{realmSlug}/{guildNameSlug}/roster',
-            GUILD_ACHIEVEMENTS: '/profile/wow/guild/{realmSlug}/{guildNameSlug}/achievements',
+            GUILD_PROFILE: '/profile/wow/guild/{realmSlug}/{nameSlug}',
+            GUILD_ROSTER: '/profile/wow/guild/{realmSlug}/{nameSlug}/roster',
+            GUILD_ACHIEVEMENTS: '/profile/wow/guild/{realmSlug}/{nameSlug}/achievements',
             // Game Data APIs - utilisent le namespace dynamic-{region}
             GUILD_SEARCH: '/data/wow/search/guild',
             CONNECTED_REALMS: '/data/wow/connected-realm/index',
@@ -307,8 +307,8 @@ export class WoWAPIClient {
             console.log(`🎯 [Blizzard API] Méthode 1: Profile API directe avec namespace profile-${region}`);
             for (const realmVariation of realmVariations) {
                 const encodedRealm = encodeURIComponent(realmVariation);
-                // URL corrigée selon la documentation: /profile/wow/guild/{realmSlug}/{guildNameSlug}
-                const profileUrl = `${WOW_API_CONFIG.BLIZZARD.BASE_URL}${WOW_API_CONFIG.BLIZZARD.ENDPOINTS.GUILD}/${encodedRealm}/${encodedGuild}?namespace=profile-${region}&locale=fr_FR&access_token=${token}`;
+                // URL corrigée selon la documentation: /profile/wow/guild/{realmSlug}/{nameSlug}
+                const profileUrl = `${WOW_API_CONFIG.BLIZZARD.BASE_URL}${WOW_API_CONFIG.BLIZZARD.ENDPOINTS.GUILD_PROFILE.replace('{realmSlug}', encodedRealm).replace('{nameSlug}', encodedGuild)}?namespace=profile-${region}&locale=fr_FR&access_token=${token}`;
                 console.log(`🌐 [Blizzard API] Test Profile API avec '${realmVariation}': ${profileUrl}`);
                 
                 try {
@@ -434,7 +434,7 @@ export class WoWAPIClient {
                                         });
                                         
                                         // Essayer de récupérer la guilde avec le bon slug via Profile API
-                                        const guildProfileUrl = `${WOW_API_CONFIG.BLIZZARD.BASE_URL}${WOW_API_CONFIG.BLIZZARD.ENDPOINTS.GUILD}/${foundRealm.slug}/${encodedGuild}?namespace=profile-${region}&locale=fr_FR&access_token=${token}`;
+                                        const guildProfileUrl = `${WOW_API_CONFIG.BLIZZARD.BASE_URL}${WOW_API_CONFIG.BLIZZARD.ENDPOINTS.GUILD_PROFILE.replace('{realmSlug}', foundRealm.slug).replace('{nameSlug}', encodedGuild)}?namespace=profile-${region}&locale=fr_FR&access_token=${token}`;
                                         console.log(`🏰 [Blizzard API] Appel Profile API avec slug correct: ${guildProfileUrl}`);
                                         
                                         try {
