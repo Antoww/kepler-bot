@@ -1,5 +1,5 @@
 import { SlashCommandBuilder, EmbedBuilder, ChatInputCommandInteraction } from 'discord.js';
-import { WoWAPIClient } from '../../utils/wowApiClient.ts';
+import { WoWAPIClient, GuildData } from '../../utils/wowApiClient.ts';
 
 interface RaidProgression {
     summary: string;
@@ -15,29 +15,6 @@ interface RaidRanking {
         region: number;
         realm: number;
     };
-}
-
-interface GuildData {
-    name: string;
-    realm: string;
-    raid_progression: Record<string, RaidProgression>;
-    raid_rankings: Record<string, RaidRanking>;
-}
-
-// Interface pour l'API Blizzard (optionnel)
-interface BlizzardGuild {
-    name: string;
-    realm: {
-        name: string;
-        slug: string;
-    };
-    faction: {
-        type: string;
-        name: string;
-    };
-    member_count: number;
-    achievement_points: number;
-    created_timestamp: number;
 }
 
 export const data = new SlashCommandBuilder()
@@ -71,20 +48,15 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         
         const apiClient = new WoWAPIClient();
         
-        // Récupérer les données enrichies (Blizzard API en priorité, puis Raider.IO)
-        const guildData = await apiClient.getEnhancedGuildData(region, server, guild);
+        // Récupérer les données via Raider.IO
+        const guildData = await apiClient.getGuildData(region, server, guild);
         
         if (!guildData) {
             console.log(`❌ [WoWGuilde] Aucune donnée trouvée pour: ${guild}`);
             throw new Error('Guilde non trouvée');
         }
 
-        console.log(`✅ [WoWGuilde] Données reçues avec sources: ${guildData.data_sources.join(', ')}`);
-        console.log(`📊 [WoWGuilde] Données Blizzard disponibles:`, {
-            membre_count: !!guildData.member_count,
-            faction: !!guildData.faction,
-            achievement_points: !!guildData.achievement_points
-        });
+        console.log(`✅ [WoWGuilde] Données reçues via Raider.IO pour: ${guildData.name}`);
         
         // Analyser les données de progression
         const raids = Object.entries(guildData.raid_progression);
@@ -116,19 +88,8 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         
         // Informations sur le serveur et la faction
         const serverInfo = `**${guildData.realm}** (${region.toUpperCase()})`;
-        
-        // Informations supplémentaires si API Blizzard disponible
-        const extraInfo: string[] = [];
-        if (guildData.member_count) {
-            extraInfo.push(`👥 Membres: **${guildData.member_count}**`);
-        }
-        if (guildData.faction) {
-            const factionEmoji = guildData.faction.toLowerCase().includes('alliance') ? '🔵' : '🔴';
-            extraInfo.push(`${factionEmoji} Faction: **${guildData.faction}**`);
-        }
-        if (guildData.achievement_points) {
-            extraInfo.push(`🏆 Points de hauts faits: **${guildData.achievement_points.toLocaleString()}**`);
-        }
+        const factionEmoji = guildData.faction.toLowerCase().includes('alliance') ? '🔵' : '🔴';
+        const factionInfo = `${factionEmoji} **${guildData.faction}**`;
         
         const embed = new EmbedBuilder()
             .setAuthor({ 
@@ -140,19 +101,14 @@ export async function execute(interaction: ChatInputCommandInteraction) {
             .setDescription(`Informations détaillées sur la guilde **${guildData.name}**`)
             .addFields(
                 { name: '🌍 Serveur', value: serverInfo, inline: true },
+                { name: '⚔️ Faction', value: factionInfo, inline: true },
                 { name: '⚔️ Progression Actuelle', value: currentProgress, inline: false },
                 { name: '📊 Classement Mythique', value: rankingText, inline: false }
             );
 
-        // Ajouter les informations supplémentaires si disponibles
-        if (extraInfo.length > 0) {
-            embed.addFields({ name: '📋 Informations', value: extraInfo.join('\n'), inline: false });
-        }
-
-        // Footer avec sources de données
-        const dataSources = guildData.data_sources.join(', ');
+        // Footer avec source de données
         embed.setFooter({
-            text: `Sources: ${dataSources} • Demandé par ${interaction.user.username}`,
+            text: `Source: Raider.IO • Demandé par ${interaction.user.username}`,
             iconURL: interaction.user.displayAvatarURL({ forceStatic: false })
         })
         .setTimestamp();
