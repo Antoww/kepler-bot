@@ -43,10 +43,6 @@ export async function execute(interaction: CommandInteraction) {
             { name: '❓ Question', value: question, inline: false },
             { name: '🎱 Réponse', value: randomResponse, inline: false }
         )
-        .setFooter({
-            text: 'Demandé par ' + interaction.user.username,
-            iconURL: interaction.user.displayAvatarURL({ forceStatic: false })
-        })
         .setTimestamp();
 
     await interaction.reply({ embeds: [embed] });

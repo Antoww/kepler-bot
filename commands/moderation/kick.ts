@@ -57,6 +57,26 @@ export async function execute(interaction: CommandInteraction) {
     }
 
     try {
+        // Essayer d'envoyer un MP à l'utilisateur avant l'expulsion
+        let dmSent = false;
+        try {
+            const dmEmbed = new EmbedBuilder()
+                .setColor('#ff9900')
+                .setTitle('👢 Vous avez été expulsé')
+                .setDescription(`Vous avez été expulsé du serveur **${interaction.guild.name}**`)
+                .addFields(
+                    { name: '📝 Raison', value: reason, inline: false },
+                    { name: '🛡️ Modérateur', value: interaction.user.tag, inline: true }
+                )
+                .setTimestamp();
+
+            await target.send({ embeds: [dmEmbed] });
+            dmSent = true;
+        } catch (dmError) {
+            console.log(`Impossible d'envoyer un MP à ${target.tag} (${target.id}):`, dmError);
+            // Ne pas faire échouer le kick si le MP ne peut pas être envoyé
+        }
+
         // Expulser l'utilisateur
         await targetMember.kick(`${reason} - Par ${interaction.user.tag}`);
 
@@ -75,6 +95,13 @@ export async function execute(interaction: CommandInteraction) {
             )
             .setThumbnail(target.displayAvatarURL({ forceStatic: false }))
             .setTimestamp();
+
+        // Indiquer si le MP a été envoyé
+        embed.addFields({ 
+            name: '💬 Message privé', 
+            value: dmSent ? '✅ Envoyé' : '❌ Non envoyé', 
+            inline: true 
+        });
 
         await interaction.reply({ embeds: [embed] });
 

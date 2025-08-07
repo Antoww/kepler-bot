@@ -25,10 +25,6 @@ export async function execute(interaction: CommandInteraction) {
             { name: '📝 Type', value: getChannelTypeName(targetChannel.type), inline: true },
             { name: '📍 Position', value: targetChannel.position.toString(), inline: true }
         )
-        .setFooter({
-            text: 'Demandé par ' + interaction.user.username,
-            iconURL: interaction.user.displayAvatarURL({ forceStatic: false })
-        })
         .setTimestamp();
 
     await interaction.reply({ embeds: [embed] });

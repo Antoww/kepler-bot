@@ -18,10 +18,6 @@ export async function execute(interaction: CommandInteraction) {
         .addFields(
             { name: '🎲 Tirage', value: 'La pièce a été lancée avec succès !', inline: true }
         )
-        .setFooter({
-            text: `Demandé par ${interaction.user.username}`,
-            iconURL: interaction.user.displayAvatarURL({ forceStatic: false })
-        })
         .setTimestamp();
 
     await interaction.reply({ embeds: [embed] });

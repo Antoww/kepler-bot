@@ -4,6 +4,7 @@ import { Client, Collection, GatewayIntentBits, REST, Routes } from 'discord.js'
 import { initDatabase } from './database/supabase.ts';
 import { BirthdayManager } from './events/core/birthdayManager.ts';
 import { ModerationManager } from './events/core/moderationManager.ts';
+import { ReminderManager } from './events/core/reminderManager.ts';
 
 // Initialisation du client
 const client = new Client({ 
@@ -109,6 +110,11 @@ client.once('ready', async (client) => {
     const moderationManager = new ModerationManager(client);
     moderationManager.start();
     console.log(`[LOG : ${new Date().toLocaleTimeString()}] Gestionnaire de modération initialisé.`);
+
+    // Initialiser le gestionnaire de rappels
+    const reminderManager = new ReminderManager(client);
+    await reminderManager.start();
+    console.log(`[LOG : ${new Date().toLocaleTimeString()}] Gestionnaire de rappels initialisé.`);
 
     const rest = new REST({ version: '10' }).setToken(Deno.env.get('TOKEN') as string);
 

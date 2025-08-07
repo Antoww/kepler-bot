@@ -44,13 +44,27 @@ export async function execute(interaction: CommandInteraction) {
 
         // Créer l'embed
         const embed = new EmbedBuilder()
-            .setAuthor({ 
-                name: `Informations de modération - ${target.tag}`, 
-                iconURL: target.displayAvatarURL({ forceStatic: false }) 
-            })
             .setColor('#0099ff')
+            .setTitle(`📋 Informations de modération - ${target.tag}`)
             .setThumbnail(target.displayAvatarURL({ forceStatic: false }))
+            .addFields(
+                { name: '🆔 ID Utilisateur', value: target.id, inline: true },
+                { name: '📅 Compte créé', value: `<t:${Math.floor(target.createdTimestamp / 1000)}:F>`, inline: true },
+                { name: '🔗 Mention', value: `<@${target.id}>`, inline: true }
+            )
             .setTimestamp();
+
+        // Vérifier si l'utilisateur est encore sur le serveur
+        const member = interaction.guild.members.cache.get(target.id);
+        if (member) {
+            embed.addFields(
+                { name: '📥 A rejoint le serveur', value: `<t:${Math.floor(member.joinedTimestamp! / 1000)}:F>`, inline: true },
+                { name: '🎭 Rôle le plus élevé', value: member.roles.highest.toString(), inline: true },
+                { name: '📊 Statut sur le serveur', value: '✅ Membre actuel', inline: true }
+            );
+        } else {
+            embed.addFields({ name: '📊 Statut sur le serveur', value: '❌ N\'est plus membre', inline: true });
+        }
 
         // Sanctions actives
         let activeStatus = '✅ Aucune sanction active';

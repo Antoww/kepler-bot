@@ -202,7 +202,7 @@ function createNavigationButtons(currentPage: number, totalPages: number, catego
         buttons.push(
             new ButtonBuilder()
                 .setCustomId(`help_prev_${category}_${currentPage - 1}`)
-                .setLabel('◀️')
+                .setLabel('Précédent')
                 .setStyle(ButtonStyle.Primary)
         );
     }
@@ -211,7 +211,7 @@ function createNavigationButtons(currentPage: number, totalPages: number, catego
     buttons.push(
         new ButtonBuilder()
             .setCustomId('help_main_menu')
-            .setLabel('🏠')
+            .setLabel('Menu')
             .setStyle(ButtonStyle.Secondary)
     );
     
@@ -220,7 +220,7 @@ function createNavigationButtons(currentPage: number, totalPages: number, catego
         buttons.push(
             new ButtonBuilder()
                 .setCustomId(`help_next_${category}_${currentPage + 1}`)
-                .setLabel('▶️')
+                .setLabel('Suivant')
                 .setStyle(ButtonStyle.Primary)
         );
     }
@@ -229,7 +229,7 @@ function createNavigationButtons(currentPage: number, totalPages: number, catego
     buttons.push(
         new ButtonBuilder()
             .setCustomId('help_close')
-            .setLabel('❌')
+            .setLabel('Fermer')
             .setStyle(ButtonStyle.Danger)
     );
     
@@ -270,7 +270,7 @@ export async function execute(interaction: CommandInteraction) {
                 new ActionRowBuilder<ButtonBuilder>().addComponents(
                     new ButtonBuilder()
                         .setCustomId('help_close')
-                        .setLabel('❌')
+                        .setLabel('Fermer')
                         .setStyle(ButtonStyle.Danger)
                 )
             ],
@@ -313,11 +313,11 @@ export async function execute(interaction: CommandInteraction) {
                     new ActionRowBuilder<ButtonBuilder>().addComponents(
                         new ButtonBuilder()
                             .setCustomId('help_main_menu')
-                            .setLabel('🏠')
+                            .setLabel('Menu')
                             .setStyle(ButtonStyle.Secondary),
                         new ButtonBuilder()
                             .setCustomId('help_close')
-                            .setLabel('❌')
+                            .setLabel('Fermer')
                             .setStyle(ButtonStyle.Danger)
                     )
                 );
@@ -353,7 +353,7 @@ export async function execute(interaction: CommandInteraction) {
                         new ActionRowBuilder<ButtonBuilder>().addComponents(
                             new ButtonBuilder()
                                 .setCustomId('help_close')
-                                .setLabel('❌')
+                                .setLabel('Fermer')
                                 .setStyle(ButtonStyle.Danger)
                         )
                     ]
@@ -384,11 +384,11 @@ export async function execute(interaction: CommandInteraction) {
                         new ActionRowBuilder<ButtonBuilder>().addComponents(
                             new ButtonBuilder()
                                 .setCustomId('help_main_menu')
-                                .setLabel('🏠')
+                                .setLabel('Menu')
                                 .setStyle(ButtonStyle.Secondary),
                             new ButtonBuilder()
                                 .setCustomId('help_close')
-                                .setLabel('❌')
+                                .setLabel('Fermer')
                                 .setStyle(ButtonStyle.Danger)
                         )
                     );

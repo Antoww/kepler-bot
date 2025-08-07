@@ -21,10 +21,6 @@ export async function execute(interaction: CommandInteraction) {
     const cpuPercent = Math.round((cpuUsage.user + cpuUsage.system) / 1000 / uptime / 10) / 100;
 
     const embed = new EmbedBuilder()
-        .setAuthor({ 
-            name: interaction.client.user?.username, 
-            iconURL: interaction.client.user?.displayAvatarURL({ forceStatic: false }) 
-        })
         .setColor('#0099ff')
         .setTitle('📊 Statistiques du Bot')
         .addFields(
@@ -37,10 +33,6 @@ export async function execute(interaction: CommandInteraction) {
             { name: '📺 Canaux', value: interaction.client.channels.cache.size.toString(), inline: true },
             { name: '🎭 Rôles', value: interaction.client.guilds.cache.reduce((acc, guild) => acc + guild.roles.cache.size, 0).toString(), inline: true }
         )
-        .setFooter({
-            text: 'Demandé par ' + interaction.user.username,
-            iconURL: interaction.user.displayAvatarURL({ forceStatic: false })
-        })
         .setTimestamp();
 
     await interaction.reply({ embeds: [embed] });

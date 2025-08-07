@@ -16,10 +16,6 @@ export async function execute(interaction: CommandInteraction) {
             { name: '📅 Version', value: `${config.botversion}`},
             { name: '🔧 Technologie', value: '[Discord.js](https://discord.js.org/) & [Deno](https://deno.com/)', inline: true },
         )
-        .setFooter({
-            text: 'Demandé par ' + interaction.user.username,
-            iconURL: interaction.user.displayAvatarURL({ forceStatic: false })
-        })
         .setTimestamp();
 
     await interaction.reply({ embeds: [embed] });
