@@ -77,6 +77,27 @@ export async function execute(interaction: CommandInteraction) {
             deleteMessageDays: deleteMessageDays
         });
 
+        // Essayer d'envoyer un MP à l'utilisateur
+        let dmSent = false;
+        try {
+            const dmEmbed = new EmbedBuilder()
+                .setColor('#ff0000')
+                .setTitle('🔨 Vous avez été banni')
+                .setDescription(`Vous avez été banni du serveur **${interaction.guild.name}**`)
+                .addFields(
+                    { name: '📝 Raison', value: reason, inline: false },
+                    { name: '⏰ Durée', value: durationText, inline: true },
+                    { name: '🛡️ Modérateur', value: interaction.user.tag, inline: true }
+                )
+                .setTimestamp();
+
+            await target.send({ embeds: [dmEmbed] });
+            dmSent = true;
+        } catch (dmError) {
+            console.log(`Impossible d'envoyer un MP à ${target.tag} (${target.id}):`, dmError);
+            // Ne pas faire échouer le ban si le MP ne peut pas être envoyé
+        }
+
         // Si c'est un ban temporaire, l'enregistrer en base
         if (banDuration) {
             await createTempBan(interaction.guild.id, target.id, interaction.user.id, reason, banDuration);
@@ -98,8 +119,8 @@ export async function execute(interaction: CommandInteraction) {
             .setTitle('🔨 Utilisateur banni')
             .addFields(
                 { name: '📋 Sanction N°', value: `#${sanctionNumber}`, inline: true },
-                { name: '👤 Utilisateur', value: `${target.tag} (${target.id})`, inline: true },
-                { name: '🛡️ Modérateur', value: interaction.user.tag, inline: true },
+                { name: '👤 Utilisateur', value: `${target.tag} (${target.id})`},
+                { name: '🛡️ Modérateur', value: interaction.user.tag},
                 { name: '📝 Raison', value: reason, inline: false },
                 { name: '⏰ Durée', value: durationText, inline: true }
             )
@@ -109,6 +130,13 @@ export async function execute(interaction: CommandInteraction) {
         if (deleteMessageDays > 0) {
             embed.addFields({ name: '🗑️ Messages supprimés', value: `${deleteMessageDays} jour(s)`, inline: true });
         }
+
+        // Indiquer si le MP a été envoyé
+        embed.addFields({ 
+            name: '💬 Message privé', 
+            value: dmSent ? '✅ Envoyé' : '❌ Non envoyé', 
+            inline: true 
+        });
 
         await interaction.reply({ embeds: [embed] });
 

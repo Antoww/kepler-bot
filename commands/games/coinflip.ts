@@ -12,12 +12,8 @@ export async function execute(interaction: CommandInteraction) {
     const resultColor = result ? '#FFD700' : '#C0C0C0'; // Or pour Pile, Argent pour Face
 
     const embed = new EmbedBuilder()
-        .setAuthor({ 
-            name: interaction.client.user?.username, 
-            iconURL: interaction.client.user?.displayAvatarURL({ forceStatic: false }) 
-        })
         .setColor(resultColor)
-        .setTitle(`${resultEmoji} Résultat du tirage au sort`)
+        .setTitle(`${resultEmoji} Résultat du lancé de pièce`)
         .setDescription(`**${resultText}** !`)
         .addFields(
             { name: '🎲 Tirage', value: 'La pièce a été lancée avec succès !', inline: true }

@@ -172,17 +172,17 @@ class Puissance4Game {
                 color = 0xFFFF00;
             } else if (this.winner === 'red') {
                 const winner = this.player1;
-                title = `🎉 ${winner.username} a gagné !`;
+                title = `🎉 <@${winner.id}> a gagné !`;
                 color = 0xFF0000;
             } else {
-                const winner = this.isVsBot ? 'Bot' : this.player2!.username;
+                const winner = this.isVsBot ? 'Bot' : `<@${this.player2!.id}>`;
                 title = `🎉 ${winner} a gagné !`;
                 color = 0xFFFF00;
             }
         } else {
             const currentPlayerName = this.currentPlayer === 'red' 
-                ? this.player1.username 
-                : (this.isVsBot ? 'Bot' : this.player2!.username);
+                ? `<@${this.player1.id}>` 
+                : (this.isVsBot ? 'Bot' : `<@${this.player2!.id}>`);
             const currentEmoji = this.currentPlayer === 'red' ? '🔴' : '🟡';
             title = `${currentEmoji} Tour de ${currentPlayerName}`;
             color = this.currentPlayer === 'red' ? 0xFF0000 : 0xFFFF00;
@@ -195,12 +195,12 @@ class Puissance4Game {
             .addFields(
                 {
                     name: '🔴 Joueur Rouge',
-                    value: this.player1.username,
+                    value: `<@${this.player1.id}>`,
                     inline: true
                 },
                 {
                     name: '🟡 Joueur Jaune',
-                    value: this.isVsBot ? 'Bot' : this.player2!.username,
+                    value: this.isVsBot ? 'Bot' : `<@${this.player2!.id}>`,
                     inline: true
                 }
             )

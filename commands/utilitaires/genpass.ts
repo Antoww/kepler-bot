@@ -31,8 +31,7 @@ export async function execute(interaction: CommandInteraction) {
         .setTitle('🔐 Mot de passe généré')
         .setDescription(`\`\`\`${password}\`\`\``)
         .addFields(
-            { name: '📏 Longueur', value: length.toString(), inline: true },
-            { name: '🔒 Sécurité', value: 'Mot de passe sécurisé généré', inline: true }
+            { name: '📏 Longueur', value: length.toString(), inline: true }
         )
         .setFooter({
             text: 'Demandé par ' + interaction.user.username,

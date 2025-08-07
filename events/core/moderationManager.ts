@@ -1,5 +1,6 @@
 import { Client } from 'discord.js';
 import { getExpiredTempBans, getExpiredTempMutes, removeTempBan, removeTempMute } from '../../database/db.ts';
+import { logModeration } from '../../utils/moderationLogger.ts';
 
 export class ModerationManager {
     private client: Client;
@@ -47,9 +48,22 @@ export class ModerationManager {
                     // Vérifier si l'utilisateur est toujours banni
                     const bans = await guild.bans.fetch();
                     if (bans.has(ban.user_id)) {
+                        // Récupérer les informations de l'utilisateur
+                        const user = await this.client.users.fetch(ban.user_id);
+                        
                         // Débannir l'utilisateur
                         await guild.members.unban(ban.user_id, 'Ban temporaire expiré');
                         console.log(`Déban automatique: ${ban.user_id} sur ${guild.name}`);
+                        
+                        // Logger l'action de déban automatique
+                        await logModeration(
+                            guild, 
+                            'Unban', 
+                            user, 
+                            this.client.user!, 
+                            'Ban temporaire expiré automatiquement',
+                            'Automatique'
+                        );
                     }
 
                     // Supprimer l'entrée de la base de données

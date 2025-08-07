@@ -54,8 +54,11 @@ export async function initDatabase(): Promise<void> {
 }
 
 // Créer un nouveau rappel
-export async function createReminder(reminderId: number, userId: string, message: string, durationMs: number, timestamp: number): Promise<void> {
-    const { error } = await supabase
+export async function createReminder(userId: string, message: string, durationMs: number): Promise<DatabaseReminder> {
+    const timestamp = Date.now() + durationMs;
+    const reminderId = Date.now(); // ID unique basé sur timestamp
+
+    const { data, error } = await supabase
         .from('reminders')
         .insert({
             reminder_id: reminderId,
@@ -63,11 +66,15 @@ export async function createReminder(reminderId: number, userId: string, message
             message: message,
             duration_ms: durationMs,
             timestamp: timestamp
-        });
+        })
+        .select()
+        .single();
 
     if (error) {
         throw new Error(`Erreur lors de la création du rappel: ${error.message}`);
     }
+
+    return data;
 }
 
 // Récupérer un rappel par son ID
@@ -108,7 +115,7 @@ export async function deleteReminder(reminderId: number): Promise<void> {
     const { error } = await supabase
         .from('reminders')
         .delete()
-        .eq('reminder_id', reminderId);
+        .eq('id', reminderId);
 
     if (error) {
         throw new Error(`Erreur lors de la suppression du rappel: ${error.message}`);

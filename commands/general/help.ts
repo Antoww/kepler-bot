@@ -270,7 +270,7 @@ export async function execute(interaction: CommandInteraction) {
                 new ActionRowBuilder<ButtonBuilder>().addComponents(
                     new ButtonBuilder()
                         .setCustomId('help_close')
-                        .setLabel('❌ Fermer')
+                        .setLabel('❌')
                         .setStyle(ButtonStyle.Danger)
                 )
             ],
@@ -313,11 +313,11 @@ export async function execute(interaction: CommandInteraction) {
                     new ActionRowBuilder<ButtonBuilder>().addComponents(
                         new ButtonBuilder()
                             .setCustomId('help_main_menu')
-                            .setLabel('🏠 Menu principal')
+                            .setLabel('🏠')
                             .setStyle(ButtonStyle.Secondary),
                         new ButtonBuilder()
                             .setCustomId('help_close')
-                            .setLabel('❌ Fermer')
+                            .setLabel('❌')
                             .setStyle(ButtonStyle.Danger)
                     )
                 );
@@ -353,7 +353,7 @@ export async function execute(interaction: CommandInteraction) {
                         new ActionRowBuilder<ButtonBuilder>().addComponents(
                             new ButtonBuilder()
                                 .setCustomId('help_close')
-                                .setLabel('❌ Fermer')
+                                .setLabel('❌')
                                 .setStyle(ButtonStyle.Danger)
                         )
                     ]
@@ -384,11 +384,11 @@ export async function execute(interaction: CommandInteraction) {
                         new ActionRowBuilder<ButtonBuilder>().addComponents(
                             new ButtonBuilder()
                                 .setCustomId('help_main_menu')
-                                .setLabel('🏠 Menu principal')
+                                .setLabel('🏠')
                                 .setStyle(ButtonStyle.Secondary),
                             new ButtonBuilder()
                                 .setCustomId('help_close')
-                                .setLabel('❌ Fermer')
+                                .setLabel('❌')
                                 .setStyle(ButtonStyle.Danger)
                         )
                     );

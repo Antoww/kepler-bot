@@ -5,13 +5,13 @@ export const data = new SlashCommandBuilder()
     .setDescription('Affiche les informations d\'un rôle')
     .addRoleOption(option => option.setName('role')
         .setDescription('Le rôle dont vous voulez voir les informations')
-        .setRequired(false));
+        .setRequired(true));
 
 export async function execute(interaction: CommandInteraction) {
     const targetRole = interaction.options.getRole('role');
 
     if (!targetRole) {
-        await interaction.reply('Veuillez spécifier un rôle.');
+        await interaction.reply('Veuillez spécifier un rôle.', { ephemeral: true });
         return;
     }
 

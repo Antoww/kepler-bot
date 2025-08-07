@@ -27,7 +27,7 @@ export async function execute(interaction: CommandInteraction) {
             .then(messages => {
                 const messageCount = messages.size;
                 const messageText = messageCount === 1 ? 'message' : 'messages';
-                interaction.reply(`Suppression de ${messageCount} ${messageText}.`);
+                interaction.reply(`🗑️ Suppression de **${messageCount} ${messageText}**.`);
             })
             .catch(error => {
                 console.error('Erreur lors de la suppression des messages :', error);

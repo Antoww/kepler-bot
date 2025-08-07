@@ -84,10 +84,21 @@ Avertir un utilisateur.
 
 **Permissions requises :** Exclure temporairement des membres
 
-### `unwarn`
-Supprimer un avertissement par son numéro de sanction.
+### `sanctions`
+Gère les sanctions d'un utilisateur (voir toutes les sanctions ou en supprimer).
 
-**Utilisation :** `/unwarn numero_sanction:123 [raison:"Erreur"]`
+#### Sous-commande `voir`
+Affiche toutes les sanctions d'un utilisateur avec pagination.
+
+**Utilisation :** `/sanctions voir utilisateur:@user`
+
+**Options :**
+- `utilisateur` : L'utilisateur dont afficher les sanctions (requis)
+
+#### Sous-commande `supprimer`
+Supprime une sanction par son numéro.
+
+**Utilisation :** `/sanctions supprimer numero_sanction:123 [raison:"Erreur"]`
 
 **Options :**
 - `numero_sanction` : Le numéro de la sanction à supprimer (requis)
@@ -104,12 +115,20 @@ Affiche tous les avertissements d'un utilisateur.
 - `utilisateur` : L'utilisateur dont afficher les avertissements (requis)
 
 **Permissions requises :** Exclure temporairement des membres
-Affiche les informations de modération d'un utilisateur (historique et sanctions actives).
+
+### `modinfo`
+Affiche les informations de modération d'un utilisateur (historique et sanctions actives) avec pagination.
 
 **Utilisation :** `/modinfo utilisateur:@user`
 
 **Options :**
 - `utilisateur` : L'utilisateur dont afficher les informations (requis)
+
+**Fonctionnalités :**
+- Affichage des sanctions actives (bans/mutes temporaires)
+- Historique paginé (5 sanctions par page)
+- Statistiques complètes
+- Navigation avec boutons
 
 **Permissions requises :** Exclure temporairement des membres
 
