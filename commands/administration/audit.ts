@@ -219,6 +219,10 @@ async function runChannelsAudit(interaction: CommandInteraction) {
       if (ow?.allow.has(PermissionFlagsBits.MentionEveryone)) risky.push('MentionEveryone');
       if (ow?.allow.has(PermissionFlagsBits.ManageMessages)) risky.push('ManageMessages');
       if (ow?.allow.has(PermissionFlagsBits.AddReactions)) risky.push('AddReactions');
+      if (ow?.allow.has(PermissionFlagsBits.ManageChannels)) risky.push('ManageChannels');
+      if (ow?.allow.has(PermissionFlagsBits.ManageWebhooks)) risky.push('ManageWebhooks');
+      if (ow?.allow.has(PermissionFlagsBits.ManageThreads)) risky.push('ManageThreads');
+      if (ow?.allow.has(PermissionFlagsBits.ManageRoles)) risky.push('ManageRoles');
       if (risky.length) riskyEveryoneLines.push(`❗ ${formatChan(ch.id, ch.name)} — @everyone: ${risky.join(', ')}`);
     }
   }
@@ -354,6 +358,10 @@ async function runRolesAudit(interaction: CommandInteraction) {
   const unmanageable = Array.from(roles.values()).filter(r => r.position >= me.roles.highest.position);
   const manageMessagesRoles = Array.from(roles.values()).filter(r => r.permissions.has(PermissionFlagsBits.ManageMessages));
   const mentionEveryoneRoles = Array.from(roles.values()).filter(r => r.permissions.has(PermissionFlagsBits.MentionEveryone));
+  const manageChannelsRoles = Array.from(roles.values()).filter(r => r.permissions.has(PermissionFlagsBits.ManageChannels));
+  const manageWebhooksRoles = Array.from(roles.values()).filter(r => r.permissions.has(PermissionFlagsBits.ManageWebhooks));
+  const manageThreadsRoles = Array.from(roles.values()).filter(r => r.permissions.has(PermissionFlagsBits.ManageThreads));
+  const manageRolesRoles = Array.from(roles.values()).filter(r => r.permissions.has(PermissionFlagsBits.ManageRoles));
 
   const listByPosition = (arr: typeof adminRoles) => arr
     .sort((a,b) => b.position - a.position)
@@ -366,6 +374,10 @@ async function runRolesAudit(interaction: CommandInteraction) {
   { name: `⚙️ Rôles non gérables par le bot (${unmanageable.length})`, value: listByPosition(unmanageable), inline: false },
   { name: `🧹 Rôles pouvant gérer/supprimer des messages (${manageMessagesRoles.length})`, value: listByPosition(manageMessagesRoles), inline: false },
   { name: `📣 Rôles pouvant mentionner @everyone/@here (${mentionEveryoneRoles.length})`, value: listByPosition(mentionEveryoneRoles), inline: false },
+  { name: `📁 Rôles pouvant gérer des salons (${manageChannelsRoles.length})`, value: listByPosition(manageChannelsRoles), inline: false },
+  { name: `🧵 Rôles pouvant gérer des fils (${manageThreadsRoles.length})`, value: listByPosition(manageThreadsRoles), inline: false },
+  { name: `🔗 Rôles pouvant gérer les webhooks (${manageWebhooksRoles.length})`, value: listByPosition(manageWebhooksRoles), inline: false },
+  { name: `🎭 Rôles pouvant gérer d'autres rôles (${manageRolesRoles.length})`, value: listByPosition(manageRolesRoles), inline: false },
   );
 
   await interaction.editReply({ embeds: [embed] });
