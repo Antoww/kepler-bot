@@ -187,17 +187,25 @@ async function runChannelsAudit(interaction: CommandInteraction) {
     // Build required set and collect missing
     const requiredBase: Array<[bigint, string]> = [[PermissionFlagsBits.ViewChannel, 'ViewChannel']];
     let required: Array<[bigint, string]> = requiredBase;
-    if (ch.type === ChannelType.GuildText || ch.type === ChannelType.GuildAnnouncement) {
+  if (ch.type === ChannelType.GuildText || ch.type === ChannelType.GuildAnnouncement) {
       required = required.concat([
         [PermissionFlagsBits.ReadMessageHistory, 'ReadMessageHistory'],
         [PermissionFlagsBits.SendMessages, 'SendMessages'],
         [PermissionFlagsBits.EmbedLinks, 'EmbedLinks'],
+    [PermissionFlagsBits.AttachFiles, 'AttachFiles'],
+    [PermissionFlagsBits.SendTTSMessages, 'SendTTSMessages'],
       ]);
     } else if (ch.type === ChannelType.GuildVoice || ch.type === ChannelType.GuildStageVoice) {
       required = required.concat([
         [PermissionFlagsBits.Connect, 'Connect'],
         [PermissionFlagsBits.Speak, 'Speak'],
         [PermissionFlagsBits.Stream, 'Stream'],
+    [PermissionFlagsBits.PrioritySpeaker, 'PrioritySpeaker'],
+    [PermissionFlagsBits.MuteMembers, 'MuteMembers'],
+    [PermissionFlagsBits.DeafenMembers, 'DeafenMembers'],
+    [PermissionFlagsBits.MoveMembers, 'MoveMembers'],
+    [PermissionFlagsBits.CreateEvents, 'CreateEvents'],
+    [PermissionFlagsBits.ManageEvents, 'ManageEvents'],
       ]);
     } else {
       // Forum or others: only ViewChannel
@@ -219,13 +227,19 @@ async function runChannelsAudit(interaction: CommandInteraction) {
     if ('permissionOverwrites' in ch) {
       const ow = ch.permissionOverwrites?.cache.get(everyoneId);
       const risky: string[] = [];
-      if (ow?.allow.has(PermissionFlagsBits.MentionEveryone)) risky.push('MentionEveryone');
-      if (ow?.allow.has(PermissionFlagsBits.ManageMessages)) risky.push('ManageMessages');
-      if (ow?.allow.has(PermissionFlagsBits.AddReactions)) risky.push('AddReactions');
+  if (ow?.allow.has(PermissionFlagsBits.MentionEveryone)) risky.push('MentionEveryone');
+  if (ow?.allow.has(PermissionFlagsBits.ManageMessages)) risky.push('ManageMessages');
+  if (ow?.allow.has(PermissionFlagsBits.AddReactions)) risky.push('AddReactions');
       if (ow?.allow.has(PermissionFlagsBits.ManageChannels)) risky.push('ManageChannels');
       if (ow?.allow.has(PermissionFlagsBits.ManageWebhooks)) risky.push('ManageWebhooks');
       if (ow?.allow.has(PermissionFlagsBits.ManageThreads)) risky.push('ManageThreads');
       if (ow?.allow.has(PermissionFlagsBits.ManageRoles)) risky.push('ManageRoles');
+  if (ow?.allow.has(PermissionFlagsBits.PrioritySpeaker)) risky.push('PrioritySpeaker');
+  if (ow?.allow.has(PermissionFlagsBits.MuteMembers)) risky.push('MuteMembers');
+  if (ow?.allow.has(PermissionFlagsBits.DeafenMembers)) risky.push('DeafenMembers');
+  if (ow?.allow.has(PermissionFlagsBits.MoveMembers)) risky.push('MoveMembers');
+  if (ow?.allow.has(PermissionFlagsBits.CreateEvents)) risky.push('CreateEvents');
+  if (ow?.allow.has(PermissionFlagsBits.ManageEvents)) risky.push('ManageEvents');
       if (risky.length) riskyEveryoneLines.push(`❗ ${formatChan(ch.id, ch.name)} — @everyone: ${risky.join(', ')}`);
     }
   }
