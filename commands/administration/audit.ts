@@ -171,53 +171,70 @@ async function runChannelsAudit(interaction: CommandInteraction) {
     });
   }
 
-  // Full sweep across all channels
-  const textIssues: string[] = [];
-  const voiceIssues: string[] = [];
-  const noAccess: string[] = [];
+  // Full sweep across all channels with per-channel status
+  type Line = string;
+  const textLines: Line[] = [];
+  const voiceLines: Line[] = [];
+  const otherLines: Line[] = [];
 
   for (const [, ch] of guild.channels.cache) {
-    // Skip categories; forum treated as text-based container (permissions checked at thread level usually)
     if (ch.type === ChannelType.GuildCategory) continue;
-
     const perms = ch.permissionsFor(me);
-    if (!perms) continue;
-
-    // If no view permission, record and skip details
-    if (!perms.has(PermissionFlagsBits.ViewChannel)) {
-      noAccess.push(formatChan(ch.id, ch.name));
-      continue;
-    }
-
+    // Build required set and collect missing
+    const requiredBase: Array<[bigint, string]> = [[PermissionFlagsBits.ViewChannel, 'ViewChannel']];
+    let required: Array<[bigint, string]> = requiredBase;
     if (ch.type === ChannelType.GuildText || ch.type === ChannelType.GuildAnnouncement) {
-      const missing: string[] = [];
-      if (!perms.has(PermissionFlagsBits.SendMessages)) missing.push('SendMessages');
-      if (!perms.has(PermissionFlagsBits.EmbedLinks)) missing.push('EmbedLinks');
-      if (!perms.has(PermissionFlagsBits.AttachFiles)) missing.push('AttachFiles');
-      if (missing.length) textIssues.push(`${formatChan(ch.id, ch.name)} → ${missing.join(', ')}`);
+      required = required.concat([
+        [PermissionFlagsBits.ReadMessageHistory, 'ReadMessageHistory'],
+        [PermissionFlagsBits.SendMessages, 'SendMessages'],
+        [PermissionFlagsBits.EmbedLinks, 'EmbedLinks'],
+      ]);
     } else if (ch.type === ChannelType.GuildVoice || ch.type === ChannelType.GuildStageVoice) {
-      const missing: string[] = [];
-      if (!perms.has(PermissionFlagsBits.Connect)) missing.push('Connect');
-      if (!perms.has(PermissionFlagsBits.Speak)) missing.push('Speak');
-      if (!perms.has(PermissionFlagsBits.Stream)) missing.push('Stream');
-      if (missing.length) voiceIssues.push(`${formatChan(ch.id, ch.name)} → ${missing.join(', ')}`);
+      required = required.concat([
+        [PermissionFlagsBits.Connect, 'Connect'],
+        [PermissionFlagsBits.Speak, 'Speak'],
+        [PermissionFlagsBits.Stream, 'Stream'],
+      ]);
+    } else {
+      // Forum or others: only ViewChannel
     }
+
+    const missing: string[] = [];
+    for (const [bit, name] of required) {
+      if (!perms || !perms.has(bit)) missing.push(name);
+    }
+    const ok = missing.length === 0;
+    const line = `${ok ? '✅' : '❌'} ${formatChan(ch.id, ch.name)}${ok ? '' : ` — ${missing.join(', ')}`}`;
+
+    if (ch.type === ChannelType.GuildText || ch.type === ChannelType.GuildAnnouncement) textLines.push(line);
+    else if (ch.type === ChannelType.GuildVoice || ch.type === ChannelType.GuildStageVoice) voiceLines.push(line);
+    else otherLines.push(line);
   }
 
-  const capList = (arr: string[], cap = 15) => {
-    const extra = arr.length > cap ? `\n… et ${arr.length - cap} autres` : '';
-    return (arr.slice(0, cap).join('\n') || 'Aucun') + extra;
+  const addChunked = (title: string, lines: string[]) => {
+    if (lines.length === 0) return;
+    const max = 1000; // safe under 1024
+    let chunk: string[] = [];
+    let size = 0;
+    let idx = 0;
+    for (const l of lines.sort()) {
+      if (size + l.length + 1 > max) {
+        embed.addFields({ name: `${title}${idx ? ` (suite ${idx})` : ''}`, value: chunk.join('\n'), inline: false });
+        chunk = [];
+        size = 0;
+        idx++;
+      }
+      chunk.push(l);
+      size += l.length + 1;
+    }
+    if (chunk.length) {
+      embed.addFields({ name: `${title}${idx ? ` (suite ${idx})` : ''}`, value: chunk.join('\n'), inline: false });
+    }
   };
 
-  if (noAccess.length) {
-    embed.addFields({ name: '🚫 Canaux inaccessibles (pas ViewChannel)', value: capList(noAccess), inline: false });
-  }
-  if (textIssues.length) {
-    embed.addFields({ name: '📝 Canaux texte avec permissions manquantes', value: capList(textIssues), inline: false });
-  }
-  if (voiceIssues.length) {
-    embed.addFields({ name: '🔊 Canaux vocaux avec permissions manquantes', value: capList(voiceIssues), inline: false });
-  }
+  addChunked('📝 Canaux texte', textLines);
+  addChunked('🔊 Canaux vocaux', voiceLines);
+  addChunked('📦 Autres canaux', otherLines);
 
   await interaction.editReply({ embeds: [embed] });
 }
