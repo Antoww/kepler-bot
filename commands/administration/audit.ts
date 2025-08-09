@@ -176,6 +176,7 @@ async function runChannelsAudit(interaction: CommandInteraction) {
   const textLines: Line[] = [];
   const voiceLines: Line[] = [];
   const otherLines: Line[] = [];
+  const riskyEveryoneLines: Line[] = [];
 
   for (const [, ch] of guild.channels.cache) {
     if (ch.type === ChannelType.GuildCategory) continue;
@@ -203,12 +204,23 @@ async function runChannelsAudit(interaction: CommandInteraction) {
     for (const [bit, name] of required) {
       if (!perms || !perms.has(bit)) missing.push(name);
     }
-    const ok = missing.length === 0;
+  const ok = missing.length === 0;
     const line = `${ok ? '✅' : '❌'} ${formatChan(ch.id, ch.name)}${ok ? '' : ` — ${missing.join(', ')}`}`;
 
-    if (ch.type === ChannelType.GuildText || ch.type === ChannelType.GuildAnnouncement) textLines.push(line);
-    else if (ch.type === ChannelType.GuildVoice || ch.type === ChannelType.GuildStageVoice) voiceLines.push(line);
-    else otherLines.push(line);
+  if (ch.type === ChannelType.GuildText || ch.type === ChannelType.GuildAnnouncement) textLines.push(line);
+  else if (ch.type === ChannelType.GuildVoice || ch.type === ChannelType.GuildStageVoice) voiceLines.push(line);
+  else otherLines.push(line);
+
+  // Check risky @everyone allowances in this channel
+    const everyoneId = guild.roles.everyone.id;
+    if ('permissionOverwrites' in ch) {
+      const ow = ch.permissionOverwrites?.cache.get(everyoneId);
+      const risky: string[] = [];
+      if (ow?.allow.has(PermissionFlagsBits.MentionEveryone)) risky.push('MentionEveryone');
+      if (ow?.allow.has(PermissionFlagsBits.ManageMessages)) risky.push('ManageMessages');
+      if (ow?.allow.has(PermissionFlagsBits.AddReactions)) risky.push('AddReactions');
+      if (risky.length) riskyEveryoneLines.push(`❗ ${formatChan(ch.id, ch.name)} — @everyone: ${risky.join(', ')}`);
+    }
   }
 
   const addChunked = (title: string, lines: string[]) => {
@@ -235,6 +247,7 @@ async function runChannelsAudit(interaction: CommandInteraction) {
   addChunked('📝 Canaux texte', textLines);
   addChunked('🔊 Canaux vocaux', voiceLines);
   addChunked('📦 Autres canaux', otherLines);
+  addChunked('⚠️ Permissions risquées pour @everyone (par canal)', riskyEveryoneLines);
 
   await interaction.editReply({ embeds: [embed] });
 }
@@ -339,6 +352,8 @@ async function runRolesAudit(interaction: CommandInteraction) {
   const roles = guild.roles.cache.filter(r => r.id !== guild.roles.everyone.id);
   const adminRoles = Array.from(roles.values()).filter(r => r.permissions.has(PermissionFlagsBits.Administrator));
   const unmanageable = Array.from(roles.values()).filter(r => r.position >= me.roles.highest.position);
+  const manageMessagesRoles = Array.from(roles.values()).filter(r => r.permissions.has(PermissionFlagsBits.ManageMessages));
+  const mentionEveryoneRoles = Array.from(roles.values()).filter(r => r.permissions.has(PermissionFlagsBits.MentionEveryone));
 
   const listByPosition = (arr: typeof adminRoles) => arr
     .sort((a,b) => b.position - a.position)
@@ -349,6 +364,8 @@ async function runRolesAudit(interaction: CommandInteraction) {
   embed.addFields(
   { name: `🛡️ Rôles avec Administrator (${adminRoles.length})`, value: listByPosition(adminRoles), inline: false },
   { name: `⚙️ Rôles non gérables par le bot (${unmanageable.length})`, value: listByPosition(unmanageable), inline: false },
+  { name: `🧹 Rôles pouvant gérer/supprimer des messages (${manageMessagesRoles.length})`, value: listByPosition(manageMessagesRoles), inline: false },
+  { name: `📣 Rôles pouvant mentionner @everyone/@here (${mentionEveryoneRoles.length})`, value: listByPosition(mentionEveryoneRoles), inline: false },
   );
 
   await interaction.editReply({ embeds: [embed] });
