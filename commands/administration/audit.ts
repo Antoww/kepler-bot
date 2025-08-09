@@ -43,6 +43,18 @@ export async function execute(interaction: CommandInteraction) {
     return;
   }
 
+  // Guard: only Administrators can run
+  try {
+    const invoker = await interaction.guild.members.fetch(interaction.user.id);
+    if (!invoker.permissions.has(PermissionFlagsBits.Administrator)) {
+      await interaction.reply({ content: '❌ Vous devez être administrateur pour utiliser cette commande.', ephemeral: true });
+      return;
+    }
+  } catch {
+    await interaction.reply({ content: '❌ Impossible de vérifier vos permissions.', ephemeral: true });
+    return;
+  }
+
   try {
     switch (sub) {
   case 'channel':
@@ -159,6 +171,54 @@ async function runChannelsAudit(interaction: CommandInteraction) {
     });
   }
 
+  // Full sweep across all channels
+  const textIssues: string[] = [];
+  const voiceIssues: string[] = [];
+  const noAccess: string[] = [];
+
+  for (const [, ch] of guild.channels.cache) {
+    // Skip categories; forum treated as text-based container (permissions checked at thread level usually)
+    if (ch.type === ChannelType.GuildCategory) continue;
+
+    const perms = ch.permissionsFor(me);
+    if (!perms) continue;
+
+    // If no view permission, record and skip details
+    if (!perms.has(PermissionFlagsBits.ViewChannel)) {
+      noAccess.push(formatChan(ch.id, ch.name));
+      continue;
+    }
+
+    if (ch.type === ChannelType.GuildText || ch.type === ChannelType.GuildAnnouncement) {
+      const missing: string[] = [];
+      if (!perms.has(PermissionFlagsBits.SendMessages)) missing.push('SendMessages');
+      if (!perms.has(PermissionFlagsBits.EmbedLinks)) missing.push('EmbedLinks');
+      if (!perms.has(PermissionFlagsBits.AttachFiles)) missing.push('AttachFiles');
+      if (missing.length) textIssues.push(`${formatChan(ch.id, ch.name)} → ${missing.join(', ')}`);
+    } else if (ch.type === ChannelType.GuildVoice || ch.type === ChannelType.GuildStageVoice) {
+      const missing: string[] = [];
+      if (!perms.has(PermissionFlagsBits.Connect)) missing.push('Connect');
+      if (!perms.has(PermissionFlagsBits.Speak)) missing.push('Speak');
+      if (!perms.has(PermissionFlagsBits.Stream)) missing.push('Stream');
+      if (missing.length) voiceIssues.push(`${formatChan(ch.id, ch.name)} → ${missing.join(', ')}`);
+    }
+  }
+
+  const capList = (arr: string[], cap = 15) => {
+    const extra = arr.length > cap ? `\n… et ${arr.length - cap} autres` : '';
+    return (arr.slice(0, cap).join('\n') || 'Aucun') + extra;
+  };
+
+  if (noAccess.length) {
+    embed.addFields({ name: '🚫 Canaux inaccessibles (pas ViewChannel)', value: capList(noAccess), inline: false });
+  }
+  if (textIssues.length) {
+    embed.addFields({ name: '📝 Canaux texte avec permissions manquantes', value: capList(textIssues), inline: false });
+  }
+  if (voiceIssues.length) {
+    embed.addFields({ name: '🔊 Canaux vocaux avec permissions manquantes', value: capList(voiceIssues), inline: false });
+  }
+
   await interaction.editReply({ embeds: [embed] });
 }
 
@@ -258,5 +318,25 @@ async function runRolesAudit(interaction: CommandInteraction) {
     })
     .addFields(fields);
 
+  // Extra: roles with Administrator and roles the bot cannot manage
+  const roles = guild.roles.cache.filter(r => r.id !== guild.roles.everyone.id);
+  const adminRoles = Array.from(roles.values()).filter(r => r.permissions.has(PermissionFlagsBits.Administrator));
+  const unmanageable = Array.from(roles.values()).filter(r => r.position >= me.roles.highest.position);
+
+  const listByPosition = (arr: typeof adminRoles) => arr
+    .sort((a,b) => b.position - a.position)
+    .slice(0, 10)
+    .map(r => `${r.name} (${r.id})`)
+    .join('\n') || 'Aucun';
+
+  embed.addFields(
+  { name: `🛡️ Rôles avec Administrator (${adminRoles.length})`, value: listByPosition(adminRoles), inline: false },
+  { name: `⚙️ Rôles non gérables par le bot (${unmanageable.length})`, value: listByPosition(unmanageable), inline: false },
+  );
+
   await interaction.editReply({ embeds: [embed] });
+}
+
+function formatChan(id: string, name?: string | null) {
+  return `<#${id}>${name ? ` (${name})` : ''}`;
 }
