@@ -6,6 +6,9 @@ import {
   EmbedBuilder,
   PermissionFlagsBits,
   ChannelType,
+  ActionRowBuilder,
+  StringSelectMenuBuilder,
+  ComponentType,
 } from 'discord.js';
 import {
   getLogChannel,
@@ -227,15 +230,77 @@ async function runChannelsAudit(interaction: CommandInteraction) {
     }
   }
 
-  const addChunked = (title: string, lines: string[]) => {
-    if (lines.length === 0) return;
-    const max = 1000; // safe under 1024
+  // Counts & interactive select menu
+  const totalText = textLines.length;
+  const totalVoice = voiceLines.length;
+  const totalRisky = riskyEveryoneLines.length;
+  const allLines = [...textLines, ...voiceLines, ...otherLines];
+  const misconfiguredLines = allLines.filter(l => l.startsWith('❌'));
+
+  embed.addFields({
+    name: '📊 Récapitulatif',
+    value: `Texte: ${totalText} | Vocaux: ${totalVoice} | Risqués @everyone: ${totalRisky} | Mal configurés: ${misconfiguredLines.length}`,
+    inline: false,
+  });
+
+  const select = new StringSelectMenuBuilder()
+    .setCustomId('audit_channel_category')
+    .setPlaceholder('Sélectionnez une catégorie à afficher')
+    .addOptions(
+      {
+        label: 'Tous les salons',
+        value: 'all',
+        description: `Lister tous les salons (${allLines.length})`,
+        emoji: '📋',
+      },
+      {
+        label: 'Salons textuels',
+        value: 'text',
+        description: `Textuels (${totalText})`,
+        emoji: '📝',
+      },
+      {
+        label: 'Salons vocaux',
+        value: 'voice',
+        description: `Vocaux (${totalVoice})`,
+        emoji: '🔊',
+      },
+      {
+        label: 'Salons mal configurés',
+        value: 'bad',
+        description: `Permissions manquantes (${misconfiguredLines.length})`,
+        emoji: '⚠️',
+      },
+      {
+        label: '@everyone risqué',
+        value: 'risky',
+        description: `@everyone avec droits sensibles (${totalRisky})`,
+        emoji: '🚨',
+      },
+    );
+
+  const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(select);
+
+  const response = await interaction.editReply({ embeds: [embed], components: [row] });
+
+  const addChunkedTo = (target: EmbedBuilder, title: string, lines: string[], capFields = 10, maxLen = 1000) => {
+    if (lines.length === 0) {
+      target.addFields({ name: title, value: 'Aucun', inline: false });
+      return;
+    }
     let chunk: string[] = [];
     let size = 0;
     let idx = 0;
+    let added = 0;
     for (const l of lines.sort()) {
-      if (size + l.length + 1 > max) {
-        embed.addFields({ name: `${title}${idx ? ` (suite ${idx})` : ''}`, value: chunk.join('\n'), inline: false });
+      if (size + l.length + 1 > maxLen) {
+        target.addFields({ name: `${title}${idx ? ` (suite ${idx})` : ''}`, value: chunk.join('\n'), inline: false });
+        added++;
+        if (added >= capFields) {
+          const remaining = lines.length - (idx * (chunk.length || 1)) - chunk.length;
+          if (remaining > 0) target.addFields({ name: '…', value: `+ ${remaining} supplémentaires`, inline: false });
+          return;
+        }
         chunk = [];
         size = 0;
         idx++;
@@ -243,17 +308,65 @@ async function runChannelsAudit(interaction: CommandInteraction) {
       chunk.push(l);
       size += l.length + 1;
     }
-    if (chunk.length) {
-      embed.addFields({ name: `${title}${idx ? ` (suite ${idx})` : ''}`, value: chunk.join('\n'), inline: false });
+    if (chunk.length && added < capFields) {
+      target.addFields({ name: `${title}${idx ? ` (suite ${idx})` : ''}`, value: chunk.join('\n'), inline: false });
     }
   };
 
-  addChunked('📝 Canaux texte', textLines);
-  addChunked('🔊 Canaux vocaux', voiceLines);
-  addChunked('📦 Autres canaux', otherLines);
-  addChunked('⚠️ Permissions risquées pour @everyone (par canal)', riskyEveryoneLines);
+  // Types: reply is a Message, we can collect select interactions
+  const msg = response as import('discord.js').Message<boolean>;
+  const collector = msg.createMessageComponentCollector({ componentType: ComponentType.StringSelect, time: 5 * 60 * 1000 });
 
-  await interaction.editReply({ embeds: [embed] });
+  collector.on('collect', async (i: import('discord.js').StringSelectMenuInteraction) => {
+    if (i.user.id !== interaction.user.id) {
+      await i.reply({ content: 'Vous ne pouvez pas utiliser ce menu.', ephemeral: true });
+      return;
+    }
+    const choice = i.values[0];
+    const header = new EmbedBuilder()
+      .setAuthor({
+        name: interaction.client.user?.username ?? 'Bot',
+        iconURL: interaction.client.user?.displayAvatarURL({ forceStatic: false }),
+      })
+      .setColor(0x00aaff)
+      .setTimestamp()
+      .setFooter({
+        text: `Demandé par ${interaction.user.tag}`,
+        iconURL: interaction.user.displayAvatarURL({ forceStatic: false }),
+      });
+
+    switch (choice) {
+      case 'text':
+        header.setTitle('📝 Salons textuels');
+        addChunkedTo(header, 'Liste', textLines);
+        break;
+      case 'voice':
+        header.setTitle('🔊 Salons vocaux');
+        addChunkedTo(header, 'Liste', voiceLines);
+        break;
+      case 'risky':
+        header.setTitle('🚨 @everyone risqué (par canal)');
+        addChunkedTo(header, 'Liste', riskyEveryoneLines);
+        break;
+      case 'bad':
+        header.setTitle('⚠️ Salons mal configurés');
+        addChunkedTo(header, 'Liste', misconfiguredLines);
+        break;
+      case 'all':
+      default:
+        header.setTitle('📋 Tous les salons');
+        addChunkedTo(header, 'Salons textuels', textLines);
+        addChunkedTo(header, 'Salons vocaux', voiceLines);
+        addChunkedTo(header, 'Autres', otherLines);
+        break;
+    }
+
+    await i.update({ embeds: [header], components: [row] });
+  });
+
+  collector.on('end', async () => {
+    try { await interaction.editReply({ components: [] }); } catch (_e) { /* message possibly deleted/uncacheable */ }
+  });
 }
 
 async function runRolesAudit(interaction: CommandInteraction) {
