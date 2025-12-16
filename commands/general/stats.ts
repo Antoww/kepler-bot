@@ -1,4 +1,5 @@
 import { type CommandInteraction, SlashCommandBuilder, EmbedBuilder } from 'discord.js';
+import process from 'node:process';
 
 export const data = new SlashCommandBuilder()
     .setName('stats')
@@ -13,8 +14,32 @@ export async function execute(interaction: CommandInteraction) {
 
     // Récupération des informations sur l'utilisation des ressources
     const memoryUsage = process.memoryUsage();
-    const memoryUsedMB = Math.round(memoryUsage.heapUsed / 1024 / 1024 * 100) / 100;
-    const memoryTotalMB = Math.round(memoryUsage.heapTotal / 1024 / 1024 * 100) / 100;
+    // Utiliser RSS pour la mémoire utilisée (plus représentative de l'utilisation réelle du processus)
+    const memoryUsedMB = Math.round((memoryUsage.rss / 1024 / 1024) * 100) / 100;
+
+    // Récupérer la RAM totale de la machine (pas seulement le heap V8)
+    let totalMemBytes: number | undefined;
+    try {
+        // Deno fournit des infos système fiables
+        if (typeof Deno !== 'undefined' && typeof Deno.systemMemoryInfo === 'function') {
+            const sys = Deno.systemMemoryInfo();
+            // total est en octets
+            totalMemBytes = sys.total as number;
+        }
+    } catch (_) {
+        // ignore (ex: permission manquante)
+    }
+    if (!totalMemBytes) {
+        try {
+            // Fallback Node:os (supporté par Deno en mode compat)
+            const os = await import('node:os');
+            totalMemBytes = os.totalmem();
+        } catch (_) {
+            // Dernier recours: utiliser heapTotal (moins précis)
+            totalMemBytes = memoryUsage.heapTotal;
+        }
+    }
+    const memoryTotalMB = Math.round(((totalMemBytes ?? 0) / 1024 / 1024) * 100) / 100;
     
     // Calcul approximatif du CPU (basé sur le temps d'utilisation du processus)
     const cpuUsage = process.cpuUsage();

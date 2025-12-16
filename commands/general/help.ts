@@ -244,15 +244,35 @@ export async function execute(interaction: CommandInteraction) {
         // Récupérer les commandes slash enregistrées avec leurs IDs
         let applicationCommands;
         try {
+            // Essayer d'abord les commandes globales
             applicationCommands = await interaction.client.application?.commands.fetch();
+            console.log(`✅ ${applicationCommands?.size || 0} commandes globales récupérées`);
+            
+            // Si on est dans une guild, essayer aussi les commandes de guild
+            if (interaction.guild && applicationCommands) {
+                try {
+                    const guildCommands = await interaction.guild.commands.fetch();
+                    console.log(`✅ ${guildCommands.size} commandes de guild récupérées`);
+                    
+                    // Fusionner les deux collections
+                    guildCommands.forEach(cmd => applicationCommands?.set(cmd.id, cmd));
+                } catch (guildError) {
+                    console.log('⚠️ Impossible de récupérer les commandes de guild:', guildError);
+                }
+            }
         } catch (error) {
-            console.error('Erreur lors de la récupération des commandes:', error);
+            console.error('❌ Erreur lors de la récupération des commandes:', error);
             applicationCommands = new Map();
         }
         
         // Mapper les commandes avec leurs IDs réels
         const commandsWithIds = allCommands.map(cmd => {
             const registeredCommand = applicationCommands?.find(appCmd => appCmd.name === cmd.name);
+            if (registeredCommand) {
+                console.log(`✅ ID trouvé pour /${cmd.name}: ${registeredCommand.id}`);
+            } else {
+                console.log(`⚠️ Aucun ID trouvé pour /${cmd.name}`);
+            }
             return {
                 ...cmd,
                 id: registeredCommand?.id || null
