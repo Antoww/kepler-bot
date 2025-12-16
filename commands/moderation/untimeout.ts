@@ -19,11 +19,14 @@ export async function execute(interaction: CommandInteraction) {
         return;
     }
 
+    // Différer la réponse pour éviter le timeout de l'interaction
+    await interaction.deferReply();
+
     const target = interaction.options.getUser('utilisateur');
     const reason = interaction.options.getString('raison') || 'Aucune raison fournie';
 
     if (!target) {
-        await interaction.reply('Utilisateur invalide.');
+        await interaction.editReply('Utilisateur invalide.');
         return;
     }
 
@@ -32,22 +35,22 @@ export async function execute(interaction: CommandInteraction) {
     const targetMember = interaction.guild.members.cache.get(target.id);
 
     if (!targetMember) {
-        await interaction.reply('❌ Cet utilisateur n\'est pas sur le serveur.');
+        await interaction.editReply('❌ Cet utilisateur n\'est pas sur le serveur.');
         return;
     }
 
     if (!targetMember.isCommunicationDisabled()) {
-        await interaction.reply('❌ Cet utilisateur n\'est pas en timeout.');
+        await interaction.editReply('❌ Cet utilisateur n\'est pas en timeout.');
         return;
     }
 
     if (member.roles.highest.position <= targetMember.roles.highest.position) {
-        await interaction.reply('❌ Vous ne pouvez pas retirer le timeout de cet utilisateur car il a un rôle égal ou supérieur au vôtre.');
+        await interaction.editReply('❌ Vous ne pouvez pas retirer le timeout de cet utilisateur car il a un rôle égal ou supérieur au vôtre.');
         return;
     }
 
     if (!targetMember.moderatable) {
-        await interaction.reply('❌ Je ne peux pas retirer le timeout de cet utilisateur (permissions insuffisantes).');
+        await interaction.editReply('❌ Je ne peux pas retirer le timeout de cet utilisateur (permissions insuffisantes).');
         return;
     }
 
@@ -92,13 +95,13 @@ export async function execute(interaction: CommandInteraction) {
             .setThumbnail(target.displayAvatarURL({ forceStatic: false }))
             .setTimestamp();
 
-        await interaction.reply({ embeds: [embed] });
+        await interaction.editReply({ embeds: [embed] });
 
         // Logger l'action
         await logModeration(interaction.guild, 'Untimeout', target, interaction.user, reason);
 
     } catch (error) {
         console.error('Erreur lors du retrait du timeout:', error);
-        await interaction.reply('❌ Une erreur est survenue lors du retrait du timeout.');
+        await interaction.editReply('❌ Une erreur est survenue lors du retrait du timeout.');
     }
 }
