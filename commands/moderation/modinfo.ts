@@ -127,6 +127,7 @@ export async function execute(interaction: CommandInteraction) {
                 ban: history.filter(h => h.action_type === 'ban' || h.action_type === 'tempban').length,
                 kick: history.filter(h => h.action_type === 'kick').length,
                 mute: history.filter(h => h.action_type === 'mute').length,
+                timeout: history.filter(h => h.action_type === 'timeout').length,
                 warn: history.filter(h => h.action_type === 'warn').length
             };
 
