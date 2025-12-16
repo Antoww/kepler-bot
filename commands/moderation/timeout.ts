@@ -22,12 +22,15 @@ export async function execute(interaction: CommandInteraction) {
         return;
     }
 
+    // Différer la réponse pour éviter le timeout de l'interaction
+    await interaction.deferReply();
+
     const target = interaction.options.getUser('utilisateur');
     const duration = interaction.options.getString('duree');
     const reason = interaction.options.getString('raison') || 'Aucune raison fournie';
 
     if (!target || !duration) {
-        await interaction.reply('Utilisateur ou durée invalide.');
+        await interaction.editReply('Utilisateur ou durée invalide.');
         return;
     }
 
@@ -36,34 +39,34 @@ export async function execute(interaction: CommandInteraction) {
     const targetMember = interaction.guild.members.cache.get(target.id);
 
     if (!targetMember) {
-        await interaction.reply('❌ Cet utilisateur n\'est pas sur le serveur.');
+        await interaction.editReply('❌ Cet utilisateur n\'est pas sur le serveur.');
         return;
     }
 
     if (target.id === interaction.user.id) {
-        await interaction.reply('❌ Vous ne pouvez pas vous placer en timeout vous-même.');
+        await interaction.editReply('❌ Vous ne pouvez pas vous placer en timeout vous-même.');
         return;
     }
 
     if (target.id === interaction.client.user?.id) {
-        await interaction.reply('❌ Je ne peux pas me placer en timeout moi-même.');
+        await interaction.editReply('❌ Je ne peux pas me placer en timeout moi-même.');
         return;
     }
 
     if (member.roles.highest.position <= targetMember.roles.highest.position) {
-        await interaction.reply('❌ Vous ne pouvez pas placer en timeout cet utilisateur car il a un rôle égal ou supérieur au vôtre.');
+        await interaction.editReply('❌ Vous ne pouvez pas placer en timeout cet utilisateur car il a un rôle égal ou supérieur au vôtre.');
         return;
     }
 
     if (!targetMember.moderatable) {
-        await interaction.reply('❌ Je ne peux pas placer en timeout cet utilisateur (permissions insuffisantes).');
+        await interaction.editReply('❌ Je ne peux pas placer en timeout cet utilisateur (permissions insuffisantes).');
         return;
     }
 
     // Parser la durée
     const timeoutDuration = parseDuration(duration);
     if (!timeoutDuration) {
-        await interaction.reply('❌ Format de durée invalide. Utilisez des formats comme: 1d, 12h, 30m, 1w');
+        await interaction.editReply('❌ Format de durée invalide. Utilisez des formats comme: 1d, 12h, 30m, 1w');
         return;
     }
 
@@ -72,19 +75,19 @@ export async function execute(interaction: CommandInteraction) {
     const timeoutMs = timeoutDuration.getTime() - Date.now();
 
     if (timeoutMs > maxTimeoutDuration) {
-        await interaction.reply('❌ La durée du timeout ne peut pas dépasser 28 jours (limite Discord).');
+        await interaction.editReply('❌ La durée du timeout ne peut pas dépasser 28 jours (limite Discord).');
         return;
     }
 
     if (timeoutMs < 1000) {
-        await interaction.reply('❌ La durée du timeout doit être d\'au moins 1 seconde.');
+        await interaction.editReply('❌ La durée du timeout doit être d\'au moins 1 seconde.');
         return;
     }
 
     try {
         // Vérifier si l'utilisateur est déjà en timeout
         if (targetMember.isCommunicationDisabled()) {
-            await interaction.reply('❌ Cet utilisateur est déjà en timeout.');
+            await interaction.editReply('❌ Cet utilisateur est déjà en timeout.');
             return;
         }
 
@@ -141,7 +144,7 @@ export async function execute(interaction: CommandInteraction) {
             .setFooter({ text: 'L\'utilisateur ne pourra pas envoyer de messages, réagir ou parler en vocal.' })
             .setTimestamp();
 
-        await interaction.reply({ embeds: [embed] });
+        await interaction.editReply({ embeds: [embed] });
 
         // Logger l'action
         await logModeration(
@@ -155,7 +158,7 @@ export async function execute(interaction: CommandInteraction) {
 
     } catch (error) {
         console.error('Erreur lors du placement en timeout:', error);
-        await interaction.reply('❌ Une erreur est survenue lors du placement en timeout.');
+        await interaction.editReply('❌ Une erreur est survenue lors du placement en timeout.');
     }
 }
 
