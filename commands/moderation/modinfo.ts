@@ -131,7 +131,7 @@ export async function execute(interaction: CommandInteraction) {
                 warn: history.filter(h => h.action_type === 'warn').length
             };
 
-            const statsText = `🔨 Bans: **${stats.ban}**\n👢 Kicks: **${stats.kick}**\n🔇 Mutes: **${stats.mute}**\n⚠️ Warns: **${stats.warn}**`;
+            const statsText = `🔨 Bans: **${stats.ban}**\n👢 Kicks: **${stats.kick}**\n🔇 Mutes: **${stats.mute}**\n⏱️ Timeouts: **${stats.timeout}**\n⚠️ Warns: **${stats.warn}**`;
             embed.addFields({ name: '📈 Statistiques', value: statsText, inline: true });
 
             const finalEmbed = generateHistoryEmbed(embed, currentPage);
@@ -200,6 +200,10 @@ function getActionEmoji(action: string): string {
         case 'mute':
         case 'tempmute':
             return '🔇';
+        case 'timeout':
+            return '⏱️';
+        case 'untimeout':
+            return '✅';
         case 'warn':
             return '⚠️';
         case 'unban':
