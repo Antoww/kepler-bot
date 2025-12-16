@@ -126,7 +126,7 @@ async function runChannelsAudit(interaction: CommandInteraction) {
     ] as const;
     const missing = needed.filter((p) => !perms.has(p));
     if (missing.length > 0) {
-      checks.push({ name: label, ok: false, detail: `Permissions manquantes: ${missing.join(', ')}` });
+      checks.push({ name: label, ok: false, detail: `Permissions manquantes: ${missing.map(p => translatePermission(PermissionFlagsBits[p as unknown as keyof typeof PermissionFlagsBits] as unknown as string)).join(', ')}` });
     } else {
       checks.push({ name: label, ok: true, detail: `${ch} prêt` });
     }
@@ -169,7 +169,7 @@ async function runChannelsAudit(interaction: CommandInteraction) {
   if (globalMissing.length > 0) {
     embed.addFields({
       name: '⚠️ Permissions globales manquantes',
-      value: globalMissing.join(', '),
+      value: globalMissing.map(p => translatePermission(PermissionFlagsBits[p as unknown as keyof typeof PermissionFlagsBits] as unknown as string)).join(', '),
       inline: false,
     });
   }
@@ -213,7 +213,7 @@ async function runChannelsAudit(interaction: CommandInteraction) {
 
     const missing: string[] = [];
     for (const [bit, name] of required) {
-      if (!perms || !perms.has(bit)) missing.push(name);
+      if (!perms || !perms.has(bit)) missing.push(translatePermission(name));
     }
   const ok = missing.length === 0;
     const line = `${ok ? '✅' : '❌'} ${formatChan(ch.id, ch.name)}${ok ? '' : ` — ${missing.join(', ')}`}`;
@@ -227,19 +227,19 @@ async function runChannelsAudit(interaction: CommandInteraction) {
     if ('permissionOverwrites' in ch) {
       const ow = ch.permissionOverwrites?.cache.get(everyoneId);
       const risky: string[] = [];
-  if (ow?.allow.has(PermissionFlagsBits.MentionEveryone)) risky.push('MentionEveryone');
-  if (ow?.allow.has(PermissionFlagsBits.ManageMessages)) risky.push('ManageMessages');
-  if (ow?.allow.has(PermissionFlagsBits.AddReactions)) risky.push('AddReactions');
-      if (ow?.allow.has(PermissionFlagsBits.ManageChannels)) risky.push('ManageChannels');
-      if (ow?.allow.has(PermissionFlagsBits.ManageWebhooks)) risky.push('ManageWebhooks');
-      if (ow?.allow.has(PermissionFlagsBits.ManageThreads)) risky.push('ManageThreads');
-      if (ow?.allow.has(PermissionFlagsBits.ManageRoles)) risky.push('ManageRoles');
-  if (ow?.allow.has(PermissionFlagsBits.PrioritySpeaker)) risky.push('PrioritySpeaker');
-  if (ow?.allow.has(PermissionFlagsBits.MuteMembers)) risky.push('MuteMembers');
-  if (ow?.allow.has(PermissionFlagsBits.DeafenMembers)) risky.push('DeafenMembers');
-  if (ow?.allow.has(PermissionFlagsBits.MoveMembers)) risky.push('MoveMembers');
-  if (ow?.allow.has(PermissionFlagsBits.CreateEvents)) risky.push('CreateEvents');
-  if (ow?.allow.has(PermissionFlagsBits.ManageEvents)) risky.push('ManageEvents');
+  if (ow?.allow.has(PermissionFlagsBits.MentionEveryone)) risky.push(translatePermission('MentionEveryone'));
+  if (ow?.allow.has(PermissionFlagsBits.ManageMessages)) risky.push(translatePermission('ManageMessages'));
+  if (ow?.allow.has(PermissionFlagsBits.AddReactions)) risky.push(translatePermission('AddReactions'));
+      if (ow?.allow.has(PermissionFlagsBits.ManageChannels)) risky.push(translatePermission('ManageChannels'));
+      if (ow?.allow.has(PermissionFlagsBits.ManageWebhooks)) risky.push(translatePermission('ManageWebhooks'));
+      if (ow?.allow.has(PermissionFlagsBits.ManageThreads)) risky.push(translatePermission('ManageThreads'));
+      if (ow?.allow.has(PermissionFlagsBits.ManageRoles)) risky.push(translatePermission('ManageRoles'));
+  if (ow?.allow.has(PermissionFlagsBits.PrioritySpeaker)) risky.push(translatePermission('PrioritySpeaker'));
+  if (ow?.allow.has(PermissionFlagsBits.MuteMembers)) risky.push(translatePermission('MuteMembers'));
+  if (ow?.allow.has(PermissionFlagsBits.DeafenMembers)) risky.push(translatePermission('DeafenMembers'));
+  if (ow?.allow.has(PermissionFlagsBits.MoveMembers)) risky.push(translatePermission('MoveMembers'));
+  if (ow?.allow.has(PermissionFlagsBits.CreateEvents)) risky.push(translatePermission('CreateEvents'));
+  if (ow?.allow.has(PermissionFlagsBits.ManageEvents)) risky.push(translatePermission('ManageEvents'));
       if (risky.length) riskyEveryoneLines.push(`❗ ${formatChan(ch.id, ch.name)} — @everyone: ${risky.join(', ')}`);
     }
   }
@@ -459,7 +459,7 @@ async function runRolesAudit(interaction: CommandInteraction) {
     ok = false;
     fields.push({
       name: '⚠️ Permissions risquées sur @everyone',
-      value: everyoneDanger.join(', '),
+      value: everyoneDanger.map(p => translatePermission(PermissionFlagsBits[p as unknown as keyof typeof PermissionFlagsBits] as unknown as string)).join(', '),
     });
   } else {
     fields.push({ name: '✅ @everyone', value: 'Aucune permission critique détectée' });
@@ -512,4 +512,45 @@ async function runRolesAudit(interaction: CommandInteraction) {
 
 function formatChan(id: string, name?: string | null) {
   return `<#${id}>${name ? ` (${name})` : ''}`;
+}
+
+/**
+ * Traduit les noms de permissions Discord en français
+ */
+function translatePermission(permission: string): string {
+  const translations: Record<string, string> = {
+    // Permissions critiques/à risques
+    'Administrator': 'Administrateur',
+    'ManageGuild': 'Gérer le serveur',
+    'ManageRoles': 'Gérer les rôles',
+    'ManageChannels': 'Gérer les salons',
+    'ManageMessages': 'Gérer les messages',
+    'ManageWebhooks': 'Gérer les webhooks',
+    'ManageThreads': 'Gérer les fils',
+    'MentionEveryone': 'Mentionner @everyone',
+    'MuteMembers': 'Rendre muet des membres',
+    'DeafenMembers': 'Mettre en sourdine des membres',
+    'MoveMembers': 'Déplacer des membres',
+    'ManageEvents': 'Gérer les événements',
+    'CreateEvents': 'Créer des événements',
+    
+    // Permissions de base
+    'ViewChannel': 'Voir le salon',
+    'SendMessages': 'Envoyer des messages',
+    'SendMessagesInThreads': 'Envoyer des messages dans les fils',
+    'EmbedLinks': 'Intégrer des liens',
+    'AttachFiles': 'Joindre des fichiers',
+    'AddReactions': 'Ajouter des réactions',
+    'ReadMessageHistory': 'Lire l\'historique des messages',
+    'SendTTSMessages': 'Envoyer des messages TTS',
+    'ViewAuditLog': 'Voir les logs d\'audit',
+    
+    // Permissions vocales
+    'Connect': 'Se connecter',
+    'Speak': 'Parler',
+    'Stream': 'Streamer',
+    'PrioritySpeaker': 'Priorité de parole',
+  };
+  
+  return translations[permission] || permission;
 }
