@@ -4,7 +4,8 @@
         "start": "deno run --allow-net --allow-read --allow-env index.ts"
     },
     "imports": {
-        "discord.js": "npm:discord.js@^14.17.2"
+        "discord.js": "npm:discord.js@^14.17.2",
+        "genius-lyrics": "npm:genius-lyrics@^4.4.7"
     },
     "compilerOptions": {
         "strict": true,
