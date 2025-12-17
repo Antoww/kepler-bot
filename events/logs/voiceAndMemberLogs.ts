@@ -150,16 +150,30 @@ export async function logVoiceStateUpdate(oldState: VoiceState, newState: VoiceS
 
     // Connexion à un canal vocal
     if (!oldState.channel && newState.channel) {
+        const client = newState.client;
+        const member = newState.member;
+        if (!member) return;
+
+        const fields: any[] = [
+            { name: '👤 Utilisateur', value: `${member.user.tag}\n\`${member.user.id}\``, inline: true },
+            { name: '🔊 Canal', value: `${newState.channel.name}\n\`${newState.channel.id}\``, inline: true },
+            { name: '📅 Date', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: false }
+        ];
+
         const embed = new EmbedBuilder()
-            .setColor('#00ff00')
+            .setAuthor({ 
+                name: 'Kepler Bot - Système de Logs',
+                iconURL: client.user?.displayAvatarURL({ forceStatic: false })
+            })
+            .setColor('#57F287')
             .setTitle('🔊 Connexion Vocale')
-            .setDescription(`**Utilisateur:** ${newState.member?.user.tag} (${newState.member?.user.id})`)
-            .addFields(
-                { name: 'Canal rejoint', value: `${newState.channel.name} (${newState.channel.id})`, inline: true },
-                { name: 'Date', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: true }
-            )
-            .setThumbnail(newState.member?.user.displayAvatarURL({ forceStatic: false }) || null)
-            .setFooter({ text: `Kepler Bot • Logs Vocal • Canal: ${newState.channel.name}` })
+            .setDescription(`### ${member.user.tag}\n> S'est connecté au salon vocal **${newState.channel.name}**.`)
+            .addFields(fields)
+            .setThumbnail(member.user.displayAvatarURL({ forceStatic: false }))
+            .setFooter({ 
+                text: `Logs Vocal`,
+                iconURL: newState.guild.iconURL({ forceStatic: false }) || undefined
+            })
             .setTimestamp();
 
         await sendLog(newState.guild, embed);
@@ -167,16 +181,30 @@ export async function logVoiceStateUpdate(oldState: VoiceState, newState: VoiceS
     
     // Déconnexion d'un canal vocal
     else if (oldState.channel && !newState.channel) {
+        const client = newState.client;
+        const member = newState.member;
+        if (!member) return;
+
+        const fields: any[] = [
+            { name: '👤 Utilisateur', value: `${member.user.tag}\n\`${member.user.id}\``, inline: true },
+            { name: '🔇 Canal', value: `${oldState.channel.name}\n\`${oldState.channel.id}\``, inline: true },
+            { name: '📅 Date', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: false }
+        ];
+
         const embed = new EmbedBuilder()
-            .setColor('#ff0000')
+            .setAuthor({ 
+                name: 'Kepler Bot - Système de Logs',
+                iconURL: client.user?.displayAvatarURL({ forceStatic: false })
+            })
+            .setColor('#ED4245')
             .setTitle('🔇 Déconnexion Vocale')
-            .setDescription(`**Utilisateur:** ${newState.member?.user.tag} (${newState.member?.user.id})`)
-            .addFields(
-                { name: 'Canal quitté', value: `${oldState.channel.name} (${oldState.channel.id})`, inline: true },
-                { name: 'Date', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: true }
-            )
-            .setThumbnail(newState.member?.user.displayAvatarURL({ forceStatic: false }) || null)
-            .setFooter({ text: `Kepler Bot • Logs Vocal • Canal: ${oldState.channel.name}` })
+            .setDescription(`### ${member.user.tag}\n> S'est déconnecté du salon vocal **${oldState.channel.name}**.`)
+            .addFields(fields)
+            .setThumbnail(member.user.displayAvatarURL({ forceStatic: false }))
+            .setFooter({ 
+                text: `Logs Vocal`,
+                iconURL: newState.guild.iconURL({ forceStatic: false }) || undefined
+            })
             .setTimestamp();
 
         await sendLog(newState.guild, embed);
@@ -184,17 +212,31 @@ export async function logVoiceStateUpdate(oldState: VoiceState, newState: VoiceS
     
     // Changement de canal vocal
     else if (oldState.channel && newState.channel && oldState.channel.id !== newState.channel.id) {
+        const client = newState.client;
+        const member = newState.member;
+        if (!member) return;
+
+        const fields: any[] = [
+            { name: '👤 Utilisateur', value: `${member.user.tag}\n\`${member.user.id}\``, inline: true },
+            { name: '📅 Date', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: true },
+            { name: '📤 Canal quitté', value: `${oldState.channel.name}\n\`${oldState.channel.id}\``, inline: true },
+            { name: '📥 Canal rejoint', value: `${newState.channel.name}\n\`${newState.channel.id}\``, inline: true }
+        ];
+
         const embed = new EmbedBuilder()
-            .setColor('#ffaa00')
+            .setAuthor({ 
+                name: 'Kepler Bot - Système de Logs',
+                iconURL: client.user?.displayAvatarURL({ forceStatic: false })
+            })
+            .setColor('#FEE75C')
             .setTitle('🔄 Changement de Canal Vocal')
-            .setDescription(`**Utilisateur:** ${newState.member?.user.tag} (${newState.member?.user.id})`)
-            .addFields(
-                { name: 'Canal quitté', value: `${oldState.channel.name} (${oldState.channel.id})`, inline: true },
-                { name: 'Canal rejoint', value: `${newState.channel.name} (${newState.channel.id})`, inline: true },
-                { name: 'Date', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: true }
-            )
-            .setThumbnail(newState.member?.user.displayAvatarURL({ forceStatic: false }) || null)
-            .setFooter({ text: `Kepler Bot • Logs Vocal • ${oldState.channel.name} → ${newState.channel.name}` })
+            .setDescription(`### ${member.user.tag}\n> A changé de salon vocal : **${oldState.channel.name}** → **${newState.channel.name}**.`)
+            .addFields(fields)
+            .setThumbnail(member.user.displayAvatarURL({ forceStatic: false }))
+            .setFooter({ 
+                text: `Logs Vocal`,
+                iconURL: newState.guild.iconURL({ forceStatic: false }) || undefined
+            })
             .setTimestamp();
 
         await sendLog(newState.guild, embed);
