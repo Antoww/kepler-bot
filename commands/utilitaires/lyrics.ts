@@ -1,8 +1,7 @@
 import { SlashCommandBuilder, EmbedBuilder, type ChatInputCommandInteraction } from 'discord.js';
 
 async function searchSong(query: string) {
-    // @ts-ignore - Deno global in Deno runtime
-    const token = globalThis.Deno?.env?.get('GENIUS_API_TOKEN');
+    const token = Deno.env.get('GENIUS_API_TOKEN');
     
     if (!token) {
         throw new Error('GENIUS_API_TOKEN environment variable is not set');
