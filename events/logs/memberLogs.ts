@@ -52,6 +52,7 @@ export async function logMemberBan(ban: GuildBan) {
             { name: 'Date', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: true }
         )
         .setThumbnail(ban.user.displayAvatarURL({ forceStatic: false }))
+        .setFooter({ text: `Kepler Bot • Logs Modération • ID: ${ban.user.id}` })
         .setTimestamp();
 
     // Ajouter la raison du ban si disponible
@@ -85,6 +86,7 @@ export async function logMemberUnban(ban: GuildBan) {
             { name: 'Date', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: true }
         )
         .setThumbnail(ban.user.displayAvatarURL({ forceStatic: false }))
+        .setFooter({ text: `Kepler Bot • Logs Modération • ID: ${ban.user.id}` })
         .setTimestamp();
 
     // Ajouter la raison si disponible
@@ -114,6 +116,7 @@ export async function logMemberKick(member: GuildMember) {
             { name: 'Date', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: true }
         )
         .setThumbnail(member.user.displayAvatarURL({ forceStatic: false }))
+        .setFooter({ text: `Kepler Bot • Logs Modération • ID: ${member.user.id}` })
         .setTimestamp();
 
     // Ajouter la raison si disponible
@@ -140,6 +143,7 @@ export async function logMemberJoin(member: GuildMember) {
             { name: 'Nombre de membres', value: member.guild.memberCount.toString(), inline: true }
         )
         .setThumbnail(member.user.displayAvatarURL({ forceStatic: false }))
+        .setFooter({ text: `Kepler Bot • Logs Membres • Membre #${member.guild.memberCount}` })
         .setTimestamp();
 
     // Vérifier si le compte est récent (moins de 7 jours)
@@ -180,6 +184,7 @@ export async function logMemberLeave(member: GuildMember) {
                 { name: 'Nombre de membres', value: member.guild.memberCount.toString(), inline: true }
             )
             .setThumbnail(member.user.displayAvatarURL({ forceStatic: false }))
+            .setFooter({ text: `Kepler Bot • Logs Membres • ID: ${member.user.id}` })
             .setTimestamp();
 
         // Ajouter les rôles qu'il avait
