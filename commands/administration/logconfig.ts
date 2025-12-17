@@ -12,7 +12,7 @@ export const data = new SlashCommandBuilder()
 
 export async function execute(interaction: CommandInteraction) {
     if (!interaction.guild) {
-        await interaction.reply('Cette commande ne peut être utilisée que sur un serveur.');
+        await interaction.reply('❌ Cette commande ne peut être utilisée que sur un serveur.');
         return;
     }
 
