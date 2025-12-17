@@ -105,8 +105,8 @@ export async function logChannelDelete(channel: GuildChannel) {
         .setDescription(`**Canal:** ${channel.name} (${channel.id})`)
         .addFields(
             { name: 'Type', value: getChannelTypeName(channel.type), inline: true },
-            { name: 'Supprimé par', value: auditEntry?.executor ? `${auditEntry.executor.tag} (${auditEntry.executor.id})` : 'Inconnu', inline: true },
-            { name: 'Date', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: true }
+            { name: 'Supprimé par', value: auditEntry?.executor ? `${auditEntry.executor.tag} (${auditEntry.executor.id})` : 'Inconnu'},
+            { name: 'Date', value: `<t:${Math.floor(Date.now() / 1000)}:F>`}
         )
         .setTimestamp();
 
