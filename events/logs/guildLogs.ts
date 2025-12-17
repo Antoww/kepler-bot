@@ -88,6 +88,7 @@ export async function logChannelCreate(channel: GuildChannel) {
         .setTitle('📝 Canal Créé')
         .setDescription(`**Canal:** ${channel.name} (${channel.id})`)
         .addFields(fields)
+        .setFooter({ text: `Kepler Bot • Logs Serveur • ID: ${channel.id}` })
         .setTimestamp();
 
     await sendLog(channel.guild, embed);
@@ -108,6 +109,7 @@ export async function logChannelDelete(channel: GuildChannel) {
             { name: 'Supprimé par', value: auditEntry?.executor ? `${auditEntry.executor.tag} (${auditEntry.executor.id})` : 'Inconnu'},
             { name: 'Date', value: `<t:${Math.floor(Date.now() / 1000)}:F>`}
         )
+        .setFooter({ text: `Kepler Bot • Logs Serveur • ID: ${channel.id}` })
         .setTimestamp();
 
     await sendLog(channel.guild, embed);
@@ -197,6 +199,7 @@ export async function logChannelUpdate(oldChannel: GuildChannel, newChannel: Gui
             { name: 'Modifié par', value: auditEntry?.executor ? `${auditEntry.executor.tag} (${auditEntry.executor.id})` : 'Inconnu', inline: true },
             { name: 'Date', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: true }
         )
+        .setFooter({ text: `Kepler Bot • Logs Serveur • ${changes.length} modification(s)` })
         .setTimestamp();
 
     await sendLog(newChannel.guild, embed);
@@ -216,6 +219,7 @@ export async function logRoleCreate(role: Role) {
             { name: 'Créé par', value: auditEntry?.executor ? `${auditEntry.executor.tag} (${auditEntry.executor.id})` : 'Inconnu', inline: true },
             { name: 'Date', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: true }
         )
+        .setFooter({ text: `Kepler Bot • Logs Serveur • ID: ${role.id}` })
         .setTimestamp();
 
     await sendLog(role.guild, embed);
@@ -234,6 +238,7 @@ export async function logRoleDelete(role: Role) {
             { name: 'Supprimé par', value: auditEntry?.executor ? `${auditEntry.executor.tag} (${auditEntry.executor.id})` : 'Inconnu', inline: true },
             { name: 'Date', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: true }
         )
+        .setFooter({ text: `Kepler Bot • Logs Serveur • ID: ${role.id}` })
         .setTimestamp();
 
     await sendLog(role.guild, embed);
@@ -303,6 +308,7 @@ export async function logRoleUpdate(oldRole: Role, newRole: Role) {
             { name: 'Modifié par', value: auditEntry?.executor ? `${auditEntry.executor.tag} (${auditEntry.executor.id})` : 'Inconnu', inline: true },
             { name: 'Date', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: true }
         )
+        .setFooter({ text: `Kepler Bot • Logs Serveur • ${changes.length} modification(s)` })
         .setTimestamp();
 
     await sendLog(newRole.guild, embed);
@@ -333,6 +339,7 @@ export async function logGuildUpdate(oldGuild: any, newGuild: any) {
             { name: 'Modifié par', value: auditEntry?.executor ? `${auditEntry.executor.tag} (${auditEntry.executor.id})` : 'Inconnu', inline: true },
             { name: 'Date', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: true }
         )
+        .setFooter({ text: `Kepler Bot • Logs Serveur • ${changes.length} modification(s)` })
         .setTimestamp();
 
     await sendLog(newGuild, embed);
