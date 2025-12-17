@@ -3,6 +3,9 @@ import { SlashCommandBuilder, EmbedBuilder, type ChatInputCommandInteraction } f
 async function searchSong(query: string) {
     const token = Deno.env.get('GENIUS_API_TOKEN');
     
+    console.log(`[DEBUG] GENIUS_API_TOKEN is ${token ? 'set' : 'NOT set'}`);
+    console.log(`[DEBUG] Available env vars: ${Object.keys(Deno.env.toObject()).join(', ')}`);
+    
     if (!token) {
         throw new Error('GENIUS_API_TOKEN environment variable is not set');
     }
