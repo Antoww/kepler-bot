@@ -5,7 +5,7 @@ export const data = new SlashCommandBuilder()
     .setName('logconfig')
     .setDescription('Configure les logs du serveur')
     .addChannelOption(option => option.setName('canal')
-        .setDescription('Le canal où envoyer les logs')
+        .setDescription('Le canal où sont envoyés les logs du serveur.')
         .addChannelTypes(ChannelType.GuildText)
         .setRequired(true))
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator);
