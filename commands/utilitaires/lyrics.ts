@@ -59,5 +59,4 @@ export async function execute(interaction: ChatInputCommandInteraction) {
             console.error('Erreur lors de la récupération des paroles:', error);
             await interaction.editReply('Une erreur est survenue lors de la recherche des paroles.');
         }
-    }
 }
