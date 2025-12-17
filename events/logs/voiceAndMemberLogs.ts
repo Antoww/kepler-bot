@@ -41,12 +41,15 @@ async function getAuditLog(guild: any, targetId: string, actionType: AuditLogEve
 // Log de changement de pseudo
 export async function logMemberUpdate(oldMember: GuildMember, newMember: GuildMember) {
     const auditEntry = await getAuditLog(newMember.guild, newMember.id, AuditLogEvent.MemberUpdate);
+    const client = newMember.client;
     
     const changes: string[] = [];
     
     // Changement de pseudo
     if (oldMember.nickname !== newMember.nickname) {
-        changes.push(`**Pseudo:** ${oldMember.nickname || oldMember.user.username} → ${newMember.nickname || newMember.user.username}`);
+        const oldNick = oldMember.nickname || oldMember.user.username;
+        const newNick = newMember.nickname || newMember.user.username;
+        changes.push(`**Pseudo:** ${oldNick} → ${newNick}`);
     }
     
     // Changement de rôles
@@ -57,26 +60,41 @@ export async function logMemberUpdate(oldMember: GuildMember, newMember: GuildMe
     const removedRoles = oldRoles.filter(role => !newRoles.has(role.id));
     
     if (addedRoles.size > 0) {
-        changes.push(`**Rôles ajoutés:** ${addedRoles.map(role => role.name).join(', ')}`);
+        const roleList = addedRoles.map(role => `\`${role.name}\``).join(', ');
+        changes.push(`**Rôles ajoutés:** ${roleList}`);
     }
     
     if (removedRoles.size > 0) {
-        changes.push(`**Rôles supprimés:** ${removedRoles.map(role => role.name).join(', ')}`);
+        const roleList = removedRoles.map(role => `\`${role.name}\``).join(', ');
+        changes.push(`**Rôles retirés:** ${roleList}`);
     }
 
     if (changes.length === 0) return;
 
+    const fields: any[] = [
+        { name: '👤 Utilisateur', value: `${newMember.user.tag}\n\`${newMember.user.id}\``, inline: true },
+        { name: '📅 Date', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: true },
+        { name: '🔄 Modifications', value: changes.join('\n'), inline: false }
+    ];
+
+    if (auditEntry?.executor) {
+        fields.push({ name: '👤 Modifié par', value: `${auditEntry.executor.tag}\n\`${auditEntry.executor.id}\``, inline: true });
+    }
+
     const embed = new EmbedBuilder()
-        .setColor('#ffaa00')
+        .setAuthor({ 
+            name: 'Kepler Bot - Système de Logs',
+            iconURL: client.user?.displayAvatarURL({ forceStatic: false })
+        })
+        .setColor('#FEE75C')
         .setTitle('✏️ Membre Modifié')
-        .setDescription(`**Utilisateur:** ${newMember.user.tag} (${newMember.user.id})`)
-        .addFields(
-            { name: 'Modifications', value: changes.join('\n'), inline: false },
-            { name: 'Modifié par', value: auditEntry?.executor ? `${auditEntry.executor.tag} (${auditEntry.executor.id})` : 'Auto/Inconnu', inline: true },
-            { name: 'Date', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: true }
-        )
+        .setDescription(`### ${newMember.user.tag}\n> Le profil du membre a été modifié avec **${changes.length}** changement(s).`)
+        .addFields(fields)
         .setThumbnail(newMember.user.displayAvatarURL({ forceStatic: false }))
-        .setFooter({ text: `Kepler Bot • Logs Membres • ${changes.length} modification(s)` })
+        .setFooter({ 
+            text: `Logs Membres • ${changes.length} modification(s)`,
+            iconURL: newMember.guild.iconURL({ forceStatic: false }) || undefined
+        })
         .setTimestamp();
 
     await sendLog(newMember.guild, embed);
@@ -84,27 +102,41 @@ export async function logMemberUpdate(oldMember: GuildMember, newMember: GuildMe
 
 // Log de timeout/mute
 export async function logMemberTimeout(member: GuildMember, timeout: Date | null, executor?: any) {
-    const embed = new EmbedBuilder()
-        .setTitle(timeout ? '🔇 Membre Mis en Timeout' : '🔊 Timeout Retiré')
-        .setDescription(`**Utilisateur:** ${member.user.tag} (${member.user.id})`)
-        .addFields(
-            { name: timeout ? 'Mis en timeout par' : 'Timeout retiré par', value: executor ? `${executor.tag} (${executor.id})` : 'Inconnu', inline: true },
-            { name: 'Date', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: true }
-        )
-        .setThumbnail(member.user.displayAvatarURL({ forceStatic: false }))
-        .setFooter({ text: `Kepler Bot • Logs Modération • ID: ${member.user.id}` })
-        .setTimestamp();
+    const client = member.client;
+    const isTimeout = timeout !== null;
+
+    const fields: any[] = [
+        { name: '👤 Utilisateur', value: `${member.user.tag}\n\`${member.user.id}\``, inline: true },
+        { name: '📅 Date', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: true }
+    ];
+
+    if (executor) {
+        fields.push({ name: isTimeout ? '🔇 Mis en timeout par' : '🔊 Timeout retiré par', value: `${executor.tag}\n\`${executor.id}\``, inline: false });
+    }
 
     if (timeout) {
-        embed.setColor('#ff6600');
-        embed.addFields({
-            name: 'Fin du timeout',
-            value: `<t:${Math.floor(timeout.getTime() / 1000)}:F>`,
+        fields.push({
+            name: '⏳ Fin du timeout',
+            value: `<t:${Math.floor(timeout.getTime() / 1000)}:F> (<t:${Math.floor(timeout.getTime() / 1000)}:R>)`,
             inline: false
         });
-    } else {
-        embed.setColor('#00ff00');
     }
+
+    const embed = new EmbedBuilder()
+        .setAuthor({ 
+            name: 'Kepler Bot - Système de Logs',
+            iconURL: client.user?.displayAvatarURL({ forceStatic: false })
+        })
+        .setColor(isTimeout ? '#F26522' : '#57F287')
+        .setTitle(isTimeout ? '🔇 Membre Mis en Timeout' : '🔊 Timeout Retiré')
+        .setDescription(`### ${member.user.tag}\n> ${isTimeout ? 'Un membre a été mis en timeout.' : 'Le timeout d\'un membre a été retiré.'}`)
+        .addFields(fields)
+        .setThumbnail(member.user.displayAvatarURL({ forceStatic: false }))
+        .setFooter({ 
+            text: `Logs Modération`,
+            iconURL: member.guild.iconURL({ forceStatic: false }) || undefined
+        })
+        .setTimestamp();
 
     await sendLog(member.guild, embed);
 }
