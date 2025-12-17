@@ -5,7 +5,8 @@
     "discord.js": "14.14.1",
     "dotenv": "^16.4.7",
     "@supabase/supabase-js": "^2.39.0",
-    "whois-json": "^2.0.4"
+    "whois-json": "^2.0.4",
+    "genius-lyrics": "^4.4.7"
   },
   "type": "module"
 }
