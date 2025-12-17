@@ -42,6 +42,11 @@ export async function execute(interaction: CommandInteraction) {
         const activeBan = await getActiveTempBan(interaction.guild.id, target.id);
         const activeMute = await getActiveTempMute(interaction.guild.id, target.id);
 
+        // Vérifier si l'utilisateur est en timeout Discord
+        const targetMember = interaction.guild.members.cache.get(target.id);
+        const isTimedOut = targetMember?.isCommunicationDisabled();
+        const timeoutUntil = targetMember?.communicationDisabledUntil;
+
         // Créer l'embed
         const embed = new EmbedBuilder()
             .setAuthor({ 
@@ -58,6 +63,8 @@ export async function execute(interaction: CommandInteraction) {
             activeStatus = `🔨 **Ban temporaire actif**\nExpire: <t:${Math.floor(new Date(activeBan.end_time).getTime() / 1000)}:F>\nRaison: ${activeBan.reason}`;
         } else if (activeMute) {
             activeStatus = `🔇 **Mute temporaire actif**\nExpire: <t:${Math.floor(new Date(activeMute.end_time).getTime() / 1000)}:F>\nRaison: ${activeMute.reason}`;
+        } else if (isTimedOut && timeoutUntil) {
+            activeStatus = `⏱️ **Timeout actif**\nExpire: <t:${Math.floor(timeoutUntil.getTime() / 1000)}:F>`;
         }
 
         embed.addFields({ name: '📊 Statut actuel', value: activeStatus, inline: false });
