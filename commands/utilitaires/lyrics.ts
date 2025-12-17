@@ -1,7 +1,41 @@
 import { SlashCommandBuilder, EmbedBuilder, type ChatInputCommandInteraction } from 'discord.js';
-import { Genius } from 'genius-lyrics';
 
-const client = new Genius.Client(process.env.GENIUS_API_TOKEN || '');
+async function searchSong(query: string) {
+    // @ts-ignore - Deno global in Deno runtime
+    const token = globalThis.Deno?.env?.get('GENIUS_API_TOKEN');
+    
+    if (!token) {
+        throw new Error('GENIUS_API_TOKEN environment variable is not set');
+    }
+
+    const response = await fetch(`https://api.genius.com/search?q=${encodeURIComponent(query)}`, {
+        headers: {
+            'Authorization': `Bearer ${token}`
+        }
+    });
+
+    const data = await response.json();
+    return data.response.hits;
+}
+
+async function getLyrics(url: string): Promise<string> {
+    const response = await fetch(url);
+    const html = await response.text();
+    
+    // Extraire les paroles du HTML (simplifié)
+    const lyricsMatch = html.match(/<div[^>]*data-lyrics-container="true"[^>]*>([\s\S]*?)<\/div>/g);
+    
+    if (!lyricsMatch) {
+        return '';
+    }
+
+    let lyrics = lyricsMatch
+        .map(div => div.replace(/<[^>]*>/g, '').replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>'))
+        .join('\n\n')
+        .trim();
+
+    return lyrics;
+}
 
 export const data = new SlashCommandBuilder()
     .setName('lyrics')
@@ -27,14 +61,14 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
     try {
         const query = artiste ? `${artiste} ${titre}` : titre;
-        const searches = await client.songs.search(query);
+        const hits = await searchSong(query);
         
-        if (searches.length === 0) {
+        if (hits.length === 0) {
             return interaction.editReply('Aucune chanson trouvée.');
         }
 
-        const song = searches[0];
-        const lyrics = await song.lyrics();
+        const song = hits[0].result;
+        const lyrics = await getLyrics(song.url);
 
         if (!lyrics) {
             return interaction.editReply('Paroles non disponibles pour cette chanson.');
@@ -48,9 +82,9 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
         const embed = new EmbedBuilder()
             .setColor('#FF1744')
-            .setTitle(`${song.title} - ${song.artist.name}`)
+            .setTitle(`${song.title} - ${song.primary_artist.name}`)
             .setDescription(truncatedLyrics)
-            .setThumbnail(song.thumbnail)
+            .setThumbnail(song.song_art_image_thumbnail_url)
             .setURL(song.url)
             .setFooter({ text: 'Source: Genius' });
 
