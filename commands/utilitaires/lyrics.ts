@@ -7,14 +7,20 @@ async function searchSong(query: string) {
         throw new Error('GENIUS_API_TOKEN environment variable is not set');
     }
 
+    console.log(`[DEBUG] Token length: ${token.length}, starts with: ${token.substring(0, 10)}...`);
+
     const response = await fetch(`https://api.genius.com/search?q=${encodeURIComponent(query)}`, {
         headers: {
-            'Authorization': `Bearer ${token}`
+            'Authorization': `Bearer ${token.trim()}`
         }
     });
 
+    console.log(`[DEBUG] Response status: ${response.status}`);
+
     if (!response.ok) {
-        throw new Error(`API Genius erreur: ${response.status}`);
+        const errorText = await response.text();
+        console.error(`[DEBUG] Error response: ${errorText}`);
+        throw new Error(`API Genius erreur ${response.status}: Vérifiez que le token est un "Client Access Token" valide`);
     }
 
     const data = await response.json();
