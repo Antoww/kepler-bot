@@ -45,13 +45,13 @@ export const data = new SlashCommandBuilder()
     .addStringOption(option =>
         option
             .setName('titre')
-            .setDescription('Le titre de la chanson')
+            .setDescription('Titre de la chanson')
             .setRequired(true)
     )
     .addStringOption(option =>
         option
             .setName('artiste')
-            .setDescription('Le nom de l\'artiste (optionnel)')
+            .setDescription('Nom de l\'artiste (optionnel)')
             .setRequired(false)
     );
 
