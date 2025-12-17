@@ -76,6 +76,7 @@ export async function logMemberUpdate(oldMember: GuildMember, newMember: GuildMe
             { name: 'Date', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: true }
         )
         .setThumbnail(newMember.user.displayAvatarURL({ forceStatic: false }))
+        .setFooter({ text: `Kepler Bot • Logs Membres • ${changes.length} modification(s)` })
         .setTimestamp();
 
     await sendLog(newMember.guild, embed);
@@ -91,6 +92,7 @@ export async function logMemberTimeout(member: GuildMember, timeout: Date | null
             { name: 'Date', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: true }
         )
         .setThumbnail(member.user.displayAvatarURL({ forceStatic: false }))
+        .setFooter({ text: `Kepler Bot • Logs Modération • ID: ${member.user.id}` })
         .setTimestamp();
 
     if (timeout) {
@@ -125,6 +127,7 @@ export async function logVoiceStateUpdate(oldState: VoiceState, newState: VoiceS
                 { name: 'Date', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: true }
             )
             .setThumbnail(newState.member?.user.displayAvatarURL({ forceStatic: false }) || null)
+            .setFooter({ text: `Kepler Bot • Logs Vocal • Canal: ${newState.channel.name}` })
             .setTimestamp();
 
         await sendLog(newState.guild, embed);
@@ -141,6 +144,7 @@ export async function logVoiceStateUpdate(oldState: VoiceState, newState: VoiceS
                 { name: 'Date', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: true }
             )
             .setThumbnail(newState.member?.user.displayAvatarURL({ forceStatic: false }) || null)
+            .setFooter({ text: `Kepler Bot • Logs Vocal • Canal: ${oldState.channel.name}` })
             .setTimestamp();
 
         await sendLog(newState.guild, embed);
@@ -158,6 +162,7 @@ export async function logVoiceStateUpdate(oldState: VoiceState, newState: VoiceS
                 { name: 'Date', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: true }
             )
             .setThumbnail(newState.member?.user.displayAvatarURL({ forceStatic: false }) || null)
+            .setFooter({ text: `Kepler Bot • Logs Vocal • ${oldState.channel.name} → ${newState.channel.name}` })
             .setTimestamp();
 
         await sendLog(newState.guild, embed);
