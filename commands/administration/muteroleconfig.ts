@@ -35,23 +35,25 @@ export async function execute(interaction: CommandInteraction) {
     try {
         switch (subcommand) {
             case 'set': {
+                await interaction.deferReply();
+                
                 const role = interaction.options.getRole('role') as Role;
                 
                 if (!role) {
-                    await interaction.reply('Rôle invalide.');
+                    await interaction.editReply('Rôle invalide.');
                     return;
                 }
 
                 // Vérifier que le rôle existe et est accessible
                 if (!interaction.guild.roles.cache.has(role.id)) {
-                    await interaction.reply('❌ Ce rôle n\'existe pas ou n\'est pas accessible.');
+                    await interaction.editReply('❌ Ce rôle n\'existe pas ou n\'est pas accessible.');
                     return;
                 }
 
                 // Vérifier que le bot peut gérer ce rôle
                 const botMember = interaction.guild.members.me;
                 if (!botMember || role.position >= botMember.roles.highest.position) {
-                    await interaction.reply('❌ Je ne peux pas gérer ce rôle car il est égal ou supérieur à mon rôle le plus élevé.');
+                    await interaction.editReply('❌ Je ne peux pas gérer ce rôle car il est égal ou supérieur à mon rôle le plus élevé.');
                     return;
                 }
 
@@ -77,11 +79,13 @@ export async function execute(interaction: CommandInteraction) {
                     })
                     .setTimestamp();
 
-                await interaction.reply({ embeds: [embed] });
+                await interaction.editReply({ embeds: [embed] });
                 break;
             }
 
             case 'create': {
+                await interaction.deferReply();
+                
                 const roleName = interaction.options.getString('nom') || 'Muted';
 
                 // Créer le rôle de mute
@@ -148,11 +152,13 @@ export async function execute(interaction: CommandInteraction) {
                     });
                 }
 
-                await interaction.reply({ embeds: [embed] });
+                await interaction.editReply({ embeds: [embed] });
                 break;
             }
 
             case 'disable': {
+                await interaction.deferReply();
+                
                 // Supprimer la configuration du rôle de mute
                 await updateMuteRole(interaction.guild.id, '');
 
@@ -175,12 +181,18 @@ export async function execute(interaction: CommandInteraction) {
                     })
                     .setTimestamp();
 
-                await interaction.reply({ embeds: [embed] });
+                await interaction.editReply({ embeds: [embed] });
                 break;
             }
         }
     } catch (error) {
         console.error('Erreur lors de la configuration du rôle de mute:', error);
-        await interaction.reply('❌ Une erreur est survenue lors de la configuration du rôle de mute.');
+        
+        // Vérifier si on peut encore répondre
+        if (interaction.deferred || interaction.replied) {
+            await interaction.editReply('❌ Une erreur est survenue lors de la configuration du rôle de mute.');
+        } else {
+            await interaction.reply('❌ Une erreur est survenue lors de la configuration du rôle de mute.');
+        }
     }
 }
