@@ -51,7 +51,11 @@ export async function execute(interaction: ChatInputCommandInteraction) {
             .setColor('#FF1744')
             .setTitle(`${titre} - ${artiste}`)
             .setDescription(truncatedLyrics)
-            .setFooter({ text: 'Source: lyrics.ovh' });
+            .setFooter({
+            text: 'Demandé par ' + interaction.user.username + ' • Source: lyrics.ovh',
+            iconURL: interaction.user.displayAvatarURL({ forceStatic: false })
+        })
+        .setTimestamp();
 
         await interaction.editReply({ embeds: [embed] });
     } catch (error) {
