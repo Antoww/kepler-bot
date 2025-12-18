@@ -32,7 +32,7 @@ export async function execute(interaction: CommandInteraction) {
             .addFields(
                 { name: '👤 Pseudo', value: data.name, inline: true },
                 { name: '🆔 UUID', value: `\`${formattedUuid}\``, inline: true },
-                { name: '🆔 UUID (sans tirets)', value: `\`${uuid}\``, inline: true }
+                { name: '🆔 UUID (sans tirets)', value: `\`${uuid}\``}
             )
             .setFooter({
                 text: 'Demandé par ' + interaction.user.username,
