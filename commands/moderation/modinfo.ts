@@ -55,6 +55,10 @@ export async function execute(interaction: CommandInteraction) {
             })
             .setColor('#0099ff')
             .setThumbnail(target.displayAvatarURL({ forceStatic: false }))
+            .setFooter({
+                        text: 'Demandé par ' + interaction.user.username,
+                        iconURL: interaction.user.displayAvatarURL({ forceStatic: false })
+                    })
             .setTimestamp();
 
         // Sanctions actives
