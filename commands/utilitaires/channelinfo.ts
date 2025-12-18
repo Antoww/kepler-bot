@@ -21,8 +21,8 @@ export async function execute(interaction: CommandInteraction) {
         .addFields(
             { name: '📺 Nom', value: targetChannel.name, inline: true },
             { name: '🆔 ID', value: targetChannel.id, inline: true },
-            { name: '📅 Créé le', value: `<t:${Math.floor(targetChannel.createdTimestamp / 1000)}:F>`, inline: true },
-            { name: '📝 Type', value: getChannelTypeName(targetChannel.type), inline: true },
+            { name: '📅 Créé le', value: `<t:${Math.floor(targetChannel.createdTimestamp / 1000)}:F>`},
+            { name: '📝 Type', value: getChannelTypeName(targetChannel.type)},
             { name: '📍 Position', value: targetChannel.position.toString(), inline: true }
         )
         .setFooter({
