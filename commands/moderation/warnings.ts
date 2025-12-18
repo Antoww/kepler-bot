@@ -37,6 +37,7 @@ export async function execute(interaction: CommandInteraction) {
                         text: 'Demandé par ' + interaction.user.username,
                         iconURL: interaction.user.displayAvatarURL({ forceStatic: false })
                     })
+            .setTimestamp();
 
         if (warnings.length === 0) {
             embed.setDescription('✅ Cet utilisateur n\'a aucun avertissement.');
