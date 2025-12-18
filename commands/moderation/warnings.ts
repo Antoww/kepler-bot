@@ -33,7 +33,10 @@ export async function execute(interaction: CommandInteraction) {
             })
             .setColor('#ffaa00')
             .setThumbnail(target.displayAvatarURL({ forceStatic: false }))
-            .setTimestamp();
+            .setFooter({
+                        text: 'Demandé par ' + interaction.user.username,
+                        iconURL: interaction.user.displayAvatarURL({ forceStatic: false })
+                    })
 
         if (warnings.length === 0) {
             embed.setDescription('✅ Cet utilisateur n\'a aucun avertissement.');
