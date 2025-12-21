@@ -56,10 +56,10 @@ export async function execute(interaction: CommandInteraction) {
             { name: '🏓 Latence', value: `${interaction.client.ws.ping}ms`, inline: true },
             { name: '⏰ Temps de fonctionnement', value: `${days}j ${hours}h ${minutes}m ${seconds}s`, inline: true },
             { name: '🧠 RAM utilisée', value: `${memoryUsedMB}MB / ${memoryTotalMB}MB`, inline: true },
-            { name: '💻 CPU', value: `${cpuPercent}%`},
+            { name: '💻 CPU', value: `${cpuPercent}%`, inline: true },
             { name: '🏠 Serveurs', value: interaction.client.guilds.cache.size.toString(), inline: true },
             { name: '👥 Utilisateurs', value: interaction.client.guilds.cache.reduce((acc, guild) => acc + guild.memberCount, 0).toString(), inline: true },
-            { name: '📺 Canaux', value: interaction.client.channels.cache.size.toString()},
+            { name: '📺 Canaux', value: interaction.client.channels.cache.size.toString(), inline: true },
             { name: '🎭 Rôles', value: interaction.client.guilds.cache.reduce((acc, guild) => acc + guild.roles.cache.size, 0).toString(), inline: true }
         )
         .setFooter({
