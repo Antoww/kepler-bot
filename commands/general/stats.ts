@@ -55,10 +55,13 @@ export async function execute(interaction: CommandInteraction) {
         .addFields(
             { name: '🏓 Latence', value: `${interaction.client.ws.ping}ms`, inline: true },
             { name: '⏰ Temps de fonctionnement', value: `${days}j ${hours}h ${minutes}m ${seconds}s`, inline: true },
+            { name: '\u200b', value: '\u200b', inline: true },
             { name: '🧠 RAM utilisée', value: `${memoryUsedMB}MB / ${memoryTotalMB}MB`, inline: true },
             { name: '💻 CPU', value: `${cpuPercent}%`, inline: true },
+            { name: '\u200b', value: '\u200b', inline: true },
             { name: '🏠 Serveurs', value: interaction.client.guilds.cache.size.toString(), inline: true },
             { name: '👥 Utilisateurs', value: interaction.client.guilds.cache.reduce((acc, guild) => acc + guild.memberCount, 0).toString(), inline: true },
+            { name: '\u200b', value: '\u200b', inline: true },
             { name: '📺 Canaux', value: interaction.client.channels.cache.size.toString(), inline: true },
             { name: '🎭 Rôles', value: interaction.client.guilds.cache.reduce((acc, guild) => acc + guild.roles.cache.size, 0).toString(), inline: true }
         )
