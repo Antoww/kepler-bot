@@ -54,12 +54,12 @@ export async function execute(interaction: CommandInteraction) {
         .setTitle('📊 Statistiques du Bot')
         .addFields(
             { name: '🏓 Latence', value: `${interaction.client.ws.ping}ms`, inline: true },
-            { name: '⏰ Temps de fonctionnement', value: `${days}j ${hours}h ${minutes}m ${seconds}s`},
+            { name: '⏰ Temps de fonctionnement', value: `${days}j ${hours}h ${minutes}m ${seconds}s`, inline: true },
             { name: '🧠 RAM utilisée', value: `${memoryUsedMB}MB / ${memoryTotalMB}MB`, inline: true },
             { name: '💻 CPU', value: `${cpuPercent}%`},
             { name: '🏠 Serveurs', value: interaction.client.guilds.cache.size.toString(), inline: true },
             { name: '👥 Utilisateurs', value: interaction.client.guilds.cache.reduce((acc, guild) => acc + guild.memberCount, 0).toString(), inline: true },
-            { name: '📺 Canaux', value: interaction.client.channels.cache.size.toString(), inline: true },
+            { name: '📺 Canaux', value: interaction.client.channels.cache.size.toString()},
             { name: '🎭 Rôles', value: interaction.client.guilds.cache.reduce((acc, guild) => acc + guild.roles.cache.size, 0).toString(), inline: true }
         )
         .setFooter({
