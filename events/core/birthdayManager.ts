@@ -1,5 +1,6 @@
 import { Client, EmbedBuilder, TextChannel } from 'discord.js';
 import { getBirthdaysForDate, getBirthdayChannel } from '../../database/db.ts';
+import { isNetworkError } from '../../utils/retryHelper.ts';
 
 export class BirthdayManager {
     private client: Client;
@@ -80,11 +81,21 @@ export class BirthdayManager {
                         }
                     }
                 } catch (error) {
-                    console.error(`Erreur lors de la vérification des anniversaires pour le serveur ${guild.name}:`, error);
+                    // Distinguer les erreurs réseau des autres erreurs
+                    if (isNetworkError(error)) {
+                        console.warn(`⚠️ Erreur réseau lors de la vérification des anniversaires pour le serveur ${guild.name} (sera réessayé):`, (error as Error).message);
+                    } else {
+                        console.error(`Erreur lors de la vérification des anniversaires pour le serveur ${guild.name}:`, error);
+                    }
                 }
             }
         } catch (error) {
-            console.error('Erreur lors de la vérification générale des anniversaires:', error);
+            // Erreur générale
+            if (isNetworkError(error)) {
+                console.warn('⚠️ Erreur réseau lors de la vérification générale des anniversaires (sera réessayé):', (error as Error).message);
+            } else {
+                console.error('Erreur lors de la vérification générale des anniversaires:', error);
+            }
         }
     }
 

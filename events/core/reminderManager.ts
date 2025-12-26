@@ -1,5 +1,6 @@
 import { Client, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 import { getExpiredReminders, deleteReminder, getUserReminders } from '../../database/supabase.ts';
+import { isNetworkError } from '../../utils/retryHelper.ts';
 
 export class ReminderManager {
     private client: Client;
@@ -142,7 +143,12 @@ export class ReminderManager {
                 }
             }
         } catch (error) {
-            console.error('❌ Erreur lors de la vérification des rappels expirés:', error);
+            // Distinguer les erreurs réseau des autres erreurs
+            if (isNetworkError(error)) {
+                console.warn('⚠️ Erreur réseau lors de la vérification des rappels expirés (sera réessayé):', (error as Error).message);
+            } else {
+                console.error('❌ Erreur lors de la vérification des rappels expirés:', error);
+            }
         }
     }
 
