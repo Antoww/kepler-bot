@@ -179,6 +179,24 @@ export async function logMessageBulkDelete(messages: any, channel: any) {
         fields.push({ name: '🗑️ Supprimé par', value: `${auditEntry.executor.tag}\n\`${auditEntry.executor.id}\``, inline: true });
     }
 
+    // Ajouter le lien d'archive si disponible
+    if (messages.archiveUrl) {
+        if (messages.archiveUrl.startsWith('http')) {
+            fields.push({ 
+                name: '📄 Archive des messages', 
+                value: `[Voir les messages supprimés](${messages.archiveUrl})`, 
+                inline: false 
+            });
+        } else if (messages.archiveUrl.startsWith('local:')) {
+            const localPath = messages.archiveUrl.replace('local:', '');
+            fields.push({ 
+                name: '📁 Archive locale', 
+                value: `\`${localPath}\``, 
+                inline: false 
+            });
+        }
+    }
+
     const embed = new EmbedBuilder()
         .setAuthor({ 
             name: 'Kepler Bot - Système de Logs',
