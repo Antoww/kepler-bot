@@ -5,5 +5,8 @@ export const name = Events.MessageBulkDelete;
 export const once = false;
 
 export async function execute(messages: any, channel: any) {
-    await logMessageBulkDelete(messages, channel);
+    // Petit délai pour laisser le temps à la commande clear d'attacher l'URL d'archive
+    setTimeout(async () => {
+        await logMessageBulkDelete(messages, channel);
+    }, 500);
 }

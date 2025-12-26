@@ -24,22 +24,15 @@ export async function execute(interaction: CommandInteraction) {
 
     if (interaction.channel?.isTextBased() && interaction.channel.type === ChannelType.GuildText) {
         const textChannel = interaction.channel as TextChannel;
-        
-        // Récupérer les messages avant de les supprimer pour archivage
-        const messagesToDelete = await textChannel.messages.fetch({ limit: amount });
-        const filteredMessages = messagesToDelete.filter(msg => 
-            (Date.now() - msg.createdTimestamp) < 1209600000 // Messages de moins de 14 jours
-        );
 
         await textChannel.bulkDelete(amount, true)
             .then(async (messages) => {
                 const messageCount = messages.size;
                 const messageText = messageCount === 1 ? 'message' : 'messages';
                 
-                console.log(`[Clear] Début de l'archivage de ${messageCount} messages...`);
+                // Archiver uniquement les messages qui ont été effectivement supprimés
+                console.log(`[Clear] Début de l'archivage de ${messageCount} messages supprimés...`);
                 
-                // Archiver les messages supprimés
-                let archiveInfo = '';
                 if (messages.size > 0) {
                     const archiveContent = formatMessagesForArchive(messages as any);
                     const title = `Messages supprimés - ${interaction.guild?.name} - ${new Date().toLocaleString('fr-FR')}`;
@@ -49,20 +42,25 @@ export async function execute(interaction: CommandInteraction) {
                     
                     if (pastebinUrl) {
                         console.log(`[Clear] ✅ Archive créée avec succès: ${pastebinUrl}`);
-                        archiveInfo = `\n📄 Archive disponible : ${pastebinUrl}`;
-                        // Stocker l'URL pour les logs
+                        // Stocker l'URL d'archive pour les logs
                         (messages as any).archiveUrl = pastebinUrl;
                     } else {
                         console.error('[Clear] ❌ Échec de la création de l\'archive Pastebin');
                         console.error('[Clear] Vérifiez les logs ci-dessus pour plus de détails');
-                        archiveInfo = `\n⚠️ L'archive n'a pas pu être créée. Vérifiez les logs du bot.`;
                         (messages as any).archiveUrl = null;
                     }
-                } else {
-                    console.log('[Clear] Aucun message à archiver');
                 }
                 
-                interaction.reply(`🗑️ Suppression de **${messageCount} ${messageText}**.${archiveInfo}`);
+                // Répondre et supprimer le message après 10 secondes
+                interaction.reply(`🗑️ Suppression de **${messageCount} ${messageText}**.`)
+                    .then(reply => {
+                        setTimeout(() => {
+                            reply.delete().catch(() => {});
+                        }, 10000);
+                    })
+                    .catch(error => {
+                        console.error('[Clear] Erreur lors de l\'envoi de la réponse:', error);
+                    });
             })
             .catch(error => {
                 console.error('Erreur lors de la suppression des messages :', error);
