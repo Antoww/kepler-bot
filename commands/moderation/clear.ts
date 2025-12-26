@@ -1,5 +1,6 @@
 import { type CommandInteraction, SlashCommandBuilder, ChannelType, TextChannel, PermissionFlagsBits, Message } from "discord.js";
 import { formatMessagesForArchive, uploadToPastebin } from "../../utils/messageArchiver.ts";
+import { storeArchiveUrl } from "../../utils/archiveCache.ts";
 
 export const data = new SlashCommandBuilder()
     .setName('clear')
@@ -42,12 +43,12 @@ export async function execute(interaction: CommandInteraction) {
                     
                     if (pastebinUrl) {
                         console.log(`[Clear] ✅ Archive créée avec succès: ${pastebinUrl}`);
-                        // Stocker l'URL d'archive pour les logs
-                        (messages as any).archiveUrl = pastebinUrl;
+                        // Stocker l'URL dans le cache pour l'événement MessageBulkDelete
+                        const messageIds = Array.from(messages.keys());
+                        storeArchiveUrl(interaction.guild!.id, textChannel.id, messageIds, pastebinUrl);
                     } else {
                         console.error('[Clear] ❌ Échec de la création de l\'archive Pastebin');
                         console.error('[Clear] Vérifiez les logs ci-dessus pour plus de détails');
-                        (messages as any).archiveUrl = null;
                     }
                 }
                 
