@@ -73,9 +73,9 @@ export async function execute(interaction: CommandInteraction) {
         reminderTime = new Date(Date.now() + durationMs);
         durationDisplay = `${durationInput} (${formatDuration(durationMs)})`;
 
-        // Vérifier les limites (minimum 10 secondes, maximum 6 mois)
+        // Vérifier les limites (minimum 10 secondes, maximum 10 ans)
         const minDuration = 10 * 1000; // 10 secondes
-        const maxDuration = 6 * 30 * 24 * 60 * 60 * 1000; // 6 mois
+        const maxDuration = 10 * 365 * 24 * 60 * 60 * 1000; // 10 ans
 
         if (durationMs < minDuration) {
             await interaction.reply({
@@ -87,7 +87,7 @@ export async function execute(interaction: CommandInteraction) {
 
         if (durationMs > maxDuration) {
             await interaction.reply({
-                content: '❌ La durée maximale est de 6 mois.',
+                content: '❌ La durée maximale est de 10 ans.',
                 ephemeral: true
             });
             return;
@@ -120,11 +120,11 @@ export async function execute(interaction: CommandInteraction) {
             return;
         }
 
-        // Vérifier que la date n'est pas trop lointaine (6 mois maximum)
-        const maxDuration = 6 * 30 * 24 * 60 * 60 * 1000;
+        // Vérifier que la date n'est pas trop lointaine (10 ans maximum)
+        const maxDuration = 10 * 365 * 24 * 60 * 60 * 1000;
         if (durationMs > maxDuration) {
             await interaction.reply({
-                content: '❌ La date ne peut pas être plus de 6 mois dans le futur.',
+                content: '❌ La date ne peut pas être plus de 10 ans dans le futur.',
                 ephemeral: true
             });
             return;
