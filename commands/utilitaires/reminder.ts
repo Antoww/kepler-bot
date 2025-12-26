@@ -9,49 +9,129 @@ export const data = new SlashCommandBuilder()
         .setRequired(true))
     .addStringOption(option => option.setName('duree')
         .setDescription('Durée du rappel (ex: 30s, 15m, 2h, 1d, 1w, 1mo)')
-        .setRequired(true));
+        .setRequired(false))
+    .addStringOption(option => option.setName('date')
+        .setDescription('Date et heure précise (ex: 2025-12-31 23:59, 31/12/2025 14:30)')
+        .setRequired(false));
 
 export async function execute(interaction: CommandInteraction) {
     const message = interaction.options.getString('message')!;
-    const durationInput = interaction.options.getString('duree')!;
+    const durationInput = interaction.options.getString('duree');
+    const dateInput = interaction.options.getString('date');
     
-    // Parser la durée
-    const durationMs = parseDuration(durationInput);
-    if (!durationMs) {
+    // Vérifier qu'au moins une option est fournie
+    if (!durationInput && !dateInput) {
         await interaction.reply({
-            content: '❌ Format de durée invalide. Utilisez des formats comme:\n' +
+            content: '❌ Vous devez spécifier soit une **durée** soit une **date**.\n\n' +
+                     '**Exemples de durée :**\n' +
                      '• `30s` - 30 secondes\n' +
                      '• `15m` - 15 minutes\n' +
                      '• `2h` - 2 heures\n' +
                      '• `1d` - 1 jour\n' +
                      '• `1w` - 1 semaine\n' +
-                     '• `1mo` - 1 mois',
+                     '• `1mo` - 1 mois\n\n' +
+                     '**Exemples de date :**\n' +
+                     '• `2025-12-31 23:59`\n' +
+                     '• `31/12/2025 14:30`\n' +
+                     '• `31-12-2025 08:00`',
             ephemeral: true
         });
         return;
     }
 
-    // Vérifier les limites (minimum 10 secondes, maximum 6 mois)
-    const minDuration = 10 * 1000; // 10 secondes
-    const maxDuration = 6 * 30 * 24 * 60 * 60 * 1000; // 6 mois
-
-    if (durationMs < minDuration) {
+    // Vérifier qu'une seule option est fournie
+    if (durationInput && dateInput) {
         await interaction.reply({
-            content: '❌ La durée minimale est de 10 secondes.',
+            content: '❌ Vous ne pouvez pas spécifier à la fois une durée et une date. Choisissez l\'une ou l\'autre.',
             ephemeral: true
         });
         return;
     }
 
-    if (durationMs > maxDuration) {
-        await interaction.reply({
-            content: '❌ La durée maximale est de 6 mois.',
-            ephemeral: true
-        });
-        return;
-    }
+    let durationMs: number;
+    let reminderTime: Date;
+    let durationDisplay: string;
 
-    const reminderTime = new Date(Date.now() + durationMs);
+    // Si une durée est fournie
+    if (durationInput) {
+        const parsedDuration = parseDuration(durationInput);
+        if (!parsedDuration) {
+            await interaction.reply({
+                content: '❌ Format de durée invalide. Utilisez des formats comme:\n' +
+                         '• `30s` - 30 secondes\n' +
+                         '• `15m` - 15 minutes\n' +
+                         '• `2h` - 2 heures\n' +
+                         '• `1d` - 1 jour\n' +
+                         '• `1w` - 1 semaine\n' +
+                         '• `1mo` - 1 mois',
+                ephemeral: true
+            });
+            return;
+        }
+
+        durationMs = parsedDuration;
+        reminderTime = new Date(Date.now() + durationMs);
+        durationDisplay = `${durationInput} (${formatDuration(durationMs)})`;
+
+        // Vérifier les limites (minimum 10 secondes, maximum 6 mois)
+        const minDuration = 10 * 1000; // 10 secondes
+        const maxDuration = 6 * 30 * 24 * 60 * 60 * 1000; // 6 mois
+
+        if (durationMs < minDuration) {
+            await interaction.reply({
+                content: '❌ La durée minimale est de 10 secondes.',
+                ephemeral: true
+            });
+            return;
+        }
+
+        if (durationMs > maxDuration) {
+            await interaction.reply({
+                content: '❌ La durée maximale est de 6 mois.',
+                ephemeral: true
+            });
+            return;
+        }
+    } 
+    // Si une date est fournie
+    else {
+        const parsedDate = parseDate(dateInput!);
+        if (!parsedDate) {
+            await interaction.reply({
+                content: '❌ Format de date invalide. Utilisez des formats comme:\n' +
+                         '• `2025-12-31 23:59`\n' +
+                         '• `31/12/2025 14:30`\n' +
+                         '• `31-12-2025 08:00`\n\n' +
+                         '**Note :** L\'heure doit être au format 24h.',
+                ephemeral: true
+            });
+            return;
+        }
+
+        reminderTime = parsedDate;
+        durationMs = reminderTime.getTime() - Date.now();
+
+        // Vérifier que la date est dans le futur
+        if (durationMs < 10 * 1000) { // Minimum 10 secondes dans le futur
+            await interaction.reply({
+                content: '❌ La date doit être au moins 10 secondes dans le futur.',
+                ephemeral: true
+            });
+            return;
+        }
+
+        // Vérifier que la date n'est pas trop lointaine (6 mois maximum)
+        const maxDuration = 6 * 30 * 24 * 60 * 60 * 1000;
+        if (durationMs > maxDuration) {
+            await interaction.reply({
+                content: '❌ La date ne peut pas être plus de 6 mois dans le futur.',
+                ephemeral: true
+            });
+            return;
+        }
+
+        durationDisplay = formatDuration(durationMs);
+    }
 
     try {
         // Créer le rappel en base de données
@@ -71,7 +151,7 @@ export async function execute(interaction: CommandInteraction) {
             .setDescription(`Votre rappel a été programmé pour <t:${Math.floor(reminderTime.getTime() / 1000)}:F>`)
             .addFields(
                 { name: '💬 Message', value: message, inline: false },
-                { name: '⏱️ Durée', value: `${durationInput} (${formatDuration(durationMs)})`, inline: true },
+                { name: '⏱️ Délai', value: durationDisplay, inline: true },
                 { name: '🆔 ID', value: reminder.id.toString(), inline: true }
             )
             .setFooter({
@@ -191,4 +271,68 @@ function formatDuration(durationMs: number): string {
     } else {
         return `${seconds}s`;
     }
+}
+
+function parseDate(dateStr: string): Date | null {
+    // Nettoyer la chaîne
+    dateStr = dateStr.trim();
+
+    // Formats supportés:
+    // 1. YYYY-MM-DD HH:MM ou YYYY/MM/DD HH:MM
+    // 2. DD-MM-YYYY HH:MM ou DD/MM/YYYY HH:MM
+    // 3. YYYY-MM-DD HH:MM:SS ou DD-MM-YYYY HH:MM:SS (avec secondes)
+
+    // Regex pour matcher différents formats
+    const patterns = [
+        // Format ISO: YYYY-MM-DD HH:MM[:SS]
+        /^(\d{4})[-/](\d{1,2})[-/](\d{1,2})\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?$/,
+        // Format FR: DD-MM-YYYY HH:MM[:SS]
+        /^(\d{1,2})[-/](\d{1,2})[-/](\d{4})\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?$/
+    ];
+
+    for (let i = 0; i < patterns.length; i++) {
+        const match = dateStr.match(patterns[i]);
+        if (match) {
+            let year: number, month: number, day: number, hours: number, minutes: number, seconds: number;
+
+            if (i === 0) {
+                // Format ISO: YYYY-MM-DD
+                year = parseInt(match[1]);
+                month = parseInt(match[2]) - 1; // Les mois commencent à 0
+                day = parseInt(match[3]);
+                hours = parseInt(match[4]);
+                minutes = parseInt(match[5]);
+                seconds = match[6] ? parseInt(match[6]) : 0;
+            } else {
+                // Format FR: DD-MM-YYYY
+                day = parseInt(match[1]);
+                month = parseInt(match[2]) - 1;
+                year = parseInt(match[3]);
+                hours = parseInt(match[4]);
+                minutes = parseInt(match[5]);
+                seconds = match[6] ? parseInt(match[6]) : 0;
+            }
+
+            // Créer la date
+            const date = new Date(year, month, day, hours, minutes, seconds);
+
+            // Vérifier que la date est valide
+            if (isNaN(date.getTime())) {
+                return null;
+            }
+
+            // Vérifier que les valeurs correspondent (pour éviter des dates comme 32/13/2025)
+            if (date.getFullYear() !== year || 
+                date.getMonth() !== month || 
+                date.getDate() !== day ||
+                date.getHours() !== hours ||
+                date.getMinutes() !== minutes) {
+                return null;
+            }
+
+            return date;
+        }
+    }
+
+    return null;
 } 
