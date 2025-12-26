@@ -194,7 +194,7 @@ export async function logMessageBulkDelete(messages: any, channel: any) {
             iconURL: client.user?.displayAvatarURL({ forceStatic: false })
         })
         .setColor('#ED4245')
-        .setTitle('🗑️ Suppression en Masse')
+        .setTitle('🗑️ Suppression de masse')
         .setDescription(`### Nettoyage de messages\n> **${messages.size}** messages ont été supprimés dans <#${channel.id}>.`)
         .addFields(fields)
         .setThumbnail(channel.guild.iconURL({ forceStatic: false }))
