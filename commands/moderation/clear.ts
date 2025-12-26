@@ -1,5 +1,5 @@
 import { type CommandInteraction, SlashCommandBuilder, ChannelType, TextChannel, PermissionFlagsBits, Message } from "discord.js";
-import { formatMessagesForArchive, uploadToPastebin, saveToLocalFile } from "../../utils/messageArchiver.ts";
+import { formatMessagesForArchive, uploadToPastebin } from "../../utils/messageArchiver.ts";
 
 export const data = new SlashCommandBuilder()
     .setName('clear')
@@ -36,31 +36,30 @@ export async function execute(interaction: CommandInteraction) {
                 const messageCount = messages.size;
                 const messageText = messageCount === 1 ? 'message' : 'messages';
                 
+                console.log(`[Clear] Début de l'archivage de ${messageCount} messages...`);
+                
                 // Archiver les messages supprimés
                 let archiveInfo = '';
                 if (messages.size > 0) {
                     const archiveContent = formatMessagesForArchive(messages as any);
-                    const timestamp = Date.now();
                     const title = `Messages supprimés - ${interaction.guild?.name} - ${new Date().toLocaleString('fr-FR')}`;
                     
-                    // Essayer d'uploader sur Pastebin
+                    console.log(`[Clear] Tentative d'upload sur Pastebin...`);
                     const pastebinUrl = await uploadToPastebin(archiveContent, title);
                     
                     if (pastebinUrl) {
+                        console.log(`[Clear] ✅ Archive créée avec succès: ${pastebinUrl}`);
                         archiveInfo = `\n📄 Archive disponible : ${pastebinUrl}`;
                         // Stocker l'URL pour les logs
                         (messages as any).archiveUrl = pastebinUrl;
                     } else {
-                        // Fallback : sauvegarder localement
-                        try {
-                            const localPath = await saveToLocalFile(archiveContent, interaction.guild!.id, timestamp);
-                            archiveInfo = `\n📁 Archive sauvegardée localement : ${localPath}`;
-                            (messages as any).archiveUrl = `local:${localPath}`;
-                        } catch (error) {
-                            console.error('Impossible de sauvegarder l\'archive:', error);
-                            (messages as any).archiveUrl = null;
-                        }
+                        console.error('[Clear] ❌ Échec de la création de l\'archive Pastebin');
+                        console.error('[Clear] Vérifiez les logs ci-dessus pour plus de détails');
+                        archiveInfo = `\n⚠️ L'archive n'a pas pu être créée. Vérifiez les logs du bot.`;
+                        (messages as any).archiveUrl = null;
                     }
+                } else {
+                    console.log('[Clear] Aucun message à archiver');
                 }
                 
                 interaction.reply(`🗑️ Suppression de **${messageCount} ${messageText}**.${archiveInfo}`);

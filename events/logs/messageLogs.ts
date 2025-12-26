@@ -181,20 +181,11 @@ export async function logMessageBulkDelete(messages: any, channel: any) {
 
     // Ajouter le lien d'archive si disponible
     if (messages.archiveUrl) {
-        if (messages.archiveUrl.startsWith('http')) {
-            fields.push({ 
-                name: '📄 Archive des messages', 
-                value: `[Voir les messages supprimés](${messages.archiveUrl})`, 
-                inline: false 
-            });
-        } else if (messages.archiveUrl.startsWith('local:')) {
-            const localPath = messages.archiveUrl.replace('local:', '');
-            fields.push({ 
-                name: '📁 Archive locale', 
-                value: `\`${localPath}\``, 
-                inline: false 
-            });
-        }
+        fields.push({ 
+            name: '📄 Archive des messages', 
+            value: `[Voir les messages supprimés](${messages.archiveUrl})`, 
+            inline: false 
+        });
     }
 
     const embed = new EmbedBuilder()
