@@ -41,12 +41,15 @@ async function getAuditLog(guild: any, targetId: string, actionType: AuditLogEve
 // Log de changement de pseudo
 export async function logMemberUpdate(oldMember: GuildMember, newMember: GuildMember) {
     const auditEntry = await getAuditLog(newMember.guild, newMember.id, AuditLogEvent.MemberUpdate);
+    const client = newMember.client;
     
     const changes: string[] = [];
     
     // Changement de pseudo
     if (oldMember.nickname !== newMember.nickname) {
-        changes.push(`**Pseudo:** ${oldMember.nickname || oldMember.user.username} → ${newMember.nickname || newMember.user.username}`);
+        const oldNick = oldMember.nickname || oldMember.user.username;
+        const newNick = newMember.nickname || newMember.user.username;
+        changes.push(`**Pseudo:** ${oldNick} → ${newNick}`);
     }
     
     // Changement de rôles
@@ -57,25 +60,41 @@ export async function logMemberUpdate(oldMember: GuildMember, newMember: GuildMe
     const removedRoles = oldRoles.filter(role => !newRoles.has(role.id));
     
     if (addedRoles.size > 0) {
-        changes.push(`**Rôles ajoutés:** ${addedRoles.map(role => role.name).join(', ')}`);
+        const roleList = addedRoles.map(role => `\`${role.name}\``).join(', ');
+        changes.push(`**Rôles ajoutés:** ${roleList}`);
     }
     
     if (removedRoles.size > 0) {
-        changes.push(`**Rôles supprimés:** ${removedRoles.map(role => role.name).join(', ')}`);
+        const roleList = removedRoles.map(role => `\`${role.name}\``).join(', ');
+        changes.push(`**Rôles retirés:** ${roleList}`);
     }
 
     if (changes.length === 0) return;
 
+    const fields: any[] = [
+        { name: '👤 Utilisateur', value: `${newMember.user.tag}\n\`${newMember.user.id}\``, inline: true },
+        { name: '📅 Date', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: true },
+        { name: '🔄 Modifications', value: changes.join('\n'), inline: false }
+    ];
+
+    if (auditEntry?.executor) {
+        fields.push({ name: '👤 Modifié par', value: `${auditEntry.executor.tag}\n\`${auditEntry.executor.id}\``, inline: true });
+    }
+
     const embed = new EmbedBuilder()
-        .setColor('#ffaa00')
+        .setAuthor({ 
+            name: 'Kepler Bot - Système de Logs',
+            iconURL: client.user?.displayAvatarURL({ forceStatic: false })
+        })
+        .setColor('#FEE75C')
         .setTitle('✏️ Membre Modifié')
-        .setDescription(`**Utilisateur:** ${newMember.user.tag} (${newMember.user.id})`)
-        .addFields(
-            { name: 'Modifications', value: changes.join('\n'), inline: false },
-            { name: 'Modifié par', value: auditEntry?.executor ? `${auditEntry.executor.tag} (${auditEntry.executor.id})` : 'Auto/Inconnu', inline: true },
-            { name: 'Date', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: true }
-        )
+        .setDescription(`### ${newMember.user.tag}\n> Le profil du membre a été modifié avec **${changes.length}** changement(s).`)
+        .addFields(fields)
         .setThumbnail(newMember.user.displayAvatarURL({ forceStatic: false }))
+        .setFooter({ 
+            text: `Logs Membres • ${changes.length} modification(s)`,
+            iconURL: newMember.guild.iconURL({ forceStatic: false }) || undefined
+        })
         .setTimestamp();
 
     await sendLog(newMember.guild, embed);
@@ -83,26 +102,41 @@ export async function logMemberUpdate(oldMember: GuildMember, newMember: GuildMe
 
 // Log de timeout/mute
 export async function logMemberTimeout(member: GuildMember, timeout: Date | null, executor?: any) {
-    const embed = new EmbedBuilder()
-        .setTitle(timeout ? '🔇 Membre Mis en Timeout' : '🔊 Timeout Retiré')
-        .setDescription(`**Utilisateur:** ${member.user.tag} (${member.user.id})`)
-        .addFields(
-            { name: timeout ? 'Mis en timeout par' : 'Timeout retiré par', value: executor ? `${executor.tag} (${executor.id})` : 'Inconnu', inline: true },
-            { name: 'Date', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: true }
-        )
-        .setThumbnail(member.user.displayAvatarURL({ forceStatic: false }))
-        .setTimestamp();
+    const client = member.client;
+    const isTimeout = timeout !== null;
+
+    const fields: any[] = [
+        { name: '👤 Utilisateur', value: `${member.user.tag}\n\`${member.user.id}\``, inline: true },
+        { name: '📅 Date', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: true }
+    ];
+
+    if (executor) {
+        fields.push({ name: isTimeout ? '🔇 Mis en timeout par' : '🔊 Timeout retiré par', value: `${executor.tag}\n\`${executor.id}\``, inline: false });
+    }
 
     if (timeout) {
-        embed.setColor('#ff6600');
-        embed.addFields({
-            name: 'Fin du timeout',
-            value: `<t:${Math.floor(timeout.getTime() / 1000)}:F>`,
+        fields.push({
+            name: '⏳ Fin du timeout',
+            value: `<t:${Math.floor(timeout.getTime() / 1000)}:F> (<t:${Math.floor(timeout.getTime() / 1000)}:R>)`,
             inline: false
         });
-    } else {
-        embed.setColor('#00ff00');
     }
+
+    const embed = new EmbedBuilder()
+        .setAuthor({ 
+            name: 'Kepler Bot - Système de Logs',
+            iconURL: client.user?.displayAvatarURL({ forceStatic: false })
+        })
+        .setColor(isTimeout ? '#F26522' : '#57F287')
+        .setTitle(isTimeout ? '🔇 Membre Mis en Timeout' : '🔊 Timeout Retiré')
+        .setDescription(`### ${member.user.tag}\n> ${isTimeout ? 'Un membre a été mis en timeout.' : 'Le timeout d\'un membre a été retiré.'}`)
+        .addFields(fields)
+        .setThumbnail(member.user.displayAvatarURL({ forceStatic: false }))
+        .setFooter({ 
+            text: `Logs Modération`,
+            iconURL: member.guild.iconURL({ forceStatic: false }) || undefined
+        })
+        .setTimestamp();
 
     await sendLog(member.guild, embed);
 }
@@ -116,15 +150,30 @@ export async function logVoiceStateUpdate(oldState: VoiceState, newState: VoiceS
 
     // Connexion à un canal vocal
     if (!oldState.channel && newState.channel) {
+        const client = newState.client;
+        const member = newState.member;
+        if (!member) return;
+
+        const fields: any[] = [
+            { name: '👤 Utilisateur', value: `${member.user.tag}\n\`${member.user.id}\``, inline: true },
+            { name: '🔊 Canal', value: `${newState.channel.name}\n\`${newState.channel.id}\``, inline: true },
+            { name: '📅 Date', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: false }
+        ];
+
         const embed = new EmbedBuilder()
-            .setColor('#00ff00')
+            .setAuthor({ 
+                name: 'Kepler Bot - Système de Logs',
+                iconURL: client.user?.displayAvatarURL({ forceStatic: false })
+            })
+            .setColor('#57F287')
             .setTitle('🔊 Connexion Vocale')
-            .setDescription(`**Utilisateur:** ${newState.member?.user.tag} (${newState.member?.user.id})`)
-            .addFields(
-                { name: 'Canal rejoint', value: `${newState.channel.name} (${newState.channel.id})`, inline: true },
-                { name: 'Date', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: true }
-            )
-            .setThumbnail(newState.member?.user.displayAvatarURL({ forceStatic: false }) || null)
+            .setDescription(`### ${member.user.tag}\n> S'est connecté au salon vocal **${newState.channel.name}**.`)
+            .addFields(fields)
+            .setThumbnail(member.user.displayAvatarURL({ forceStatic: false }))
+            .setFooter({ 
+                text: `Logs Vocal`,
+                iconURL: newState.guild.iconURL({ forceStatic: false }) || undefined
+            })
             .setTimestamp();
 
         await sendLog(newState.guild, embed);
@@ -132,15 +181,30 @@ export async function logVoiceStateUpdate(oldState: VoiceState, newState: VoiceS
     
     // Déconnexion d'un canal vocal
     else if (oldState.channel && !newState.channel) {
+        const client = newState.client;
+        const member = newState.member;
+        if (!member) return;
+
+        const fields: any[] = [
+            { name: '👤 Utilisateur', value: `${member.user.tag}\n\`${member.user.id}\``, inline: true },
+            { name: '🔇 Canal', value: `${oldState.channel.name}\n\`${oldState.channel.id}\``, inline: true },
+            { name: '📅 Date', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: false }
+        ];
+
         const embed = new EmbedBuilder()
-            .setColor('#ff0000')
+            .setAuthor({ 
+                name: 'Kepler Bot - Système de Logs',
+                iconURL: client.user?.displayAvatarURL({ forceStatic: false })
+            })
+            .setColor('#ED4245')
             .setTitle('🔇 Déconnexion Vocale')
-            .setDescription(`**Utilisateur:** ${newState.member?.user.tag} (${newState.member?.user.id})`)
-            .addFields(
-                { name: 'Canal quitté', value: `${oldState.channel.name} (${oldState.channel.id})`, inline: true },
-                { name: 'Date', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: true }
-            )
-            .setThumbnail(newState.member?.user.displayAvatarURL({ forceStatic: false }) || null)
+            .setDescription(`### ${member.user.tag}\n> S'est déconnecté du salon vocal **${oldState.channel.name}**.`)
+            .addFields(fields)
+            .setThumbnail(member.user.displayAvatarURL({ forceStatic: false }))
+            .setFooter({ 
+                text: `Logs Vocal`,
+                iconURL: newState.guild.iconURL({ forceStatic: false }) || undefined
+            })
             .setTimestamp();
 
         await sendLog(newState.guild, embed);
@@ -148,16 +212,31 @@ export async function logVoiceStateUpdate(oldState: VoiceState, newState: VoiceS
     
     // Changement de canal vocal
     else if (oldState.channel && newState.channel && oldState.channel.id !== newState.channel.id) {
+        const client = newState.client;
+        const member = newState.member;
+        if (!member) return;
+
+        const fields: any[] = [
+            { name: '👤 Utilisateur', value: `${member.user.tag}\n\`${member.user.id}\``, inline: true },
+            { name: '📅 Date', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: true },
+            { name: '📤 Canal quitté', value: `${oldState.channel.name}\n\`${oldState.channel.id}\``, inline: true },
+            { name: '📥 Canal rejoint', value: `${newState.channel.name}\n\`${newState.channel.id}\``, inline: true }
+        ];
+
         const embed = new EmbedBuilder()
-            .setColor('#ffaa00')
+            .setAuthor({ 
+                name: 'Kepler Bot - Système de Logs',
+                iconURL: client.user?.displayAvatarURL({ forceStatic: false })
+            })
+            .setColor('#FEE75C')
             .setTitle('🔄 Changement de Canal Vocal')
-            .setDescription(`**Utilisateur:** ${newState.member?.user.tag} (${newState.member?.user.id})`)
-            .addFields(
-                { name: 'Canal quitté', value: `${oldState.channel.name} (${oldState.channel.id})`, inline: true },
-                { name: 'Canal rejoint', value: `${newState.channel.name} (${newState.channel.id})`, inline: true },
-                { name: 'Date', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: true }
-            )
-            .setThumbnail(newState.member?.user.displayAvatarURL({ forceStatic: false }) || null)
+            .setDescription(`### ${member.user.tag}\n> A changé de salon vocal : **${oldState.channel.name}** → **${newState.channel.name}**.`)
+            .addFields(fields)
+            .setThumbnail(member.user.displayAvatarURL({ forceStatic: false }))
+            .setFooter({ 
+                text: `Logs Vocal`,
+                iconURL: newState.guild.iconURL({ forceStatic: false }) || undefined
+            })
             .setTimestamp();
 
         await sendLog(newState.guild, embed);

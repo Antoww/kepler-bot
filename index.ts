@@ -56,7 +56,29 @@ async function loadEvents() {
     const eventFiles = [
         'events/core/ready.ts',
         'events/core/interactionCreate.ts',
-        'events/handlers/emojiCreate.ts'
+        'events/handlers/channelCreate.ts',
+        'events/handlers/channelDelete.ts',
+        'events/handlers/channelUpdate.ts',
+        'events/handlers/emojiCreate.ts',
+        'events/handlers/emojiDelete.ts',
+        'events/handlers/emojiUpdate.ts',
+        'events/handlers/guildBanAdd.ts',
+        'events/handlers/guildBanRemove.ts',
+        'events/handlers/guildMemberAdd.ts',
+        'events/handlers/guildMemberRemove.ts',
+        'events/handlers/guildMemberUpdate.ts',
+        'events/handlers/guildUpdate.ts',
+        'events/handlers/inviteCreate.ts',
+        'events/handlers/inviteDelete.ts',
+        'events/handlers/messageDelete.ts',
+        'events/handlers/messageDeleteBulk.ts',
+        'events/handlers/messageUpdate.ts',
+        'events/handlers/roleCreate.ts',
+        'events/handlers/roleDelete.ts',
+        'events/handlers/roleUpdate.ts',
+        'events/handlers/stickerCreate.ts',
+        'events/handlers/stickerDelete.ts',
+        'events/handlers/voiceStateUpdate.ts'
     ];
 
     for (const eventFile of eventFiles) {

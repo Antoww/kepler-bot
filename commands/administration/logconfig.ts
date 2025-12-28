@@ -5,14 +5,14 @@ export const data = new SlashCommandBuilder()
     .setName('logconfig')
     .setDescription('Configure les logs du serveur')
     .addChannelOption(option => option.setName('canal')
-        .setDescription('Le canal où envoyer les logs')
+        .setDescription('Le canal où sont envoyés les logs du serveur.')
         .addChannelTypes(ChannelType.GuildText)
         .setRequired(true))
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator);
 
 export async function execute(interaction: CommandInteraction) {
     if (!interaction.guild) {
-        await interaction.reply('Cette commande ne peut être utilisée que sur un serveur.');
+        await interaction.reply('❌ Cette commande ne peut être utilisée que sur un serveur.');
         return;
     }
 

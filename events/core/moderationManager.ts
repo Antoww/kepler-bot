@@ -1,6 +1,7 @@
 import { Client } from 'discord.js';
 import { getExpiredTempBans, getExpiredTempMutes, removeTempBan, removeTempMute } from '../../database/db.ts';
 import { logModeration } from '../../utils/moderationLogger.ts';
+import { isNetworkError } from '../../utils/retryHelper.ts';
 
 export class ModerationManager {
     private client: Client;
@@ -73,7 +74,17 @@ export class ModerationManager {
                 }
             }
         } catch (error) {
-            console.error('Erreur lors de la vérification des bans temporaires:', error);
+            // Distinguer les erreurs réseau des autres erreurs
+            if (isNetworkError(error)) {
+                console.warn('⚠️ Erreur réseau lors de la vérification des bans temporaires (sera réessayé):', (error as Error).message);
+            } else {
+                console.error('❌ Erreur lors de la vérification des bans temporaires:', {
+                    message: (error as Error).message,
+                    details: error,
+                    hint: '',
+                    code: ''
+                });
+            }
         }
     }
 
@@ -100,7 +111,17 @@ export class ModerationManager {
                 }
             }
         } catch (error) {
-            console.error('Erreur lors de la vérification des mutes temporaires:', error);
+            // Distinguer les erreurs réseau des autres erreurs
+            if (isNetworkError(error)) {
+                console.warn('⚠️ Erreur réseau lors de la vérification des mutes temporaires (sera réessayé):', (error as Error).message);
+            } else {
+                console.error('❌ Erreur lors de la vérification des mutes temporaires:', {
+                    message: (error as Error).message,
+                    details: error,
+                    hint: '',
+                    code: ''
+                });
+            }
         }
     }
 }

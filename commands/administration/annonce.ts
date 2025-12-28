@@ -172,7 +172,7 @@ export async function execute(interaction: CommandInteraction) {
         .setTitle(`📢 ${titre}`)
         .setDescription(message)
         .setFooter({
-            text: `Annonce par ${interaction.user.username}`,
+            text: `Demandé par ${interaction.user.username}`,
             iconURL: interaction.user.displayAvatarURL({ forceStatic: false })
         })
         .setTimestamp();

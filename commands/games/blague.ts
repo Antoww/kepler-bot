@@ -74,7 +74,10 @@ export async function execute(interaction: CommandInteraction) {
                 { name: "Question", value: joke.joke },
                 { name: "Réponse", value: joke.answer }
             )
-            .setFooter({ text: `Catégorie: ${categories.find(cat => cat.value === category)?.name}` })
+            .setFooter({ 
+                text: `Catégorie: ${categories.find(cat => cat.value === category)?.name} • Demandé par ${interaction.user.username}`,
+                iconURL: interaction.user.displayAvatarURL({ forceStatic: false })
+            })
             .setTimestamp();
 
         const button = new ButtonBuilder()
@@ -113,7 +116,10 @@ export async function execute(interaction: CommandInteraction) {
                         { name: "Question", value: newJoke.joke },
                         { name: "Réponse", value: newJoke.answer }
                     )
-                    .setFooter({ text: `Catégorie: ${categories.find(cat => cat.value === category)?.name}` })
+                    .setFooter({ 
+                        text: `Catégorie: ${categories.find(cat => cat.value === category)?.name} • Demandé par ${interaction.user.username}`,
+                        iconURL: interaction.user.displayAvatarURL({ forceStatic: false })
+                    })
                     .setTimestamp();
 
                 await i.editReply({

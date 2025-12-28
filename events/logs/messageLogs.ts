@@ -43,36 +43,56 @@ export async function logMessageDelete(message: Message | PartialMessage) {
     if (!message.guild || message.author?.bot) return;
 
     const auditEntry = await getAuditLog(message.guild, message.id, AuditLogEvent.MessageDelete);
+    const client = message.client;
     
-    const embed = new EmbedBuilder()
-        .setColor('#ff0000')
-        .setTitle('🗑️ Message Supprimé')
-        .setDescription(`**Canal:** <#${message.channel.id}> (${message.channel.id})`)
-        .addFields(
-            { name: 'Auteur du message', value: message.author ? `${message.author.tag} (${message.author.id})` : 'Inconnu', inline: true },
-            { name: 'Supprimé par', value: auditEntry?.executor ? `${auditEntry.executor.tag} (${auditEntry.executor.id})` : message.author?.tag || 'Inconnu', inline: true },
-            { name: 'Date', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: true }
-        )
-        .setTimestamp();
+    const fields: any[] = [
+        { name: '💬 Canal', value: `<#${message.channel.id}>\n\`${message.channel.id}\``, inline: true },
+        { name: '📅 Date', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: true }
+    ];
+
+    if (message.author) {
+        fields.push({ name: '✍️ Auteur', value: `${message.author.tag}\n\`${message.author.id}\``, inline: true });
+    }
+
+    if (auditEntry?.executor) {
+        fields.push({ name: '🗑️ Supprimé par', value: `${auditEntry.executor.tag}\n\`${auditEntry.executor.id}\``, inline: true });
+    }
 
     // Ajouter le contenu du message s'il est disponible
     if (message.content && message.content.length > 0) {
-        embed.addFields({
-            name: 'Contenu du message',
-            value: message.content.length > 1024 ? message.content.substring(0, 1021) + '...' : message.content,
+        const content = message.content.length > 1000 ? message.content.substring(0, 997) + '...' : message.content;
+        fields.push({
+            name: '📝 Contenu du message',
+            value: `\`\`\`${content}\`\`\``,
             inline: false
         });
     }
 
     // Ajouter les pièces jointes s'il y en a
     if (message.attachments && message.attachments.size > 0) {
-        const attachments = message.attachments.map(att => att.name || att.url).join('\n');
-        embed.addFields({
-            name: 'Pièces jointes',
+        const attachments = message.attachments.map(att => `• ${att.name || att.url}`).join('\n');
+        fields.push({
+            name: '📎 Pièces jointes',
             value: attachments.length > 1024 ? attachments.substring(0, 1021) + '...' : attachments,
             inline: false
         });
     }
+
+    const embed = new EmbedBuilder()
+        .setAuthor({ 
+            name: 'Kepler Bot - Système de Logs',
+            iconURL: client.user?.displayAvatarURL({ forceStatic: false })
+        })
+        .setColor('#ED4245')
+        .setTitle('🗑️ Message Supprimé')
+        .setDescription(`### Message supprimé\n> Un message a été supprimé dans <#${message.channel.id}>.`)
+        .addFields(fields)
+        .setThumbnail(message.author?.displayAvatarURL({ forceStatic: false }) || null)
+        .setFooter({ 
+            text: `Logs Messages`,
+            iconURL: message.guild.iconURL({ forceStatic: false }) || undefined
+        })
+        .setTimestamp();
 
     await sendLog(message.guild, embed);
 }
@@ -83,43 +103,61 @@ export async function logMessageUpdate(oldMessage: Message | PartialMessage, new
     if (!oldMessage.content && !newMessage.content) return;
     if (oldMessage.content === newMessage.content) return;
 
-    const embed = new EmbedBuilder()
-        .setColor('#ffaa00')
-        .setTitle('✏️ Message Modifié')
-        .setDescription(`**Canal:** <#${newMessage.channel.id}> (${newMessage.channel.id})`)
-        .addFields(
-            { name: 'Auteur', value: newMessage.author ? `${newMessage.author.tag} (${newMessage.author.id})` : 'Inconnu', inline: true },
-            { name: 'Message ID', value: newMessage.id, inline: true },
-            { name: 'Date', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: true }
-        )
-        .setTimestamp();
+    const client = newMessage.client;
+    const fields: any[] = [
+        { name: '💬 Canal', value: `<#${newMessage.channel.id}>\n\`${newMessage.channel.id}\``, inline: true },
+        { name: '🆔 Message ID', value: `\`${newMessage.id}\``, inline: true },
+        { name: '📅 Date', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: false }
+    ];
+
+    if (newMessage.author) {
+        fields.push({ name: '✍️ Auteur', value: `${newMessage.author.tag}\n\`${newMessage.author.id}\``, inline: true });
+    }
 
     // Ajouter l'ancien contenu
     if (oldMessage.content) {
-        embed.addFields({
-            name: 'Ancien contenu',
-            value: oldMessage.content.length > 1024 ? oldMessage.content.substring(0, 1021) + '...' : oldMessage.content,
+        const oldContent = oldMessage.content.length > 500 ? oldMessage.content.substring(0, 497) + '...' : oldMessage.content;
+        fields.push({
+            name: '📝 Ancien contenu',
+            value: `\`\`\`${oldContent}\`\`\``,
             inline: false
         });
     }
 
     // Ajouter le nouveau contenu
     if (newMessage.content) {
-        embed.addFields({
-            name: 'Nouveau contenu',
-            value: newMessage.content.length > 1024 ? newMessage.content.substring(0, 1021) + '...' : newMessage.content,
+        const newContent = newMessage.content.length > 500 ? newMessage.content.substring(0, 497) + '...' : newMessage.content;
+        fields.push({
+            name: '✨ Nouveau contenu',
+            value: `\`\`\`${newContent}\`\`\``,
             inline: false
         });
     }
 
     // Ajouter le lien vers le message
     if (newMessage.url) {
-        embed.addFields({
-            name: 'Lien vers le message',
-            value: `[Voir le message](${newMessage.url})`,
+        fields.push({
+            name: '🔗 Lien',
+            value: `[Aller au message](${newMessage.url})`,
             inline: false
         });
     }
+
+    const embed = new EmbedBuilder()
+        .setAuthor({ 
+            name: 'Kepler Bot - Système de Logs',
+            iconURL: client.user?.displayAvatarURL({ forceStatic: false })
+        })
+        .setColor('#FEE75C')
+        .setTitle('✏️ Message Modifié')
+        .setDescription(`### Message édité\n> Un message a été modifié dans <#${newMessage.channel.id}>.`)
+        .addFields(fields)
+        .setThumbnail(newMessage.author?.displayAvatarURL({ forceStatic: false }) || null)
+        .setFooter({ 
+            text: `Logs Messages`,
+            iconURL: newMessage.guild.iconURL({ forceStatic: false }) || undefined
+        })
+        .setTimestamp();
 
     await sendLog(newMessage.guild, embed);
 }
@@ -129,16 +167,41 @@ export async function logMessageBulkDelete(messages: any, channel: any) {
     if (!channel.guild) return;
 
     const auditEntry = await getAuditLog(channel.guild, channel.id, AuditLogEvent.MessageBulkDelete);
+    const client = channel.client;
     
+    const fields: any[] = [
+        { name: '💬 Canal', value: `<#${channel.id}>\n\`${channel.id}\``, inline: true },
+        { name: '📊 Quantité', value: `${messages.size} messages`, inline: true },
+        { name: '📅 Date', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: false }
+    ];
+
+    if (auditEntry?.executor) {
+        fields.push({ name: '🗑️ Supprimé par', value: `${auditEntry.executor.tag}\n\`${auditEntry.executor.id}\``, inline: true });
+    }
+
+    // Ajouter le lien d'archive si disponible
+    if (messages.archiveUrl) {
+        fields.push({ 
+            name: '📄 Archive des messages', 
+            value: `[Voir les messages supprimés](${messages.archiveUrl})`, 
+            inline: false 
+        });
+    }
+
     const embed = new EmbedBuilder()
-        .setColor('#ff0000')
-        .setTitle('🗑️ Suppression en Masse de Messages')
-        .setDescription(`**Canal:** <#${channel.id}> (${channel.id})`)
-        .addFields(
-            { name: 'Nombre de messages', value: messages.size.toString(), inline: true },
-            { name: 'Supprimé par', value: auditEntry?.executor ? `${auditEntry.executor.tag} (${auditEntry.executor.id})` : 'Inconnu', inline: true },
-            { name: 'Date', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: true }
-        )
+        .setAuthor({ 
+            name: 'Kepler Bot - Système de Logs',
+            iconURL: client.user?.displayAvatarURL({ forceStatic: false })
+        })
+        .setColor('#ED4245')
+        .setTitle('🗑️ Suppression de masse')
+        .setDescription(`### Nettoyage de messages\n> **${messages.size}** messages ont été supprimés dans <#${channel.id}>.`)
+        .addFields(fields)
+        .setThumbnail(channel.guild.iconURL({ forceStatic: false }))
+        .setFooter({ 
+            text: `Logs Messages • ${messages.size} messages supprimés`,
+            iconURL: channel.guild.iconURL({ forceStatic: false }) || undefined
+        })
         .setTimestamp();
 
     await sendLog(channel.guild, embed);

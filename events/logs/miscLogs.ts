@@ -44,27 +44,47 @@ export async function logInviteCreate(invite: Invite) {
     if (!invite.guild) return;
 
     const auditEntry = await getAuditLog(invite.guild, invite.code, AuditLogEvent.InviteCreate);
+    const client = invite.client;
     
-    const embed = new EmbedBuilder()
-        .setColor('#00ff00')
-        .setTitle('📬 Invitation Créée')
-        .setDescription(`**Code:** ${invite.code}`)
-        .addFields(
-            { name: 'Canal', value: invite.channel ? `<#${invite.channel.id}>` : 'Inconnu', inline: true },
-            { name: 'Créée par', value: invite.inviter ? `${invite.inviter.tag} (${invite.inviter.id})` : auditEntry?.executor ? `${auditEntry.executor.tag} (${auditEntry.executor.id})` : 'Inconnu', inline: true },
-            { name: 'Utilisation max', value: invite.maxUses ? invite.maxUses.toString() : 'Illimitée', inline: true },
-            { name: 'Expire le', value: invite.expiresAt ? `<t:${Math.floor(invite.expiresAt.getTime() / 1000)}:F>` : 'Jamais', inline: true },
-            { name: 'Date de création', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: true }
-        )
-        .setTimestamp();
+    const fields: any[] = [
+        { name: '📬 Code', value: `\`${invite.code}\``, inline: true },
+        { name: '📢 Canal', value: invite.channel ? `<#${invite.channel.id}>\n\`${invite.channel.id}\`` : 'Inconnu', inline: true },
+        { name: '📅 Date', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: false }
+    ];
+
+    const creator = invite.inviter || auditEntry?.executor;
+    if (creator) {
+        fields.push({ name: '✍️ Créée par', value: `${creator.tag}\n\`${creator.id}\``, inline: true });
+    }
+
+    fields.push(
+        { name: '🔢 Utilisations max', value: invite.maxUses ? `${invite.maxUses}` : 'Illimitée', inline: true },
+        { name: '⏱️ Expiration', value: invite.expiresAt ? `<t:${Math.floor(invite.expiresAt.getTime() / 1000)}:F>` : 'Jamais', inline: true }
+    );
 
     if (invite.temporary) {
-        embed.addFields({
-            name: 'Temporaire',
-            value: 'Oui (l\'utilisateur sera expulsé à la déconnexion)',
+        fields.push({
+            name: '⚠️ Temporaire',
+            value: 'Oui (expulsion à la déconnexion)',
             inline: false
         });
     }
+
+    const embed = new EmbedBuilder()
+        .setAuthor({ 
+            name: 'Kepler Bot - Système de Logs',
+            iconURL: client.user?.displayAvatarURL({ forceStatic: false })
+        })
+        .setColor('#57F287')
+        .setTitle('📬 Invitation Créée')
+        .setDescription(`### Nouvelle invitation\n> Une invitation a été créée avec le code \`${invite.code}\`.`)
+        .addFields(fields)
+        .setThumbnail(invite.inviter?.displayAvatarURL({ forceStatic: false }) || invite.guild.iconURL({ forceStatic: false }))
+        .setFooter({ 
+            text: `Logs Invitations`,
+            iconURL: invite.guild.iconURL({ forceStatic: false }) || undefined
+        })
+        .setTimestamp();
 
     await sendLog(invite.guild, embed);
 }
@@ -74,18 +94,38 @@ export async function logInviteDelete(invite: Invite) {
     if (!invite.guild) return;
 
     const auditEntry = await getAuditLog(invite.guild, invite.code, AuditLogEvent.InviteDelete);
+    const client = invite.client;
     
+    const fields: any[] = [
+        { name: '📬 Code', value: `\`${invite.code}\``, inline: true },
+        { name: '📢 Canal', value: invite.channel ? `<#${invite.channel.id}>\n\`${invite.channel.id}\`` : 'Inconnu', inline: true },
+        { name: '📅 Date', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: false }
+    ];
+
+    if (invite.inviter) {
+        fields.push({ name: '✍️ Créée par', value: `${invite.inviter.tag}\n\`${invite.inviter.id}\``, inline: true });
+    }
+
+    if (auditEntry?.executor) {
+        fields.push({ name: '🗑️ Supprimée par', value: `${auditEntry.executor.tag}\n\`${auditEntry.executor.id}\``, inline: true });
+    }
+
+    fields.push({ name: '📊 Utilisations', value: invite.uses ? `${invite.uses}` : '0', inline: true });
+
     const embed = new EmbedBuilder()
-        .setColor('#ff0000')
+        .setAuthor({ 
+            name: 'Kepler Bot - Système de Logs',
+            iconURL: client.user?.displayAvatarURL({ forceStatic: false })
+        })
+        .setColor('#ED4245')
         .setTitle('🗑️ Invitation Supprimée')
-        .setDescription(`**Code:** ${invite.code}`)
-        .addFields(
-            { name: 'Canal', value: invite.channel ? `<#${invite.channel.id}>` : 'Inconnu', inline: true },
-            { name: 'Créée par', value: invite.inviter ? `${invite.inviter.tag} (${invite.inviter.id})` : 'Inconnu', inline: true },
-            { name: 'Supprimée par', value: auditEntry?.executor ? `${auditEntry.executor.tag} (${auditEntry.executor.id})` : 'Inconnu', inline: true },
-            { name: 'Utilisations', value: invite.uses ? invite.uses.toString() : '0', inline: true },
-            { name: 'Date de suppression', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: true }
-        )
+        .setDescription(`### Invitation supprimée\n> L'invitation \`${invite.code}\` a été supprimée.`)
+        .addFields(fields)
+        .setThumbnail(auditEntry?.executor?.displayAvatarURL({ forceStatic: false }) || invite.guild.iconURL({ forceStatic: false }))
+        .setFooter({ 
+            text: `Logs Invitations`,
+            iconURL: invite.guild.iconURL({ forceStatic: false }) || undefined
+        })
         .setTimestamp();
 
     await sendLog(invite.guild, embed);
@@ -94,17 +134,33 @@ export async function logInviteDelete(invite: Invite) {
 // Log de création d'emoji
 export async function logEmojiCreate(emoji: GuildEmoji) {
     const auditEntry = await getAuditLog(emoji.guild, emoji.id, AuditLogEvent.EmojiCreate);
+    const client = emoji.client;
     
+    const fields: any[] = [
+        { name: '😀 Nom', value: `\`${emoji.name}\``, inline: true },
+        { name: '🆔 ID', value: `\`${emoji.id}\``, inline: true },
+        { name: '✨ Animé', value: emoji.animated ? 'Oui' : 'Non', inline: true },
+        { name: '📅 Date', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: false }
+    ];
+
+    if (auditEntry?.executor) {
+        fields.push({ name: '✍️ Créé par', value: `${auditEntry.executor.tag}\n\`${auditEntry.executor.id}\``, inline: true });
+    }
+
     const embed = new EmbedBuilder()
-        .setColor('#00ff00')
+        .setAuthor({ 
+            name: 'Kepler Bot - Système de Logs',
+            iconURL: client.user?.displayAvatarURL({ forceStatic: false })
+        })
+        .setColor('#57F287')
         .setTitle('😀 Emoji Créé')
-        .setDescription(`**Nom:** ${emoji.name} (${emoji.id})`)
-        .addFields(
-            { name: 'Créé par', value: auditEntry?.executor ? `${auditEntry.executor.tag} (${auditEntry.executor.id})` : 'Inconnu', inline: true },
-            { name: 'Animé', value: emoji.animated ? 'Oui' : 'Non', inline: true },
-            { name: 'Date', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: true }
-        )
+        .setDescription(`### Nouvel emoji\n> L'emoji **${emoji.name}** a été ajouté au serveur.`)
+        .addFields(fields)
         .setThumbnail(emoji.url)
+        .setFooter({ 
+            text: `Logs Emojis`,
+            iconURL: emoji.guild.iconURL({ forceStatic: false }) || undefined
+        })
         .setTimestamp();
 
     await sendLog(emoji.guild, embed);
@@ -113,17 +169,33 @@ export async function logEmojiCreate(emoji: GuildEmoji) {
 // Log de suppression d'emoji
 export async function logEmojiDelete(emoji: GuildEmoji) {
     const auditEntry = await getAuditLog(emoji.guild, emoji.id, AuditLogEvent.EmojiDelete);
+    const client = emoji.client;
     
+    const fields: any[] = [
+        { name: '😀 Nom', value: `\`${emoji.name}\``, inline: true },
+        { name: '🆔 ID', value: `\`${emoji.id}\``, inline: true },
+        { name: '✨ Animé', value: emoji.animated ? 'Oui' : 'Non', inline: true },
+        { name: '📅 Date', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: false }
+    ];
+
+    if (auditEntry?.executor) {
+        fields.push({ name: '🗑️ Supprimé par', value: `${auditEntry.executor.tag}\n\`${auditEntry.executor.id}\``, inline: true });
+    }
+
     const embed = new EmbedBuilder()
-        .setColor('#ff0000')
+        .setAuthor({ 
+            name: 'Kepler Bot - Système de Logs',
+            iconURL: client.user?.displayAvatarURL({ forceStatic: false })
+        })
+        .setColor('#ED4245')
         .setTitle('🗑️ Emoji Supprimé')
-        .setDescription(`**Nom:** ${emoji.name} (${emoji.id})`)
-        .addFields(
-            { name: 'Supprimé par', value: auditEntry?.executor ? `${auditEntry.executor.tag} (${auditEntry.executor.id})` : 'Inconnu', inline: true },
-            { name: 'Animé', value: emoji.animated ? 'Oui' : 'Non', inline: true },
-            { name: 'Date', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: true }
-        )
+        .setDescription(`### Emoji supprimé\n> L'emoji **${emoji.name}** a été supprimé du serveur.`)
+        .addFields(fields)
         .setThumbnail(emoji.url)
+        .setFooter({ 
+            text: `Logs Emojis`,
+            iconURL: emoji.guild.iconURL({ forceStatic: false }) || undefined
+        })
         .setTimestamp();
 
     await sendLog(emoji.guild, embed);
@@ -132,25 +204,41 @@ export async function logEmojiDelete(emoji: GuildEmoji) {
 // Log de modification d'emoji
 export async function logEmojiUpdate(oldEmoji: GuildEmoji, newEmoji: GuildEmoji) {
     const auditEntry = await getAuditLog(newEmoji.guild, newEmoji.id, AuditLogEvent.EmojiUpdate);
+    const client = newEmoji.client;
     
     const changes: string[] = [];
     
     if (oldEmoji.name !== newEmoji.name) {
-        changes.push(`**Nom:** ${oldEmoji.name} → ${newEmoji.name}`);
+        changes.push(`**Ancien nom:** \`${oldEmoji.name}\`\n**Nouveau nom:** \`${newEmoji.name}\``);
     }
 
     if (changes.length === 0) return;
 
+    const fields: any[] = [
+        { name: '🆔 ID', value: `\`${newEmoji.id}\``, inline: true },
+        { name: '✨ Animé', value: newEmoji.animated ? 'Oui' : 'Non', inline: true },
+        { name: '📅 Date', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: false },
+        { name: '📝 Modifications', value: changes.join('\n'), inline: false }
+    ];
+
+    if (auditEntry?.executor) {
+        fields.push({ name: '✏️ Modifié par', value: `${auditEntry.executor.tag}\n\`${auditEntry.executor.id}\``, inline: true });
+    }
+
     const embed = new EmbedBuilder()
-        .setColor('#ffaa00')
+        .setAuthor({ 
+            name: 'Kepler Bot - Système de Logs',
+            iconURL: client.user?.displayAvatarURL({ forceStatic: false })
+        })
+        .setColor('#FEE75C')
         .setTitle('✏️ Emoji Modifié')
-        .setDescription(`**Emoji:** ${newEmoji.name} (${newEmoji.id})`)
-        .addFields(
-            { name: 'Modifications', value: changes.join('\n'), inline: false },
-            { name: 'Modifié par', value: auditEntry?.executor ? `${auditEntry.executor.tag} (${auditEntry.executor.id})` : 'Inconnu', inline: true },
-            { name: 'Date', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: true }
-        )
+        .setDescription(`### Modification d'emoji\n> L'emoji **${newEmoji.name}** a été modifié.`)
+        .addFields(fields)
         .setThumbnail(newEmoji.url)
+        .setFooter({ 
+            text: `Logs Emojis`,
+            iconURL: newEmoji.guild.iconURL({ forceStatic: false }) || undefined
+        })
         .setTimestamp();
 
     await sendLog(newEmoji.guild, embed);
@@ -161,17 +249,40 @@ export async function logStickerCreate(sticker: Sticker) {
     if (!sticker.guild) return;
 
     const auditEntry = await getAuditLog(sticker.guild, sticker.id, AuditLogEvent.StickerCreate);
+    const client = sticker.guild.client;
     
+    const fields: any[] = [
+        { name: '🏷️ Nom', value: `\`${sticker.name}\``, inline: true },
+        { name: '🆔 ID', value: `\`${sticker.id}\``, inline: true },
+        { name: '📅 Date', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: false }
+    ];
+
+    if (sticker.description) {
+        fields.push({ name: '📝 Description', value: sticker.description, inline: false });
+    }
+
+    if (sticker.tags) {
+        fields.push({ name: '🏷️ Tags', value: sticker.tags, inline: true });
+    }
+
+    if (auditEntry?.executor) {
+        fields.push({ name: '✍️ Créé par', value: `${auditEntry.executor.tag}\n\`${auditEntry.executor.id}\``, inline: true });
+    }
+
     const embed = new EmbedBuilder()
-        .setColor('#00ff00')
+        .setAuthor({ 
+            name: 'Kepler Bot - Système de Logs',
+            iconURL: client.user?.displayAvatarURL({ forceStatic: false })
+        })
+        .setColor('#57F287')
         .setTitle('🏷️ Sticker Créé')
-        .setDescription(`**Nom:** ${sticker.name} (${sticker.id})`)
-        .addFields(
-            { name: 'Créé par', value: auditEntry?.executor ? `${auditEntry.executor.tag} (${auditEntry.executor.id})` : 'Inconnu', inline: true },
-            { name: 'Description', value: sticker.description || 'Aucune', inline: true },
-            { name: 'Tags', value: sticker.tags || 'Aucun', inline: true },
-            { name: 'Date', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: true }
-        )
+        .setDescription(`### Nouveau sticker\n> Le sticker **${sticker.name}** a été ajouté au serveur.`)
+        .addFields(fields)
+        .setThumbnail(sticker.guild.iconURL({ forceStatic: false }))
+        .setFooter({ 
+            text: `Logs Stickers`,
+            iconURL: sticker.guild.iconURL({ forceStatic: false }) || undefined
+        })
         .setTimestamp();
 
     await sendLog(sticker.guild, embed);
@@ -182,16 +293,36 @@ export async function logStickerDelete(sticker: Sticker) {
     if (!sticker.guild) return;
 
     const auditEntry = await getAuditLog(sticker.guild, sticker.id, AuditLogEvent.StickerDelete);
+    const client = sticker.guild.client;
     
+    const fields: any[] = [
+        { name: '🏷️ Nom', value: `\`${sticker.name}\``, inline: true },
+        { name: '🆔 ID', value: `\`${sticker.id}\``, inline: true },
+        { name: '📅 Date', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: false }
+    ];
+
+    if (sticker.description) {
+        fields.push({ name: '📝 Description', value: sticker.description, inline: false });
+    }
+
+    if (auditEntry?.executor) {
+        fields.push({ name: '🗑️ Supprimé par', value: `${auditEntry.executor.tag}\n\`${auditEntry.executor.id}\``, inline: true });
+    }
+
     const embed = new EmbedBuilder()
-        .setColor('#ff0000')
+        .setAuthor({ 
+            name: 'Kepler Bot - Système de Logs',
+            iconURL: client.user?.displayAvatarURL({ forceStatic: false })
+        })
+        .setColor('#ED4245')
         .setTitle('🗑️ Sticker Supprimé')
-        .setDescription(`**Nom:** ${sticker.name} (${sticker.id})`)
-        .addFields(
-            { name: 'Supprimé par', value: auditEntry?.executor ? `${auditEntry.executor.tag} (${auditEntry.executor.id})` : 'Inconnu', inline: true },
-            { name: 'Description', value: sticker.description || 'Aucune', inline: true },
-            { name: 'Date', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: true }
-        )
+        .setDescription(`### Sticker supprimé\n> Le sticker **${sticker.name}** a été supprimé du serveur.`)
+        .addFields(fields)
+        .setThumbnail(sticker.guild.iconURL({ forceStatic: false }))
+        .setFooter({ 
+            text: `Logs Stickers`,
+            iconURL: sticker.guild.iconURL({ forceStatic: false }) || undefined
+        })
         .setTimestamp();
 
     await sendLog(sticker.guild, embed);

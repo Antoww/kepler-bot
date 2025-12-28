@@ -33,6 +33,10 @@ export async function execute(interaction: CommandInteraction) {
             })
             .setColor('#ffaa00')
             .setThumbnail(target.displayAvatarURL({ forceStatic: false }))
+            .setFooter({
+                        text: 'Demandé par ' + interaction.user.username,
+                        iconURL: interaction.user.displayAvatarURL({ forceStatic: false })
+                    })
             .setTimestamp();
 
         if (warnings.length === 0) {

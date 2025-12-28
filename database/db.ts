@@ -1,4 +1,5 @@
 import { supabase } from './supabase.ts';
+import { withNetworkRetry } from '../utils/retryHelper.ts';
 
 // Initialiser la connexion à la base de données avec retry
 export async function initDatabase(): Promise<void> {
@@ -72,15 +73,17 @@ export async function deleteReminder(reminderId: number): Promise<void> {
 
 // Récupérer tous les rappels expirés
 export async function getExpiredReminders(): Promise<DatabaseReminder[]> {
-    const currentTime = Date.now();
-    const { data, error } = await supabase
-        .from('reminders')
-        .select('*')
-        .lte('timestamp', currentTime)
-        .order('timestamp', { ascending: true });
-    
-    if (error) throw error;
-    return data || [];
+    return withNetworkRetry(async () => {
+        const currentTime = Date.now();
+        const { data, error } = await supabase
+            .from('reminders')
+            .select('*')
+            .lte('timestamp', currentTime)
+            .order('timestamp', { ascending: true });
+        
+        if (error) throw error;
+        return data || [];
+    }, 'récupération des rappels expirés');
 }
 
 // Interface pour les anniversaires
@@ -245,15 +248,17 @@ export async function getBirthday(guildId: string, userId: string): Promise<Birt
 
 // Récupérer tous les anniversaires d'un serveur pour un jour/mois donné
 export async function getBirthdaysForDate(guildId: string, day: number, month: number): Promise<Birthday[]> {
-    const { data, error } = await supabase
-        .from('birthdays')
-        .select('*')
-        .eq('guild_id', guildId)
-        .eq('birth_day', day)
-        .eq('birth_month', month);
-    
-    if (error) throw error;
-    return data || [];
+    return withNetworkRetry(async () => {
+        const { data, error } = await supabase
+            .from('birthdays')
+            .select('*')
+            .eq('guild_id', guildId)
+            .eq('birth_day', day)
+            .eq('birth_month', month);
+        
+        if (error) throw error;
+        return data || [];
+    }, 'récupération des anniversaires');
 }
 
 // Supprimer un anniversaire
@@ -388,24 +393,28 @@ export async function createTempMute(guildId: string, userId: string, moderatorI
 
 // Récupérer les bans temporaires expirés
 export async function getExpiredTempBans(): Promise<TempBan[]> {
-    const { data, error } = await supabase
-        .from('temp_bans')
-        .select('*')
-        .lt('end_time', new Date().toISOString());
-    
-    if (error) throw error;
-    return data || [];
+    return withNetworkRetry(async () => {
+        const { data, error } = await supabase
+            .from('temp_bans')
+            .select('*')
+            .lt('end_time', new Date().toISOString());
+        
+        if (error) throw error;
+        return data || [];
+    }, 'récupération des bans temporaires expirés');
 }
 
 // Récupérer les mutes temporaires expirés
 export async function getExpiredTempMutes(): Promise<TempMute[]> {
-    const { data, error } = await supabase
-        .from('temp_mutes')
-        .select('*')
-        .lt('end_time', new Date().toISOString());
-    
-    if (error) throw error;
-    return data || [];
+    return withNetworkRetry(async () => {
+        const { data, error } = await supabase
+            .from('temp_mutes')
+            .select('*')
+            .lt('end_time', new Date().toISOString());
+        
+        if (error) throw error;
+        return data || [];
+    }, 'récupération des mutes temporaires expirés');
 }
 
 // Supprimer un ban temporaire
