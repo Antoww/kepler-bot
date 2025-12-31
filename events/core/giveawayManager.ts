@@ -250,7 +250,7 @@ export function generateGiveawayEmbed(giveaway: any, participantCount: number, t
         );
     }
     
-    embed.setFooter({ text: `ID: ${giveaway.id}` });
+    embed.setFooter({ text: `ID: ${giveaway.id}`, iconURL: 'https://cdn.discordapp.com/emojis/1084447535625191505.png' });
     embed.setTimestamp(new Date(giveaway.end_time));
     
     return embed;
