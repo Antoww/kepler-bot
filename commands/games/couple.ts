@@ -22,13 +22,10 @@ async function generateCoupleImage(user1: User, user2: User): Promise<Buffer> {
         const avatarSize = 140;
         const padding = 20;
 
-        // Create base image with dark background
+        // Create base image - create transparent image then fill with color
         console.log(`[COUPLE] Création de l'image de base (${canvasWidth}x${canvasHeight})`);
-        const image = await Jimp.create({
-            width: canvasWidth,
-            height: canvasHeight,
-            color: 0x1a1a2eff
-        });
+        let image = new Jimp({ width: canvasWidth, height: canvasHeight });
+        image.fillColor({ r: 26, g: 26, b: 46, a: 255 }); // Dark background #1a1a2e
 
         // Get avatars
         const avatar1URL = user1.displayAvatarURL({ size: 512, extension: 'png' });
@@ -39,8 +36,8 @@ async function generateCoupleImage(user1: User, user2: User): Promise<Buffer> {
         const avatar1Data = await axios.get(avatar1URL, { responseType: 'arraybuffer' });
         const avatar2Data = await axios.get(avatar2URL, { responseType: 'arraybuffer' });
 
-        const avatar1 = await Jimp.fromBuffer(avatar1Data.data);
-        const avatar2 = await Jimp.fromBuffer(avatar2Data.data);
+        const avatar1 = new Jimp({ data: Buffer.from(avatar1Data.data) });
+        const avatar2 = new Jimp({ data: Buffer.from(avatar2Data.data) });
 
         // Resize avatars
         console.log(`[COUPLE] Redimensionnement et circularisation des avatars...`);
