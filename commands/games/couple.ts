@@ -1,6 +1,7 @@
 import { type CommandInteraction, SlashCommandBuilder, EmbedBuilder, AttachmentBuilder, type User } from 'discord.js';
 import sharp from 'sharp';
 import axios from 'axios';
+import { Buffer } from 'node:buffer';
 
 export const data = new SlashCommandBuilder()
     .setName('couple')
