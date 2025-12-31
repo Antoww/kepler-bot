@@ -104,8 +104,16 @@ export async function execute(interaction: CommandInteraction) {
                 return;
             }
 
-            // Use only the cache, don't fetch (to avoid rate limits)
-            const members = guild.members.cache;
+            // Try cache first, fetch if cache is too small
+            let members = guild.members.cache;
+            if (members.size < 2) {
+                console.log(`[COUPLE] Cache petit (${members.size}), fetching...`);
+                try {
+                    members = await guild.members.fetch({ limit: 1000, withPresences: false });
+                } catch (e) {
+                    console.log(`[COUPLE] Fetch failed, using cache anyway`);
+                }
+            }
             
             // Filter out bots
             const nonBotMembers = members.filter(m => !m.user.bot);
