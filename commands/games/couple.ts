@@ -1,5 +1,5 @@
 import { type CommandInteraction, SlashCommandBuilder, EmbedBuilder, AttachmentBuilder, type User } from 'discord.js';
-import Jimp from 'jimp';
+import sharp from 'sharp';
 import axios from 'axios';
 
 export const data = new SlashCommandBuilder()
@@ -16,7 +16,6 @@ async function generateCoupleImage(user1: User, user2: User): Promise<Buffer> {
     try {
         console.log(`[COUPLE] Génération d'image pour ${user1.username} et ${user2.username}...`);
         
-        // Image dimensions
         const canvasWidth = 600;
         const canvasHeight = 200;
         const avatarSize = 140;
@@ -26,50 +25,68 @@ async function generateCoupleImage(user1: User, user2: User): Promise<Buffer> {
         const avatar1URL = user1.displayAvatarURL({ size: 512, extension: 'png' });
         const avatar2URL = user2.displayAvatarURL({ size: 512, extension: 'png' });
 
-        // Download avatars in parallel + create base image in parallel
-        console.log(`[COUPLE] Téléchargement & création...`);
-        const [avatar1Data, avatar2Data, image] = await Promise.all([
+        // Download avatars in parallel
+        console.log(`[COUPLE] Téléchargement...`);
+        const [avatar1Data, avatar2Data] = await Promise.all([
             axios.get(avatar1URL, { responseType: 'arraybuffer' }),
-            axios.get(avatar2URL, { responseType: 'arraybuffer' }),
-            (async () => {
-                let img = new Jimp({ width: canvasWidth, height: canvasHeight });
-                img.fillColor({ r: 26, g: 26, b: 46, a: 255 });
-                return img;
-            })()
+            axios.get(avatar2URL, { responseType: 'arraybuffer' })
         ]);
 
-        // Load avatars in parallel
-        const [avatar1, avatar2] = await Promise.all([
-            (async () => {
-                const av = new Jimp({ data: Buffer.from(avatar1Data.data) });
-                av.resize({ w: avatarSize, h: avatarSize });
-                av.circle();
-                return av;
-            })(),
-            (async () => {
-                const av = new Jimp({ data: Buffer.from(avatar2Data.data) });
-                av.resize({ w: avatarSize, h: avatarSize });
-                av.circle();
-                return av;
-            })()
+        // Process avatars in parallel (resize + circle)
+        const [avatar1Buffer, avatar2Buffer] = await Promise.all([
+            sharp(Buffer.from(avatar1Data.data))
+                .resize(avatarSize, avatarSize)
+                .composite([{
+                    input: Buffer.from(
+                        `<svg><circle cx="${avatarSize/2}" cy="${avatarSize/2}" r="${avatarSize/2}" fill="black"/></svg>`
+                    ),
+                    blend: 'dest_in'
+                }])
+                .png()
+                .toBuffer(),
+            sharp(Buffer.from(avatar2Data.data))
+                .resize(avatarSize, avatarSize)
+                .composite([{
+                    input: Buffer.from(
+                        `<svg><circle cx="${avatarSize/2}" cy="${avatarSize/2}" r="${avatarSize/2}" fill="black"/></svg>`
+                    ),
+                    blend: 'dest_in'
+                }])
+                .png()
+                .toBuffer()
         ]);
 
-        // Position and composite avatars
+        // Create base image with composites
         const avatar1X = padding;
         const avatar1Y = (canvasHeight - avatarSize) / 2;
         const avatar2X = canvasWidth - padding - avatarSize;
         const avatar2Y = (canvasHeight - avatarSize) / 2;
 
-        image.composite({ source: avatar1, x: avatar1X, y: avatar1Y });
-        image.composite({ source: avatar2, x: avatar2X, y: avatar2Y });
+        // Create the final image
+        const buffer = await sharp({
+            create: {
+                width: canvasWidth,
+                height: canvasHeight,
+                channels: 4,
+                background: { r: 26, g: 26, b: 46, alpha: 1 }
+            }
+        })
+            .composite([
+                { input: avatar1Buffer, left: avatar1X, top: avatar1Y },
+                { input: avatar2Buffer, left: avatar2X, top: avatar2Y },
+                // Red circle in the middle
+                {
+                    input: Buffer.from(
+                        `<svg><circle cx="20" cy="20" r="20" fill="#ff1744"/></svg>`
+                    ),
+                    left: Math.floor(canvasWidth / 2 - 20),
+                    top: Math.floor(canvasHeight / 2 - 20)
+                }
+            ])
+            .png()
+            .toBuffer();
 
-        // Draw heart
-        drawHeartOptimized(image, canvasWidth / 2, canvasHeight / 2, 40);
-
-        // Convert to PNG
-        const buffer = await image.png().toBuffer();
         console.log(`[COUPLE] ✅ Générée (${buffer.length} bytes)`);
-
         return buffer;
     } catch (error) {
         console.error('[COUPLE] Erreur lors de la génération:', error);
@@ -77,24 +94,7 @@ async function generateCoupleImage(user1: User, user2: User): Promise<Buffer> {
     }
 }
 
-function drawHeartOptimized(image: Jimp, x: number, y: number, size: number) {
-    // Simple red circle instead of complex heart shape to avoid blocking
-    const redColor = 0xff1744ff;
-    const radius = Math.floor(size / 2);
 
-    // Draw simple circle for heart (fast and non-blocking)
-    for (let i = -radius; i <= radius; i++) {
-        for (let j = -radius; j <= radius; j++) {
-            if (i * i + j * j <= radius * radius) {
-                const px = Math.floor(x + i);
-                const py = Math.floor(y + j);
-                if (px >= 0 && px < image.bitmap.width && py >= 0 && py < image.bitmap.height) {
-                    image.setPixelColor(redColor, px, py);
-                }
-            }
-        }
-    }
-}
 
 export async function execute(interaction: CommandInteraction) {
     try {
