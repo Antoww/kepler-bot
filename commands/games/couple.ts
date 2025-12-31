@@ -39,8 +39,8 @@ async function generateCoupleImage(user1: User, user2: User): Promise<Buffer> {
         const avatar1Data = await axios.get(avatar1URL, { responseType: 'arraybuffer' });
         const avatar2Data = await axios.get(avatar2URL, { responseType: 'arraybuffer' });
 
-        const avatar1 = await Jimp.read(avatar1Data.data);
-        const avatar2 = await Jimp.read(avatar2Data.data);
+        const avatar1 = await Jimp.fromBuffer(avatar1Data.data);
+        const avatar2 = await Jimp.fromBuffer(avatar2Data.data);
 
         // Resize avatars
         console.log(`[COUPLE] Redimensionnement et circularisation des avatars...`);
