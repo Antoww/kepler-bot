@@ -33,53 +33,59 @@ async function generateCoupleImage(user1: User, user2: User): Promise<Buffer> {
             axios.get(avatar2URL, { responseType: 'arraybuffer' })
         ]);
 
-        // Process avatars in parallel (resize + circle)
+        // Resize and round avatars
         const [avatar1Buffer, avatar2Buffer] = await Promise.all([
             sharp(Buffer.from(avatar1Data.data))
-                .resize(avatarSize, avatarSize)
-                .composite([{
-                    input: Buffer.from(
-                        `<svg><circle cx="${avatarSize/2}" cy="${avatarSize/2}" r="${avatarSize/2}" fill="black"/></svg>`
-                    ),
-                    blend: 'dest_in'
-                }])
-                .png()
+                .resize(avatarSize, avatarSize, { fit: 'cover' })
+                .composite([
+                    {
+                        input: Buffer.from(
+                            `<svg><rect x="0" y="0" width="${avatarSize}" height="${avatarSize}" rx="${avatarSize / 2}" fill="white"/></svg>`
+                        ),
+                        blend: 'in'
+                    }
+                ])
                 .toBuffer(),
             sharp(Buffer.from(avatar2Data.data))
-                .resize(avatarSize, avatarSize)
-                .composite([{
-                    input: Buffer.from(
-                        `<svg><circle cx="${avatarSize/2}" cy="${avatarSize/2}" r="${avatarSize/2}" fill="black"/></svg>`
-                    ),
-                    blend: 'dest_in'
-                }])
-                .png()
+                .resize(avatarSize, avatarSize, { fit: 'cover' })
+                .composite([
+                    {
+                        input: Buffer.from(
+                            `<svg><rect x="0" y="0" width="${avatarSize}" height="${avatarSize}" rx="${avatarSize / 2}" fill="white"/></svg>`
+                        ),
+                        blend: 'in'
+                    }
+                ])
                 .toBuffer()
         ]);
 
-        // Create base image with composites
+        // Position avatars
         const avatar1X = padding;
         const avatar1Y = (canvasHeight - avatarSize) / 2;
         const avatar2X = canvasWidth - padding - avatarSize;
         const avatar2Y = (canvasHeight - avatarSize) / 2;
+
+        // Create red heart SVG
+        const heartSvg = Buffer.from(
+            `<svg width="40" height="40" viewBox="0 0 40 40">
+                <circle cx="20" cy="20" r="18" fill="#ff1744"/>
+            </svg>`
+        );
 
         // Create the final image
         const buffer = await sharp({
             create: {
                 width: canvasWidth,
                 height: canvasHeight,
-                channels: 4,
-                background: { r: 26, g: 26, b: 46, alpha: 1 }
+                channels: 3,
+                background: { r: 26, g: 26, b: 46 }
             }
         })
             .composite([
                 { input: avatar1Buffer, left: avatar1X, top: avatar1Y },
                 { input: avatar2Buffer, left: avatar2X, top: avatar2Y },
-                // Red circle in the middle
                 {
-                    input: Buffer.from(
-                        `<svg><circle cx="20" cy="20" r="20" fill="#ff1744"/></svg>`
-                    ),
+                    input: heartSvg,
                     left: Math.floor(canvasWidth / 2 - 20),
                     top: Math.floor(canvasHeight / 2 - 20)
                 }
