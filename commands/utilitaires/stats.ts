@@ -128,22 +128,22 @@ async function getChessStats(interaction: any) {
 				{ name: 'Titre', value: player.title || 'Aucun', inline: true },
 				{
 					name: 'Elo Blitz',
-					value: stats.chess_blitz?.last?.rating || 'N/A',
+					value: (stats.chess_blitz?.last?.rating || 'N/A').toString(),
 					inline: true
 				},
 				{
 					name: 'Elo Rapide',
-					value: stats.chess_rapid?.last?.rating || 'N/A',
+					value: (stats.chess_rapid?.last?.rating || 'N/A').toString(),
 					inline: true
 				},
 				{
 					name: 'Elo Bullet',
-					value: stats.chess_bullet?.last?.rating || 'N/A',
+					value: (stats.chess_bullet?.last?.rating || 'N/A').toString(),
 					inline: true
 				},
 				{
 					name: 'Elo Classique',
-					value: stats.chess_classical?.last?.rating || 'N/A',
+					value: (stats.chess_classical?.last?.rating || 'N/A').toString(),
 					inline: true
 				},
 				{ name: 'Pays', value: player.country_name || 'N/A', inline: true },
