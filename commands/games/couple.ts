@@ -26,19 +26,19 @@ async function generateCoupleImage(user1: User, user2: User): Promise<Buffer> {
         const avatar1URL = user1.displayAvatarURL({ size: 512, extension: 'png' });
         const avatar2URL = user2.displayAvatarURL({ size: 512, extension: 'png' });
 
-        // Download avatars in parallel
+        // Download avatars in parallel (handles PNG, JPG, GIF - extracts first frame)
         console.log(`[COUPLE] Téléchargement...`);
         const [avatar1Data, avatar2Data] = await Promise.all([
             axios.get(avatar1URL, { responseType: 'arraybuffer' }),
             axios.get(avatar2URL, { responseType: 'arraybuffer' })
         ]);
 
-        // Resize avatars without complex SVG masking
+        // Resize avatars, extract first frame if GIF
         const [avatar1Buffer, avatar2Buffer] = await Promise.all([
-            sharp(Buffer.from(avatar1Data.data))
+            sharp(Buffer.from(avatar1Data.data), { animated: false })
                 .resize(avatarSize, avatarSize, { fit: 'cover' })
                 .toBuffer(),
-            sharp(Buffer.from(avatar2Data.data))
+            sharp(Buffer.from(avatar2Data.data), { animated: false })
                 .resize(avatarSize, avatarSize, { fit: 'cover' })
                 .toBuffer()
         ]);
@@ -49,9 +49,9 @@ async function generateCoupleImage(user1: User, user2: User): Promise<Buffer> {
         const avatar2X = canvasWidth - padding - avatarSize;
         const avatar2Y = (canvasHeight - avatarSize) / 2;
 
-        // Create red heart SVG (better shape)
+        // Create larger red heart SVG
         const heartSvg = Buffer.from(
-            `<svg width="50" height="50" viewBox="0 0 50 50" xmlns="http://www.w3.org/2000/svg">
+            `<svg width="80" height="80" viewBox="0 0 50 50" xmlns="http://www.w3.org/2000/svg">
                 <path d="M25,45 C25,45 5,30 5,20 C5,12 10,8 15,8 C20,8 25,12 25,12 C25,12 30,8 35,8 C40,8 45,12 45,20 C45,30 25,45 25,45 Z" fill="#ff1744"/>
             </svg>`
         );
@@ -70,8 +70,8 @@ async function generateCoupleImage(user1: User, user2: User): Promise<Buffer> {
                 { input: avatar2Buffer, left: avatar2X, top: avatar2Y },
                 {
                     input: heartSvg,
-                    left: Math.floor(canvasWidth / 2 - 25),
-                    top: Math.floor(canvasHeight / 2 - 25)
+                    left: Math.floor(canvasWidth / 2 - 40),
+                    top: Math.floor(canvasHeight / 2 - 40)
                 }
             ])
             .png()
