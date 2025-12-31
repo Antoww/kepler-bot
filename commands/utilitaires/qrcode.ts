@@ -79,7 +79,7 @@ export async function execute(interaction: any) {
 			}
 			qrData = url;
 			title = '🔗 QR Code - Lien';
-			description = `Lien: [${url}](${url})`;
+			description = `\`${url}\``;
 		} else if (subcommand === 'texte') {
 			const texte = interaction.options.getString('contenu');
 			qrData = texte;
