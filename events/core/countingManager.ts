@@ -46,7 +46,7 @@ export class CountingManager {
                     .setTimestamp();
 
                 try {
-                    const errorMsg = await message.channel.send({ embeds: [errorEmbed], reply: { messageReference: message.id } });
+                    const errorMsg = await message.channel.send({ embeds: [errorEmbed] });
                     // Supprimer le message d'erreur après 3 secondes
                     setTimeout(() => errorMsg.delete().catch(() => {}), 3000);
                 } catch (error) {
@@ -71,7 +71,7 @@ export class CountingManager {
                     .setTimestamp();
 
                 try {
-                    const errorMsg = await message.channel.send({ embeds: [errorEmbed], reply: { messageReference: message.id } });
+                    const errorMsg = await message.channel.send({ embeds: [errorEmbed] });
                     // Supprimer le message d'erreur après 3 secondes
                     setTimeout(() => errorMsg.delete().catch(() => {}), 3000);
                 } catch (error) {
