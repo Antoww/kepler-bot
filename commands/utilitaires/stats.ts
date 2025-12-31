@@ -389,7 +389,7 @@ async function getMinecraftStats(interaction: any) {
 		);
 
 		const profile = profileResponse.data;
-		const skinUrl = `https://crafatar.com/avatars/${uuid}?size=128`;
+		const skinUrl = `https://visage.surgeplay.com/face/256/${uuid}`;
 
 		const embed = new EmbedBuilder()
 			.setColor('#00aa00')
