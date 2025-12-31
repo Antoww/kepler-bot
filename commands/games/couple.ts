@@ -152,11 +152,28 @@ export async function execute(interaction: CommandInteraction) {
         const coupleImage = await generateCoupleImage(user1, user2);
         const attachment = new AttachmentBuilder(coupleImage, { name: 'couple.png' });
 
+        // Random descriptions
+        const descriptions = [
+            `C'est magique entre ces deux là ! ✨`,
+            `Amour vrai détecté 💕`,
+            `Quel couple adorable ! 😍`,
+            `Faits pour être ensemble 💞`,
+            `L'amour est dans l'air 🥰`,
+            `Une belle histoire d'amour commence ! 📖✨`,
+            `Coup de foudre ! ⚡❤️`,
+            `Destinés l'un à l'autre 🌟`,
+            `Ils sont mignons ensemble ! 😊💕`,
+            `Voilà qui fait rêver ! 🌹`,
+            `C'est la vraie love 💯`,
+            `Parfait ensemble ! 👌💗`
+        ];
+        const randomDescription = descriptions[Math.floor(Math.random() * descriptions.length)];
+
         // Create embed
         const embed = new EmbedBuilder()
             .setColor('#ff1744')
             .setTitle(`❤️ Amour entre ${user1.username} et ${user2.username}`)
-            .setDescription(`C'est magique entre ces deux là ! ✨`)
+            .setDescription(randomDescription)
             .setImage('attachment://couple.png')
             .setFooter({
             text: 'Demandé par ' + interaction.user.username,
