@@ -19,8 +19,8 @@ async function generateCoupleImage(user1: User, user2: User): Promise<Buffer> {
         
         const canvasWidth = 600;
         const canvasHeight = 200;
-        const avatarSize = 140;
-        const padding = 20;
+        const avatarSize = 150;
+        const padding = 15;
 
         // Get avatars URLs
         const avatar1URL = user1.displayAvatarURL({ size: 512, extension: 'png' });
@@ -51,7 +51,7 @@ async function generateCoupleImage(user1: User, user2: User): Promise<Buffer> {
 
         // Create larger red heart SVG
         const heartSvg = Buffer.from(
-            `<svg width="80" height="80" viewBox="0 0 50 50" xmlns="http://www.w3.org/2000/svg">
+            `<svg width="110" height="110" viewBox="0 0 50 50" xmlns="http://www.w3.org/2000/svg">
                 <path d="M25,45 C25,45 5,30 5,20 C5,12 10,8 15,8 C20,8 25,12 25,12 C25,12 30,8 35,8 C40,8 45,12 45,20 C45,30 25,45 25,45 Z" fill="#ff1744"/>
             </svg>`
         );
@@ -70,8 +70,8 @@ async function generateCoupleImage(user1: User, user2: User): Promise<Buffer> {
                 { input: avatar2Buffer, left: avatar2X, top: avatar2Y },
                 {
                     input: heartSvg,
-                    left: Math.floor(canvasWidth / 2 - 40),
-                    top: Math.floor(canvasHeight / 2 - 40)
+                    left: Math.floor(canvasWidth / 2 - 55),
+                    top: Math.floor(canvasHeight / 2 - 55)
                 }
             ])
             .png()
