@@ -20,13 +20,20 @@ export class CountingManager {
                 return; // Pas de comptage actif dans ce canal
             }
 
-            // Vérifier si le message est un nombre
-            const number = parseInt(message.content.trim());
-
-            if (isNaN(number)) {
-                // Ce n'est pas un nombre, ignorer
+            // Extraire le nombre au début du message
+            const match = message.content.trim().match(/^(\d+)/);
+            
+            if (!match) {
+                // Le message ne commence pas par un nombre, le supprimer
+                try {
+                    await message.delete();
+                } catch (error) {
+                    console.error('Erreur lors de la suppression du message:', error);
+                }
                 return;
             }
+            
+            const number = parseInt(match[1]);
 
             // Vérifier que le nombre est le suivant attendu
             const expectedNumber = config.current_count + 1;
