@@ -24,7 +24,7 @@ async function generateCoupleImage(user1: User, user2: User): Promise<Buffer> {
 
         // Create base image with dark background
         console.log(`[COUPLE] Création de l'image de base (${canvasWidth}x${canvasHeight})`);
-        const image = new Jimp({
+        const image = await Jimp.create({
             width: canvasWidth,
             height: canvasHeight,
             color: 0x1a1a2eff
