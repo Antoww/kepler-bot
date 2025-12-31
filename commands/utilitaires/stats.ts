@@ -5,7 +5,7 @@ import { config } from 'dotenv';
 config();
 
 export const data = new SlashCommandBuilder()
-	.setName('stats')
+	.setName('gamestats')
 	.setDescription('Affiche les statistiques de jeux vidéo')
 	.addSubcommand(subcommand =>
 		subcommand

@@ -2,7 +2,7 @@ import { type CommandInteraction, SlashCommandBuilder, EmbedBuilder } from 'disc
 import process from 'node:process';
 
 export const data = new SlashCommandBuilder()
-    .setName('stats')
+    .setName('botstats')
     .setDescription('Affiche les statistiques du bot');
 
 export async function execute(interaction: CommandInteraction) {
