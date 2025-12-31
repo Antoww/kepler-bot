@@ -14,6 +14,8 @@ export const data = new SlashCommandBuilder()
 
 async function generateCoupleImage(user1: User, user2: User): Promise<Buffer> {
     try {
+        console.log(`[COUPLE] Génération d'image pour ${user1.username} et ${user2.username}...`);
+        
         // Image dimensions
         const canvasWidth = 600;
         const canvasHeight = 200;
@@ -21,6 +23,7 @@ async function generateCoupleImage(user1: User, user2: User): Promise<Buffer> {
         const padding = 20;
 
         // Create base image with dark background
+        console.log(`[COUPLE] Création de l'image de base (${canvasWidth}x${canvasHeight})`);
         const image = new Jimp({
             width: canvasWidth,
             height: canvasHeight,
@@ -32,6 +35,7 @@ async function generateCoupleImage(user1: User, user2: User): Promise<Buffer> {
         const avatar2URL = user2.displayAvatarURL({ size: 512, extension: 'png' });
 
         // Download and process avatars
+        console.log(`[COUPLE] Téléchargement des avatars...`);
         const avatar1Data = await axios.get(avatar1URL, { responseType: 'arraybuffer' });
         const avatar2Data = await axios.get(avatar2URL, { responseType: 'arraybuffer' });
 
@@ -39,6 +43,7 @@ async function generateCoupleImage(user1: User, user2: User): Promise<Buffer> {
         const avatar2 = await Jimp.read(avatar2Data.data);
 
         // Resize avatars
+        console.log(`[COUPLE] Redimensionnement et circularisation des avatars...`);
         avatar1.resize({ w: avatarSize, h: avatarSize });
         avatar2.resize({ w: avatarSize, h: avatarSize });
 
@@ -53,6 +58,7 @@ async function generateCoupleImage(user1: User, user2: User): Promise<Buffer> {
         const avatar2Y = (canvasHeight - avatarSize) / 2;
 
         // Composite avatars on main image
+        console.log(`[COUPLE] Composition de l'image...`);
         image.composite({
             source: avatar1,
             x: avatar1X,
@@ -66,48 +72,50 @@ async function generateCoupleImage(user1: User, user2: User): Promise<Buffer> {
         });
 
         // Draw heart in the middle
-        drawHeart(image, canvasWidth / 2, canvasHeight / 2, 40);
+        console.log(`[COUPLE] Dessin du cœur...`);
+        drawHeartOptimized(image, canvasWidth / 2, canvasHeight / 2, 40);
 
-        return await image.png().toBuffer();
+        console.log(`[COUPLE] Conversion en PNG...`);
+        const buffer = await image.png().toBuffer();
+        console.log(`[COUPLE] Image générée avec succès (${buffer.length} bytes)`);
+
+        return buffer;
     } catch (error) {
-        console.error('Error generating couple image:', error);
+        console.error('[COUPLE] Erreur lors de la génération:', error);
         throw error;
     }
 }
 
-function drawHeart(image: Jimp, x: number, y: number, size: number) {
-    // Red heart color
+function drawHeartOptimized(image: Jimp, x: number, y: number, size: number) {
+    // Red heart color (RGBA)
     const redColor = 0xff1744ff;
-    
-    // Simple heart drawing using Jimp's scan method
     const d = size;
-    
-    // This creates a simple filled heart shape
-    for (let i = -d; i <= d; i++) {
-        for (let j = -d; j <= d; j++) {
-            // Heart shape equation
-            const heartX = i;
-            const heartY = j;
-            const xx = heartX / d;
-            const yy = -heartY / d;
-            
-            // Heart curve formula
-            const heart = Math.pow(xx * xx + (yy - Math.abs(xx)) * (yy - Math.abs(xx)), 0.5) - 1;
-            
-            if (heart <= 0) {
-                const pixelX = Math.round(x + heartX);
-                const pixelY = Math.round(y + heartY);
-                
-                if (pixelX >= 0 && pixelX < image.bitmap.width && pixelY >= 0 && pixelY < image.bitmap.height) {
-                    image.setPixelColor(redColor, pixelX, pixelY);
-                }
-            }
+
+    // Pre-calculate boundaries
+    const minX = Math.max(0, Math.floor(x - d));
+    const maxX = Math.min(image.bitmap.width - 1, Math.ceil(x + d));
+    const minY = Math.max(0, Math.floor(y - d));
+    const maxY = Math.min(image.bitmap.height - 1, Math.ceil(y + d));
+
+    // Use Jimp's scan for better performance
+    image.scan(minX, minY, maxX - minX + 1, maxY - minY + 1, (px: number, py: number) => {
+        const heartX = px - x;
+        const heartY = py - y;
+        const xx = heartX / d;
+        const yy = -heartY / d;
+
+        // Heart curve formula
+        const heart = Math.pow(xx * xx + (yy - Math.abs(xx)) * (yy - Math.abs(xx)), 0.5) - 1;
+
+        if (heart <= 0) {
+            image.setPixelColor(redColor, px, py);
         }
-    }
+    });
 }
 
 export async function execute(interaction: CommandInteraction) {
     try {
+        console.log(`[COUPLE] Commande exécutée par ${interaction.user.username}`);
         await interaction.deferReply();
 
         let user1 = interaction.options.getUser('personne1');
@@ -115,6 +123,7 @@ export async function execute(interaction: CommandInteraction) {
 
         // If users are not provided, pick random users from the guild
         if (!user1 || !user2) {
+            console.log(`[COUPLE] Sélection aléatoire des utilisateurs...`);
             const guild = interaction.guild;
             if (!guild) {
                 await interaction.editReply('❌ Cette commande ne peut être utilisée que dans un serveur');
@@ -138,6 +147,7 @@ export async function execute(interaction: CommandInteraction) {
             if (!user1) {
                 const randomIndex1 = Math.floor(Math.random() * membersArray.length);
                 user1 = membersArray[randomIndex1].user;
+                console.log(`[COUPLE] Utilisateur 1 aléatoire: ${user1.username}`);
             }
 
             if (!user2) {
@@ -147,6 +157,7 @@ export async function execute(interaction: CommandInteraction) {
                     randomIndex2 = Math.floor(Math.random() * membersArray.length);
                 }
                 user2 = membersArray[randomIndex2].user;
+                console.log(`[COUPLE] Utilisateur 2 aléatoire: ${user2.username}`);
             }
         }
 
@@ -169,12 +180,14 @@ export async function execute(interaction: CommandInteraction) {
             .setFooter({ text: 'Couple Generator' })
             .setTimestamp();
 
+        console.log(`[COUPLE] Envoi de la réponse...`);
         await interaction.editReply({
             embeds: [embed],
             files: [attachment]
         });
+        console.log(`[COUPLE] ✅ Commande exécutée avec succès`);
     } catch (error) {
-        console.error(error);
+        console.error('[COUPLE] ❌ Erreur:', error);
         await interaction.editReply('❌ Une erreur est survenue lors de la génération du couple');
     }
 }
