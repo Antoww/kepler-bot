@@ -92,9 +92,9 @@ async function handleChannelCommand(interaction: CommandInteraction) {
 
         await interaction.reply({ embeds: [embed] });
 
-        // Envoyer un message dans le salon de comptage
+        // Envoyer un message dans le salon de comptage et l'épingler
         try {
-            await channel.send({
+            const countingMessage = await channel.send({
                 embeds: [
                     new EmbedBuilder()
                         .setColor('#0099ff')
@@ -103,6 +103,8 @@ async function handleChannelCommand(interaction: CommandInteraction) {
                         .setTimestamp()
                 ]
             });
+            // Épingler le message
+            await countingMessage.pin().catch(error => console.error('Erreur lors de l\'épinglage du message:', error));
         } catch (error) {
             console.error('Erreur lors de l\'envoi du message dans le salon:', error);
         }

@@ -39,14 +39,14 @@ export class CountingManager {
                     console.error('Erreur lors de la suppression du message:', error);
                 }
 
-                // Envoyer un message d'erreur
+                // Envoyer un message d'erreur ephemeral
                 const errorEmbed = new EmbedBuilder()
                     .setColor('#ff0000')
                     .setDescription(`❌ ${message.author.toString()} Le nombre attendu était **${expectedNumber}**, pas ${number}!`)
                     .setTimestamp();
 
                 try {
-                    const errorMsg = await message.channel.send({ embeds: [errorEmbed] });
+                    const errorMsg = await message.channel.send({ embeds: [errorEmbed], reply: { messageReference: message.id } });
                     // Supprimer le message d'erreur après 3 secondes
                     setTimeout(() => errorMsg.delete().catch(() => {}), 3000);
                 } catch (error) {
@@ -64,14 +64,14 @@ export class CountingManager {
                     console.error('Erreur lors de la suppression du message:', error);
                 }
 
-                // Envoyer un message d'erreur
+                // Envoyer un message d'erreur ephemeral
                 const errorEmbed = new EmbedBuilder()
                     .setColor('#ff0000')
                     .setDescription(`❌ ${message.author.toString()} Vous avez déjà compté! Attendez que quelqu'un d'autre compte.`)
                     .setTimestamp();
 
                 try {
-                    const errorMsg = await message.channel.send({ embeds: [errorEmbed] });
+                    const errorMsg = await message.channel.send({ embeds: [errorEmbed], reply: { messageReference: message.id } });
                     // Supprimer le message d'erreur après 3 secondes
                     setTimeout(() => errorMsg.delete().catch(() => {}), 3000);
                 } catch (error) {
