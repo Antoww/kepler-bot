@@ -3,7 +3,7 @@ import { createCanvas, loadImage } from 'canvas';
 
 export const data = new SlashCommandBuilder()
     .setName('couple')
-    .setDescription('Crée un couple avec deux utilisateurs')
+    .setDescription('Crée un couple avec deux membres du serveur')
     .addUserOption(option => option.setName('personne1')
         .setDescription('Première personne du couple')
         .setRequired(false))
