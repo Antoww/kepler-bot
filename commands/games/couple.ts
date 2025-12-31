@@ -120,8 +120,8 @@ export async function execute(interaction: CommandInteraction) {
                 return;
             }
 
-            // Fetch all members
-            const members = await guild.members.fetch();
+            // Fetch all members (use cache if available)
+            const members = await guild.members.fetch({ force: false });
             
             // Filter out bots
             const nonBotMembers = members.filter(m => !m.user.bot);
