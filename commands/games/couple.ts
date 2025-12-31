@@ -1,5 +1,6 @@
 import { type CommandInteraction, SlashCommandBuilder, EmbedBuilder, AttachmentBuilder, type User } from 'discord.js';
-import { createCanvas, loadImage } from 'canvas';
+import Jimp from 'jimp';
+import axios from 'axios';
 
 export const data = new SlashCommandBuilder()
     .setName('couple')
@@ -12,67 +13,97 @@ export const data = new SlashCommandBuilder()
         .setRequired(false));
 
 async function generateCoupleImage(user1: User, user2: User): Promise<Buffer> {
-    const canvas = createCanvas(600, 200);
-    const ctx = canvas.getContext('2d');
-
-    // Background
-    ctx.fillStyle = '#1a1a2e';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    // Load avatars
-    const avatar1URL = user1.displayAvatarURL({ size: 512, extension: 'png' });
-    const avatar2URL = user2.displayAvatarURL({ size: 512, extension: 'png' });
-
     try {
-        const avatar1 = await loadImage(avatar1URL);
-        const avatar2 = await loadImage(avatar2URL);
-
-        // Draw avatars with circular clipping
+        // Image dimensions
+        const canvasWidth = 600;
+        const canvasHeight = 200;
         const avatarSize = 140;
         const padding = 20;
 
-        // Avatar 1 (left)
-        ctx.save();
-        ctx.beginPath();
-        ctx.arc(padding + avatarSize / 2, canvas.height / 2, avatarSize / 2, 0, Math.PI * 2);
-        ctx.clip();
-        ctx.drawImage(avatar1, padding, canvas.height / 2 - avatarSize / 2, avatarSize, avatarSize);
-        ctx.restore();
+        // Create base image with dark background
+        const image = new Jimp({
+            width: canvasWidth,
+            height: canvasHeight,
+            color: 0x1a1a2eff
+        });
 
-        // Avatar 2 (right)
-        ctx.save();
-        ctx.beginPath();
-        ctx.arc(canvas.width - padding - avatarSize / 2, canvas.height / 2, avatarSize / 2, 0, Math.PI * 2);
-        ctx.clip();
-        ctx.drawImage(avatar2, canvas.width - padding - avatarSize, canvas.height / 2 - avatarSize / 2, avatarSize, avatarSize);
-        ctx.restore();
+        // Get avatars
+        const avatar1URL = user1.displayAvatarURL({ size: 512, extension: 'png' });
+        const avatar2URL = user2.displayAvatarURL({ size: 512, extension: 'png' });
+
+        // Download and process avatars
+        const avatar1Data = await axios.get(avatar1URL, { responseType: 'arraybuffer' });
+        const avatar2Data = await axios.get(avatar2URL, { responseType: 'arraybuffer' });
+
+        const avatar1 = await Jimp.read(avatar1Data.data);
+        const avatar2 = await Jimp.read(avatar2Data.data);
+
+        // Resize avatars
+        avatar1.resize({ w: avatarSize, h: avatarSize });
+        avatar2.resize({ w: avatarSize, h: avatarSize });
+
+        // Circularize avatars (create circular mask)
+        avatar1.circle();
+        avatar2.circle();
+
+        // Position avatars
+        const avatar1X = padding;
+        const avatar1Y = (canvasHeight - avatarSize) / 2;
+        const avatar2X = canvasWidth - padding - avatarSize;
+        const avatar2Y = (canvasHeight - avatarSize) / 2;
+
+        // Composite avatars on main image
+        image.composite({
+            source: avatar1,
+            x: avatar1X,
+            y: avatar1Y
+        });
+
+        image.composite({
+            source: avatar2,
+            x: avatar2X,
+            y: avatar2Y
+        });
 
         // Draw heart in the middle
-        drawHeart(ctx, canvas.width / 2, canvas.height / 2, 40);
+        drawHeart(image, canvasWidth / 2, canvasHeight / 2, 40);
 
-        return canvas.toBuffer('image/png');
+        return await image.png().toBuffer();
     } catch (error) {
         console.error('Error generating couple image:', error);
         throw error;
     }
 }
 
-function drawHeart(ctx: any, x: number, y: number, size: number) {
-    ctx.fillStyle = '#ff1744';
-    ctx.beginPath();
+function drawHeart(image: Jimp, x: number, y: number, size: number) {
+    // Red heart color
+    const redColor = 0xff1744ff;
     
+    // Simple heart drawing using Jimp's scan method
     const d = size;
     
-    // Left bump
-    ctx.bezierCurveTo(x - d/2, y - d/3, x - d, y - d/3, x - d, y + d/5);
-    ctx.bezierCurveTo(x - d, y + d/2, x, y + d, x, y + d);
-    
-    // Right bump
-    ctx.bezierCurveTo(x, y + d, x + d, y + d/2, x + d, y + d/5);
-    ctx.bezierCurveTo(x + d, y - d/3, x + d/2, y - d/3, x, y);
-    
-    ctx.closePath();
-    ctx.fill();
+    // This creates a simple filled heart shape
+    for (let i = -d; i <= d; i++) {
+        for (let j = -d; j <= d; j++) {
+            // Heart shape equation
+            const heartX = i;
+            const heartY = j;
+            const xx = heartX / d;
+            const yy = -heartY / d;
+            
+            // Heart curve formula
+            const heart = Math.pow(xx * xx + (yy - Math.abs(xx)) * (yy - Math.abs(xx)), 0.5) - 1;
+            
+            if (heart <= 0) {
+                const pixelX = Math.round(x + heartX);
+                const pixelY = Math.round(y + heartY);
+                
+                if (pixelX >= 0 && pixelX < image.bitmap.width && pixelY >= 0 && pixelY < image.bitmap.height) {
+                    image.setPixelColor(redColor, pixelX, pixelY);
+                }
+            }
+        }
+    }
 }
 
 export async function execute(interaction: CommandInteraction) {
