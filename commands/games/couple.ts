@@ -22,59 +22,53 @@ async function generateCoupleImage(user1: User, user2: User): Promise<Buffer> {
         const avatarSize = 140;
         const padding = 20;
 
-        // Create base image - create transparent image then fill with color
-        console.log(`[COUPLE] Création de l'image de base (${canvasWidth}x${canvasHeight})`);
-        let image = new Jimp({ width: canvasWidth, height: canvasHeight });
-        image.fillColor({ r: 26, g: 26, b: 46, a: 255 }); // Dark background #1a1a2e
-
-        // Get avatars
+        // Get avatars URLs
         const avatar1URL = user1.displayAvatarURL({ size: 512, extension: 'png' });
         const avatar2URL = user2.displayAvatarURL({ size: 512, extension: 'png' });
 
-        // Download and process avatars
-        console.log(`[COUPLE] Téléchargement des avatars...`);
-        const avatar1Data = await axios.get(avatar1URL, { responseType: 'arraybuffer' });
-        const avatar2Data = await axios.get(avatar2URL, { responseType: 'arraybuffer' });
+        // Download avatars in parallel + create base image in parallel
+        console.log(`[COUPLE] Téléchargement & création...`);
+        const [avatar1Data, avatar2Data, image] = await Promise.all([
+            axios.get(avatar1URL, { responseType: 'arraybuffer' }),
+            axios.get(avatar2URL, { responseType: 'arraybuffer' }),
+            (async () => {
+                let img = new Jimp({ width: canvasWidth, height: canvasHeight });
+                img.fillColor({ r: 26, g: 26, b: 46, a: 255 });
+                return img;
+            })()
+        ]);
 
-        const avatar1 = new Jimp({ data: Buffer.from(avatar1Data.data) });
-        const avatar2 = new Jimp({ data: Buffer.from(avatar2Data.data) });
+        // Load avatars in parallel
+        const [avatar1, avatar2] = await Promise.all([
+            (async () => {
+                const av = new Jimp({ data: Buffer.from(avatar1Data.data) });
+                av.resize({ w: avatarSize, h: avatarSize });
+                av.circle();
+                return av;
+            })(),
+            (async () => {
+                const av = new Jimp({ data: Buffer.from(avatar2Data.data) });
+                av.resize({ w: avatarSize, h: avatarSize });
+                av.circle();
+                return av;
+            })()
+        ]);
 
-        // Resize avatars
-        console.log(`[COUPLE] Redimensionnement et circularisation des avatars...`);
-        avatar1.resize({ w: avatarSize, h: avatarSize });
-        avatar2.resize({ w: avatarSize, h: avatarSize });
-
-        // Circularize avatars (create circular mask)
-        avatar1.circle();
-        avatar2.circle();
-
-        // Position avatars
+        // Position and composite avatars
         const avatar1X = padding;
         const avatar1Y = (canvasHeight - avatarSize) / 2;
         const avatar2X = canvasWidth - padding - avatarSize;
         const avatar2Y = (canvasHeight - avatarSize) / 2;
 
-        // Composite avatars on main image
-        console.log(`[COUPLE] Composition de l'image...`);
-        image.composite({
-            source: avatar1,
-            x: avatar1X,
-            y: avatar1Y
-        });
+        image.composite({ source: avatar1, x: avatar1X, y: avatar1Y });
+        image.composite({ source: avatar2, x: avatar2X, y: avatar2Y });
 
-        image.composite({
-            source: avatar2,
-            x: avatar2X,
-            y: avatar2Y
-        });
-
-        // Draw heart in the middle
-        console.log(`[COUPLE] Dessin du cœur...`);
+        // Draw heart
         drawHeartOptimized(image, canvasWidth / 2, canvasHeight / 2, 40);
 
-        console.log(`[COUPLE] Conversion en PNG...`);
+        // Convert to PNG
         const buffer = await image.png().toBuffer();
-        console.log(`[COUPLE] Image générée avec succès (${buffer.length} bytes)`);
+        console.log(`[COUPLE] ✅ Générée (${buffer.length} bytes)`);
 
         return buffer;
     } catch (error) {
@@ -84,30 +78,22 @@ async function generateCoupleImage(user1: User, user2: User): Promise<Buffer> {
 }
 
 function drawHeartOptimized(image: Jimp, x: number, y: number, size: number) {
-    // Red heart color (RGBA)
+    // Simple red circle instead of complex heart shape to avoid blocking
     const redColor = 0xff1744ff;
-    const d = size;
+    const radius = Math.floor(size / 2);
 
-    // Pre-calculate boundaries
-    const minX = Math.max(0, Math.floor(x - d));
-    const maxX = Math.min(image.bitmap.width - 1, Math.ceil(x + d));
-    const minY = Math.max(0, Math.floor(y - d));
-    const maxY = Math.min(image.bitmap.height - 1, Math.ceil(y + d));
-
-    // Use Jimp's scan for better performance
-    image.scan(minX, minY, maxX - minX + 1, maxY - minY + 1, (px: number, py: number) => {
-        const heartX = px - x;
-        const heartY = py - y;
-        const xx = heartX / d;
-        const yy = -heartY / d;
-
-        // Heart curve formula
-        const heart = Math.pow(xx * xx + (yy - Math.abs(xx)) * (yy - Math.abs(xx)), 0.5) - 1;
-
-        if (heart <= 0) {
-            image.setPixelColor(redColor, px, py);
+    // Draw simple circle for heart (fast and non-blocking)
+    for (let i = -radius; i <= radius; i++) {
+        for (let j = -radius; j <= radius; j++) {
+            if (i * i + j * j <= radius * radius) {
+                const px = Math.floor(x + i);
+                const py = Math.floor(y + j);
+                if (px >= 0 && px < image.bitmap.width && py >= 0 && py < image.bitmap.height) {
+                    image.setPixelColor(redColor, px, py);
+                }
+            }
         }
-    });
+    }
 }
 
 export async function execute(interaction: CommandInteraction) {
