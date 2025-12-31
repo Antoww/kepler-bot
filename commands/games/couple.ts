@@ -104,35 +104,34 @@ export async function execute(interaction: CommandInteraction) {
                 return;
             }
 
-            // Try cache first, fetch if cache is too small
+            // Get members from cache + voice/presences
             let members = guild.members.cache;
-            if (members.size < 2) {
-                console.log(`[COUPLE] Cache petit (${members.size}), fetching...`);
-                try {
-                    members = await guild.members.fetch({ limit: 1000, withPresences: false });
-                } catch (e) {
-                    console.log(`[COUPLE] Fetch failed, using cache anyway`);
-                }
+            
+            // Try to get from presences if cache is empty
+            if (members.size < 2 && guild.presences) {
+                members = guild.presences.cache.mapValues(p => p.member).filter(m => m !== null);
             }
             
             // Filter out bots
-            const nonBotMembers = members.filter(m => !m.user.bot);
+            const nonBotMembers = members.filter(m => m && !m.user.bot);
 
             if (nonBotMembers.size < 2) {
-                await interaction.editReply('❌ Il faut au moins 2 membres non-bots sur le serveur');
+                await interaction.editReply(
+                    '❌ Pas assez de membres en cache. Veuillez spécifier deux utilisateurs avec `/couple @user1 @user2`'
+                );
                 return;
             }
 
             // Pick random members
-            const membersArray = Array.from(nonBotMembers.values());
+            const membersArray = Array.from(nonBotMembers.values()).filter(m => m !== null);
             
-            if (!user1) {
+            if (!user1 && membersArray.length > 0) {
                 const randomIndex1 = Math.floor(Math.random() * membersArray.length);
                 user1 = membersArray[randomIndex1].user;
                 console.log(`[COUPLE] Utilisateur 1 aléatoire: ${user1.username}`);
             }
 
-            if (!user2) {
+            if (!user2 && membersArray.length > 0) {
                 let randomIndex2 = Math.floor(Math.random() * membersArray.length);
                 // Make sure we don't pick the same user twice
                 while (user1 && membersArray[randomIndex2].user.id === user1.id && membersArray.length > 1) {
