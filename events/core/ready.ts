@@ -1,10 +1,11 @@
 import { type Client } from 'discord.js';
 import config from '../../config.json' with { type: 'json' };
+import { initializeGiveaways } from './giveawayManager.ts';
 
 export const name = 'ready';
 export const once = true;
 
-export function execute(client: Client<true>) {
+export async function execute(client: Client<true>) {
     console.log(`[LOG : ${new Date().toLocaleDateString()}] Bot connecté en tant que ${client.user?.tag}`);
     console.log(`[LOG : ${new Date().toLocaleDateString()}] Prêt à servir ${client.guilds.cache.size} serveur(s)`);
     
@@ -17,4 +18,11 @@ export function execute(client: Client<true>) {
     // 4 = Custom (Statut personnalisé)
     // 5 = Competing (En compétition dans)
     client.user.setActivity(config.botversion, { type: 3 }); // Type 3 = Watching
+    
+    // Initialiser les giveaways
+    try {
+        await initializeGiveaways(client);
+    } catch (error) {
+        console.error('❌ Erreur lors de l\'initialisation des giveaways:', error);
+    }
 }

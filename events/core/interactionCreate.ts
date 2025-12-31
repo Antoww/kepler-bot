@@ -1,5 +1,7 @@
 import { type CommandInteraction, type ButtonInteraction, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
 import { createReminder } from '../../database/supabase.ts';
+import { addGiveawayParticipant, removeGiveawayParticipant, isParticipant, getGiveaway, getGiveawayParticipantCount } from '../../database/db.ts';
+import { formatTimeRemaining, generateGiveawayEmbed } from './giveawayManager.ts';
 
 export const name = 'interactionCreate';
 
@@ -49,7 +51,11 @@ async function handleButtonInteraction(interaction: ButtonInteraction) {
     const customId = interaction.customId;
 
     try {
-        if (customId.startsWith('repeat_')) {
+        if (customId === 'giveaway_join') {
+            await handleGiveawayJoin(interaction);
+        } else if (customId === 'giveaway_leave') {
+            await handleGiveawayLeave(interaction);
+        } else if (customId.startsWith('repeat_')) {
             await handleRepeatReminder(interaction);
         } else if (customId.startsWith('snooze_')) {
             await handleSnoozeReminder(interaction);
@@ -63,6 +69,138 @@ async function handleButtonInteraction(interaction: ButtonInteraction) {
                 ephemeral: true 
             });
         }
+    }
+}
+
+async function handleGiveawayJoin(interaction: ButtonInteraction) {
+    const message = interaction.message;
+    const footer = message.embeds[0]?.footer?.text;
+    const giveawayId = footer?.split('ID: ')[1];
+
+    if (!giveawayId) {
+        await interaction.reply({ content: '❌ Impossible de trouver l\'ID du giveaway.', ephemeral: true });
+        return;
+    }
+
+    try {
+        // Vérifier si le giveaway existe
+        const giveaway = await getGiveaway(giveawayId);
+        if (!giveaway || giveaway.ended) {
+            await interaction.reply({ content: '❌ Ce giveaway n\'existe pas ou est terminé.', ephemeral: true });
+            return;
+        }
+
+        // Vérifier si l'utilisateur a le rôle requis
+        if (giveaway.role_id && interaction.guild?.members.cache.get(interaction.user.id)?.roles.cache.has(giveaway.role_id) === false) {
+            await interaction.reply({ 
+                content: `❌ Vous devez avoir le rôle <@&${giveaway.role_id}> pour participer.`, 
+                ephemeral: true 
+            });
+            return;
+        }
+
+        // Ajouter le participant
+        const added = await addGiveawayParticipant(giveawayId, interaction.user.id);
+
+        if (added) {
+            // Récupérer le nombre de participants
+            const count = await getGiveawayParticipantCount(giveawayId);
+            
+            // Mettre à jour l'embed du message
+            const embed = generateGiveawayEmbed(giveaway, count, formatTimeRemaining(new Date(giveaway.end_time)));
+            const buttons = new ActionRowBuilder<ButtonBuilder>()
+                .addComponents(
+                    new ButtonBuilder()
+                        .setCustomId('giveaway_join')
+                        .setLabel('✅ Participer')
+                        .setStyle(ButtonStyle.Success),
+                    new ButtonBuilder()
+                        .setCustomId('giveaway_leave')
+                        .setLabel('❌ Se retirer')
+                        .setStyle(ButtonStyle.Danger)
+                );
+
+            await message.edit({ embeds: [embed], components: [buttons] });
+
+            await interaction.reply({ 
+                content: `✅ Vous participez maintenant au giveaway **${giveaway.title}**!`, 
+                ephemeral: true 
+            });
+        } else {
+            await interaction.reply({ 
+                content: '❌ Vous participez déjà à ce giveaway.', 
+                ephemeral: true 
+            });
+        }
+    } catch (error) {
+        console.error('Erreur lors de la participation au giveaway:', error);
+        await interaction.reply({ 
+            content: '❌ Une erreur est survenue.', 
+            ephemeral: true 
+        });
+    }
+}
+
+async function handleGiveawayLeave(interaction: ButtonInteraction) {
+    const message = interaction.message;
+    const footer = message.embeds[0]?.footer?.text;
+    const giveawayId = footer?.split('ID: ')[1];
+
+    if (!giveawayId) {
+        await interaction.reply({ content: '❌ Impossible de trouver l\'ID du giveaway.', ephemeral: true });
+        return;
+    }
+
+    try {
+        // Vérifier si le giveaway existe
+        const giveaway = await getGiveaway(giveawayId);
+        if (!giveaway) {
+            await interaction.reply({ content: '❌ Ce giveaway n\'existe pas.', ephemeral: true });
+            return;
+        }
+
+        // Vérifier si l'utilisateur participe
+        const participated = await isParticipant(giveawayId, interaction.user.id);
+        if (!participated) {
+            await interaction.reply({ 
+                content: '❌ Vous ne participez pas à ce giveaway.', 
+                ephemeral: true 
+            });
+            return;
+        }
+
+        // Retirer le participant
+        await removeGiveawayParticipant(giveawayId, interaction.user.id);
+
+        // Récupérer le nombre de participants
+        const count = await getGiveawayParticipantCount(giveawayId);
+        
+        // Mettre à jour l'embed du message
+        const embed = generateGiveawayEmbed(giveaway, count, formatTimeRemaining(new Date(giveaway.end_time)));
+        const buttons = new ActionRowBuilder<ButtonBuilder>()
+            .addComponents(
+                new ButtonBuilder()
+                    .setCustomId('giveaway_join')
+                    .setLabel('✅ Participer')
+                    .setStyle(ButtonStyle.Success),
+                new ButtonBuilder()
+                    .setCustomId('giveaway_leave')
+                    .setLabel('❌ Se retirer')
+                    .setStyle(ButtonStyle.Danger)
+            );
+
+        await message.edit({ embeds: [embed], components: [buttons] });
+
+        await interaction.reply({ 
+            content: `✅ Vous avez quitté le giveaway **${giveaway.title}**.`, 
+            ephemeral: true 
+        });
+    } catch (error) {
+        console.error('Erreur lors de la suppression du giveaway:', error);
+        await interaction.reply({ 
+            content: '❌ Une erreur est survenue.', 
+            ephemeral: true 
+        });
     }
 }
 
