@@ -158,7 +158,10 @@ export async function execute(interaction: CommandInteraction) {
             .setTitle(`❤️ Amour entre ${user1.username} et ${user2.username}`)
             .setDescription(`C'est magique entre ces deux là ! ✨`)
             .setImage('attachment://couple.png')
-            .setFooter({ text: 'Couple Generator' })
+            .setFooter({
+            text: 'Demandé par ' + interaction.user.username,
+            iconURL: interaction.user.displayAvatarURL({ forceStatic: false })
+     })
             .setTimestamp();
 
         console.log(`[COUPLE] Envoi de la réponse...`);
