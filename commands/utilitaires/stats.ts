@@ -434,21 +434,33 @@ async function getDota2Stats(interaction: any) {
 
 		// Si ce n'est pas un ID numérique, chercher via le pseudo
 		if (!/^\d+$/.test(input)) {
-			console.log(`[STATS] Recherche du joueur Dota 2 par pseudo: ${input}`);
-			const searchResponse = await axios.get(
-				`https://api.opendota.com/api/search/players?q=${encodeURIComponent(input)}`,
-				{ timeout: 5000 }
-			);
+			try {
+				console.log(`[STATS] Recherche du joueur Dota 2 par pseudo: ${input}`);
+				const searchResponse = await axios.get(
+					`https://api.opendota.com/api/search/players?q=${encodeURIComponent(input)}&limit=1`,
+					{ timeout: 5000 }
+				);
 
-			if (!searchResponse.data || searchResponse.data.length === 0) {
+				if (!searchResponse.data || searchResponse.data.length === 0) {
+					return interaction.editReply({
+						content: `❌ Joueur \`${input}\` introuvable sur Dota 2.\n💡 Essayez avec l'ID numérique du joueur ou vérifiez l'orthographe du pseudo.`
+					});
+				}
+
+				// Prendre le premier résultat
+				playerId = searchResponse.data[0].account_id?.toString();
+				if (!playerId) {
+					return interaction.editReply({
+						content: `❌ Impossible de convertir le pseudo \`${input}\` en ID.`
+					});
+				}
+				console.log(`[STATS] Joueur trouvé avec ID: ${playerId}`);
+			} catch (searchError: any) {
+				console.error(`[STATS] Erreur lors de la recherche:`, searchError.message);
 				return interaction.editReply({
-					content: `❌ Joueur \`${input}\` introuvable sur Dota 2`
+					content: `❌ Erreur lors de la recherche du joueur \`${input}\`.\n💡 Essayez avec l'ID numérique du joueur.`
 				});
 			}
-
-			// Prendre le premier résultat
-			playerId = searchResponse.data[0].account_id.toString();
-			console.log(`[STATS] Joueur trouvé avec ID: ${playerId}`);
 		}
 
 		const response = await axios.get(`https://api.opendota.com/api/players/${playerId}`, {
@@ -498,12 +510,17 @@ async function getDota2Stats(interaction: any) {
 		console.log(`[STATS] ✅ Dota 2 stats récupérées`);
 		return interaction.editReply({ embeds: [embed] });
 	} catch (error: any) {
+		console.error(`[STATS] Erreur Dota 2:`, error.message);
+		
 		if (error.response?.status === 404) {
 			return interaction.editReply({
 				content: `❌ Joueur \`${input}\` introuvable sur Dota 2`
 			});
 		}
-		throw error;
+		
+		return interaction.editReply({
+			content: `❌ Erreur lors de la récupération des stats Dota 2`
+		});
 	}
 }
 
