@@ -79,6 +79,23 @@ async function handleViewSanctions(interaction: CommandInteraction) {
         const isTimedOut = targetMember?.isCommunicationDisabled();
         const timeoutUntil = targetMember?.communicationDisabledUntil;
 
+        // Calculer les statistiques
+        const stats = {
+            ban: history?.filter(h => h.action_type === 'ban' || h.action_type === 'tempban').length || 0,
+            kick: history?.filter(h => h.action_type === 'kick').length || 0,
+            mute: history?.filter(h => h.action_type === 'mute' || h.action_type === 'tempmute').length || 0,
+            timeout: history?.filter(h => h.action_type === 'timeout').length || 0,
+            warn: history?.filter(h => h.action_type === 'warn').length || 0
+        };
+
+        const statsText = [
+            `🔨 Bans: **${stats.ban}**`,
+            `👢 Kicks: **${stats.kick}**`,
+            `🔇 Mutes: **${stats.mute}**`,
+            `⏱️ Timeouts: **${stats.timeout}**`,
+            `⚠️ Warns: **${stats.warn}**`
+        ].join(' • ');
+
         // Créer l'embed de base
         const baseEmbed = new EmbedBuilder()
             .setAuthor({ 
@@ -99,22 +116,10 @@ async function handleViewSanctions(interaction: CommandInteraction) {
             activeStatus = `⏱️ **Timeout actif**\nExpire: <t:${Math.floor(timeoutUntil.getTime() / 1000)}:F>`;
         }
 
-        baseEmbed.addFields({ name: '📊 Statut actuel', value: activeStatus, inline: false });
-
-        // Warnings actifs
-        if (warnings && warnings.length > 0) {
-            const warningsText = warnings.slice(0, 5).map((warning) => {
-                const date = new Date(warning.created_at);
-                const timestamp = Math.floor(date.getTime() / 1000);
-                return `**#${warning.sanction_number}** - ${warning.reason}\n🕐 <t:${timestamp}:R> | 🛡️ <@${warning.moderator_id}>`;
-            }).join('\n\n');
-
-            baseEmbed.addFields({ 
-                name: `⚠️ Avertissements actifs (${warnings.length})`, 
-                value: warningsText.length > 1024 ? warningsText.substring(0, 1021) + '...' : warningsText, 
-                inline: false 
-            });
-        }
+        baseEmbed.addFields(
+            { name: '📊 Statut actuel', value: activeStatus, inline: false },
+            { name: '📈 Statistiques', value: statsText, inline: false }
+        );
 
         if (!history || history.length === 0) {
             baseEmbed.addFields({ name: '📜 Historique', value: 'Aucune action de modération enregistrée', inline: false });
@@ -130,27 +135,6 @@ async function handleViewSanctions(interaction: CommandInteraction) {
         let currentPage = 0;
         const itemsPerPage = 5;
         const totalPages = Math.ceil(history.length / itemsPerPage);
-
-        // Statistiques
-        const stats = {
-            ban: history.filter(h => h.action_type === 'ban' || h.action_type === 'tempban').length,
-            kick: history.filter(h => h.action_type === 'kick').length,
-            mute: history.filter(h => h.action_type === 'mute' || h.action_type === 'tempmute').length,
-            timeout: history.filter(h => h.action_type === 'timeout').length,
-            warn: history.filter(h => h.action_type === 'warn').length,
-            unban: history.filter(h => h.action_type === 'unban').length,
-            unmute: history.filter(h => h.action_type === 'unmute').length
-        };
-
-        const statsText = [
-            `🔨 Bans: **${stats.ban}**`,
-            `👢 Kicks: **${stats.kick}**`,
-            `🔇 Mutes: **${stats.mute}**`,
-            `⏱️ Timeouts: **${stats.timeout}**`,
-            `⚠️ Warns: **${stats.warn}**`
-        ].join('\n');
-
-        baseEmbed.addFields({ name: '📈 Statistiques', value: statsText, inline: true });
 
         const generateEmbed = (page: number) => {
             const start = page * itemsPerPage;
