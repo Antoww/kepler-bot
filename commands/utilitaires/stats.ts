@@ -46,8 +46,8 @@ export const data = new SlashCommandBuilder()
 			.setDescription('Affiche les stats Dota 2 d\'un joueur')
 			.addStringOption(option =>
 				option
-					.setName('player_id')
-					.setDescription('ID du joueur Dota 2')
+					.setName('joueur')
+					.setDescription('ID numérique ou pseudo du joueur Dota 2')
 					.setRequired(true)
 			)
 	)
@@ -423,16 +423,43 @@ async function getMinecraftStats(interaction: any) {
 }
 
 async function getDota2Stats(interaction: any) {
-	const playerId = interaction.options.getString('player_id');
+	const input = interaction.options.getString('joueur');
 
 	await interaction.deferReply();
 
 	try {
-		console.log(`[STATS] Récupération Dota 2 stats pour ${playerId}...`);
+		console.log(`[STATS] Récupération Dota 2 stats pour ${input}...`);
+
+		let playerId = input;
+
+		// Si ce n'est pas un ID numérique, chercher via le pseudo
+		if (!/^\d+$/.test(input)) {
+			console.log(`[STATS] Recherche du joueur Dota 2 par pseudo: ${input}`);
+			const searchResponse = await axios.get(
+				`https://api.opendota.com/api/search/players?q=${encodeURIComponent(input)}`,
+				{ timeout: 5000 }
+			);
+
+			if (!searchResponse.data || searchResponse.data.length === 0) {
+				return interaction.editReply({
+					content: `❌ Joueur \`${input}\` introuvable sur Dota 2`
+				});
+			}
+
+			// Prendre le premier résultat
+			playerId = searchResponse.data[0].account_id.toString();
+			console.log(`[STATS] Joueur trouvé avec ID: ${playerId}`);
+		}
 
 		const response = await axios.get(`https://api.opendota.com/api/players/${playerId}`, {
 			timeout: 5000
 		});
+
+		if (!response.data || response.data.error) {
+			return interaction.editReply({
+				content: `❌ Impossible de récupérer les stats du joueur \`${input}\``
+			});
+		}
 
 		const player = response.data;
 
@@ -473,7 +500,7 @@ async function getDota2Stats(interaction: any) {
 	} catch (error: any) {
 		if (error.response?.status === 404) {
 			return interaction.editReply({
-				content: `❌ Joueur \`${playerId}\` introuvable sur Dota 2`
+				content: `❌ Joueur \`${input}\` introuvable sur Dota 2`
 			});
 		}
 		throw error;
