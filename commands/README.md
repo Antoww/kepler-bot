@@ -1,53 +1,158 @@
-# Structure des Commandes
+# 📂 Commandes du Bot
 
-Ce dossier contient toutes les commandes du bot Discord organisées par catégories.
+Ce dossier contient toutes les commandes slash du bot Discord, organisées par catégories.
 
-## 📁 Organisation
+## 📁 Structure
 
-### 🛠️ Utilitaires (`/utilitaires/`)
-Commandes d'information et d'utilité générale :
-- `ping.ts` - Affiche la latence du bot
-- `userinfo.ts` - Informations sur un utilisateur
-- `serverinfo.ts` - Informations sur le serveur
-- `channelinfo.ts` - Informations sur un canal
-- `roleinfo.ts` - Informations sur un rôle
-- `rolelist.ts` - Liste des rôles du serveur
-- `whois.ts` - Informations détaillées sur un utilisateur
-- `stats.ts` - Statistiques du bot
-- `status.ts` - Change le statut du bot
-- `genpass.ts` - Génère un mot de passe sécurisé
-- `reminder.ts` - Crée un rappel
-- `birthday.ts` - Souhaite un joyeux anniversaire
-- `credits.ts` - Affiche les crédits du bot
-- `minecraft-uuid.ts` - Récupère l'UUID d'un joueur Minecraft
-- `wowguilde.ts` - Informations sur une guilde WoW
-- `golem.ts` - Crée un golem virtuel
+```
+commands/
+├── administration/    # Commandes réservées aux administrateurs
+├── games/            # Jeux et divertissement
+├── general/          # Commandes générales (ping, help, stats)
+├── moderation/       # Outils de modération
+└── utilitaires/      # Utilitaires divers
+```
 
-### 🛡️ Modération (`/moderation/`)
-Commandes de modération du serveur :
-- `clear.ts` - Supprime des messages
-- `logconfig.ts` - Configure les logs du serveur
+---
 
-### 🎮 Jeux (`/games/`)
-Commandes de divertissement et jeux :
-- `coinflip.ts` - Lance une pièce (pile ou face)
-- `8ball.ts` - Boule magique pour répondre aux questions
-- `meme.ts` - Affiche un meme aléatoire
+## ⚙️ Administration (`/administration/`)
 
-### ⚙️ Administration (`/administration/`)
-Commandes d'administration du bot :
-- `config.ts` - Configure les paramètres du bot
-- `annonce.ts` - Fait une annonce
+Commandes réservées aux administrateurs du serveur ou à l'owner du bot.
 
-## 🔧 Ajout de nouvelles commandes
+| Commande | Description | Permission |
+|----------|-------------|------------|
+| `/annonce` | Envoyer une annonce dans un canal | Admin |
+| `/audit` | Consulter les logs d'audit | Admin |
+| `/bdayconfig` | Configurer le canal d'anniversaires | Admin |
+| `/giveaway` | Créer et gérer des giveaways | Admin |
+| `/graph` | Statistiques d'utilisation du bot | Owner |
+| `/logconfig` | Configurer le canal de logs | Admin |
+| `/moderationconfig` | Configurer le canal de modération | Admin |
+| `/muteroleconfig` | Configurer le rôle mute | Admin |
 
-Pour ajouter une nouvelle commande :
+---
 
-1. **Choisir la catégorie appropriée** dans les sous-dossiers
-2. **Créer un fichier TypeScript** avec le nom de la commande
-3. **Exporter les propriétés requises** :
-   ```typescript
-   export const data = new SlashCommandBuilder()
+## 🎮 Jeux (`/games/`)
+
+Commandes de divertissement et mini-jeux.
+
+| Commande | Description |
+|----------|-------------|
+| `/8ball` | Pose une question à la boule magique 🎱 |
+| `/blague` | Raconte une blague aléatoire |
+| `/chifoumi` | Pierre-feuille-ciseaux |
+| `/coinflip` | Pile ou face 🪙 |
+| `/count` | Configure le jeu de comptage |
+| `/couple` | Crée une image de couple ❤️ |
+| `/golem` | Invoque un golem virtuel |
+| `/meme` | Affiche un meme aléatoire |
+| `/puissance4` | Joue à Puissance 4 contre un autre joueur |
+
+---
+
+## 🏠 Général (`/general/`)
+
+Commandes d'information générale sur le bot.
+
+| Commande | Description |
+|----------|-------------|
+| `/credits` | Affiche les crédits du bot |
+| `/help` | Liste des commandes disponibles |
+| `/ping` | Latence du bot et de l'API |
+| `/botstats` | Statistiques techniques du bot |
+
+---
+
+## 🛡️ Modération (`/moderation/`)
+
+Outils de modération pour les modérateurs du serveur.
+
+| Commande | Description | Permission |
+|----------|-------------|------------|
+| `/ban` | Bannir un utilisateur | BanMembers |
+| `/unban` | Débannir un utilisateur | BanMembers |
+| `/kick` | Expulser un utilisateur | KickMembers |
+| `/mute` | Mute un utilisateur (rôle) | ModerateMembers |
+| `/unmute` | Unmute un utilisateur | ModerateMembers |
+| `/timeout` | Timeout temporaire | ModerateMembers |
+| `/untimeout` | Retirer un timeout | ModerateMembers |
+| `/warn` | Avertir un utilisateur | ModerateMembers |
+| `/clear` | Supprimer des messages | ManageMessages |
+| `/sanctions` | Voir l'historique des sanctions | ModerateMembers |
+
+---
+
+## 🔧 Utilitaires (`/utilitaires/`)
+
+Commandes utilitaires diverses.
+
+| Commande | Description |
+|----------|-------------|
+| `/birthday` | Gérer son anniversaire |
+| `/genpass` | Générer un mot de passe sécurisé |
+| `/info` | Informations (serveur, utilisateur, canal, rôle) |
+| `/lyrics` | Paroles d'une chanson |
+| `/mesdonnees` | Gestion RGPD de vos données 🔐 |
+| `/minecraft-uuid` | UUID d'un joueur Minecraft |
+| `/qrcode` | Générer un QR Code |
+| `/reminder` | Créer un rappel |
+| `/reminders` | Gérer ses rappels |
+| `/rolelist` | Liste des rôles du serveur |
+
+---
+
+## 🔧 Création d'une commande
+
+### Structure de base
+
+```typescript
+import { type ChatInputCommandInteraction, SlashCommandBuilder, EmbedBuilder } from 'discord.js';
+
+export const data = new SlashCommandBuilder()
+    .setName('macommande')
+    .setDescription('Description de la commande');
+
+export async function execute(interaction: ChatInputCommandInteraction) {
+    await interaction.reply('Hello!');
+}
+```
+
+### Avec sous-commandes
+
+```typescript
+export const data = new SlashCommandBuilder()
+    .setName('exemple')
+    .setDescription('Commande avec sous-commandes')
+    .addSubcommand(sub => sub
+        .setName('action1')
+        .setDescription('Première action')
+    )
+    .addSubcommand(sub => sub
+        .setName('action2')
+        .setDescription('Deuxième action')
+    );
+
+export async function execute(interaction: ChatInputCommandInteraction) {
+    const subcommand = interaction.options.getSubcommand();
+    
+    switch (subcommand) {
+        case 'action1':
+            // ...
+            break;
+        case 'action2':
+            // ...
+            break;
+    }
+}
+```
+
+### Bonnes pratiques
+
+1. **Utiliser `ChatInputCommandInteraction`** au lieu de `CommandInteraction` pour le typage des options
+2. **`deferReply()`** pour les commandes longues (> 3s)
+3. **`ephemeral: true`** pour les réponses privées
+4. **Gérer les erreurs** avec try/catch
+5. **Vérifier les permissions** avec `setDefaultMemberPermissions()`
        .setName('nom-commande')
        .setDescription('Description de la commande');
    
