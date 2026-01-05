@@ -1,5 +1,6 @@
 import { type CommandInteraction, SlashCommandBuilder, EmbedBuilder } from 'discord.js';
 import process from 'node:process';
+import version from '../../version.json' assert { type: 'json' };
 
 export const data = new SlashCommandBuilder()
     .setName('botstats')
@@ -75,10 +76,11 @@ export async function execute(interaction: CommandInteraction) {
             { name: '🏠 Serveurs', value: interaction.client.guilds.cache.size.toString(), inline: true },
             { name: '👥 Utilisateurs', value: interaction.client.guilds.cache.reduce((acc, guild) => acc + guild.memberCount, 0).toString(), inline: true },
             { name: '📺 Canaux', value: interaction.client.channels.cache.size.toString(), inline: true },
-            { name: '🎭 Rôles', value: interaction.client.guilds.cache.reduce((acc, guild) => acc + guild.roles.cache.size, 0).toString(), inline: true }
+            { name: '🎭 Rôles', value: interaction.client.guilds.cache.reduce((acc, guild) => acc + guild.roles.cache.size, 0).toString(), inline: true },
+            { name: '📦 Version', value: `v${version.version}`, inline: true }
         )
         .setFooter({
-            text: 'Demandé par ' + interaction.user.username,
+            text: `${version.codename} • Demandé par ${interaction.user.username}`,
             iconURL: interaction.user.displayAvatarURL({ forceStatic: false })
         })
         .setTimestamp();
