@@ -41,9 +41,20 @@ export async function execute(interaction: CommandInteraction) {
     }
     const memoryTotalMB = Math.round(((totalMemBytes ?? 0) / 1024 / 1024) * 100) / 100;
     
-    // Calcul approximatif du CPU (basé sur le temps d'utilisation du processus)
-    const cpuUsage = process.cpuUsage();
-    const cpuPercent = Math.round((cpuUsage.user + cpuUsage.system) / 1000 / uptime / 10) / 100;
+    // CPU: Deno ne supporte pas process.cpuUsage(), on utilise une alternative
+    let cpuPercent = 0;
+    try {
+        // Tenter d'utiliser Deno.systemMemoryInfo pour vérifier si on peut accéder aux infos système
+        // Le CPU réel nécessiterait des permissions --allow-sys
+        if (typeof Deno !== 'undefined' && Deno.loadavg) {
+            const loadAvg = Deno.loadavg();
+            // loadavg retourne [1min, 5min, 15min] - on prend la moyenne 1min
+            cpuPercent = Math.round(loadAvg[0] * 100) / 100;
+        }
+    } catch {
+        // Fallback: estimation basée sur le temps d'uptime (très approximatif)
+        cpuPercent = 0; // Indisponible
+    }
 
     const embed = new EmbedBuilder()
         .setAuthor({ 
