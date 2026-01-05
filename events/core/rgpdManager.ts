@@ -1,19 +1,24 @@
-import { purgeOldData } from '../../utils/statsTracker.ts';
+import { purgeAllOldData } from '../../utils/rgpdManager.ts';
 
 /**
  * Gestionnaire RGPD - Purge automatique des données anciennes
  * Conforme au principe de limitation de conservation du RGPD
+ * 
+ * Conservation:
+ * - Statistiques (commandes, messages): 90 jours
+ * - Modération (warnings, history): 2 ans
+ * - Bans/mutes temporaires expirés: suppression immédiate
  */
 export class RGPDManager {
     private purgeInterval: ReturnType<typeof setInterval> | null = null;
-    private readonly RETENTION_DAYS = 90; // Durée de conservation en jours
     private readonly PURGE_INTERVAL_MS = 24 * 60 * 60 * 1000; // Vérification toutes les 24h
 
     /**
      * Démarre le gestionnaire RGPD
      */
     start(): void {
-        console.log(`[RGPD] Gestionnaire démarré - Conservation des données: ${this.RETENTION_DAYS} jours`);
+        console.log('[RGPD] Gestionnaire démarré - Purge automatique activée');
+        console.log('[RGPD] Durées de conservation: Stats=90j, Modération=2ans');
         
         // Effectuer une purge au démarrage (avec délai pour laisser le bot s'initialiser)
         setTimeout(() => {
@@ -42,11 +47,23 @@ export class RGPDManager {
      */
     private async performPurge(): Promise<void> {
         try {
-            console.log(`[RGPD] Début de la purge des données > ${this.RETENTION_DAYS} jours...`);
-            const result = await purgeOldData(this.RETENTION_DAYS);
+            console.log('[RGPD] Début de la purge automatique...');
+            const result = await purgeAllOldData();
             
-            if (result.commandsPurged > 0 || result.messagesPurged > 0) {
-                console.log(`[RGPD] Purge terminée: ${result.commandsPurged} commandes, ${result.messagesPurged} messages supprimés`);
+            const totalPurged = 
+                result.stats.commands + 
+                result.stats.messages + 
+                result.stats.daily +
+                result.personal.reminders +
+                result.moderation.history +
+                result.moderation.tempBans +
+                result.moderation.tempMutes;
+
+            if (totalPurged > 0) {
+                console.log(`[RGPD] Purge terminée:`);
+                console.log(`  - Stats: ${result.stats.commands} commandes, ${result.stats.messages} messages, ${result.stats.daily} daily`);
+                console.log(`  - Personnel: ${result.personal.reminders} rappels expirés`);
+                console.log(`  - Modération: ${result.moderation.history} historique, ${result.moderation.tempBans} bans, ${result.moderation.tempMutes} mutes`);
             } else {
                 console.log('[RGPD] Purge terminée: aucune donnée à supprimer');
             }
@@ -58,7 +75,7 @@ export class RGPDManager {
     /**
      * Force une purge manuelle (pour l'owner)
      */
-    async forcePurge(): Promise<{ commandsPurged: number; messagesPurged: number }> {
-        return await purgeOldData(this.RETENTION_DAYS);
+    async forcePurge() {
+        return await purgeAllOldData();
     }
 }

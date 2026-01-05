@@ -1,3 +1,4 @@
+import { Buffer } from 'node:buffer';
 import { 
     type ChatInputCommandInteraction, 
     SlashCommandBuilder, 
@@ -8,10 +9,11 @@ import {
     ComponentType
 } from 'discord.js';
 import {
-    getUserDataSummary,
-    deleteUserData,
-    exportUserData
-} from '../../utils/statsTracker.ts';
+    getCompleteUserDataSummary,
+    exportCompleteUserData,
+    deleteVoluntaryUserData,
+    generatePrivacyReport
+} from '../../utils/rgpdManager.ts';
 
 export const data = new SlashCommandBuilder()
     .setName('mesdonnees')
@@ -29,7 +31,7 @@ export const data = new SlashCommandBuilder()
     .addSubcommand(subcommand =>
         subcommand
             .setName('supprimer')
-            .setDescription('Supprimer définitivement toutes vos données')
+            .setDescription('Supprimer vos données volontaires (stats, anniversaires, rappels)')
     )
     .addSubcommand(subcommand =>
         subcommand
@@ -60,46 +62,40 @@ async function handleViewData(interaction: ChatInputCommandInteraction) {
     await interaction.deferReply({ ephemeral: true });
 
     try {
-        const summary = await getUserDataSummary(interaction.user.id);
+        const summary = await getCompleteUserDataSummary(interaction.user.id);
+        const report = generatePrivacyReport(summary);
 
         const embed = new EmbedBuilder()
             .setColor('#3498db')
             .setTitle('🔐 Vos données personnelles')
-            .setDescription('Voici un résumé des données que nous avons collectées vous concernant.')
+            .setDescription(report)
             .addFields(
                 {
-                    name: '📊 Statistiques',
-                    value: [
-                        `**Commandes exécutées:** ${summary.commandCount}`,
-                        `**Messages comptabilisés:** ${summary.messageCount}`
-                    ].join('\n'),
-                    inline: true
-                },
-                {
                     name: '📅 Période d\'activité',
-                    value: [
-                        `**Première activité:** ${summary.firstActivity ? new Date(summary.firstActivity).toLocaleDateString('fr-FR') : 'N/A'}`,
-                        `**Dernière activité:** ${summary.lastActivity ? new Date(summary.lastActivity).toLocaleDateString('fr-FR') : 'N/A'}`
-                    ].join('\n'),
+                    value: summary.firstActivity 
+                        ? `Du **${new Date(summary.firstActivity).toLocaleDateString('fr-FR')}** au **${new Date(summary.lastActivity!).toLocaleDateString('fr-FR')}**`
+                        : 'Aucune activité enregistrée',
                     inline: true
                 },
                 {
                     name: '🏠 Serveurs',
-                    value: `Données présentes sur **${summary.guilds.length}** serveur(s)`,
-                    inline: false
+                    value: summary.guilds.length > 0 
+                        ? `Données sur **${summary.guilds.length}** serveur(s)`
+                        : 'Aucun serveur',
+                    inline: true
                 },
                 {
                     name: '⏰ Conservation',
-                    value: 'Vos données sont automatiquement supprimées après **90 jours** d\'inactivité.',
+                    value: [
+                        '• Statistiques : **90 jours**',
+                        '• Modération : **2 ans**',
+                        '• Anniversaires : **Jusqu\'à suppression**'
+                    ].join('\n'),
                     inline: false
                 }
             )
             .setFooter({ text: 'Utilisez /mesdonnees supprimer pour effacer vos données' })
             .setTimestamp();
-
-        if (summary.commandCount === 0 && summary.messageCount === 0) {
-            embed.setDescription('✨ Aucune donnée n\'est actuellement stockée vous concernant.');
-        }
 
         await interaction.editReply({ embeds: [embed] });
     } catch (error) {
@@ -112,12 +108,20 @@ async function handleExportData(interaction: ChatInputCommandInteraction) {
     await interaction.deferReply({ ephemeral: true });
 
     try {
-        const exportData = await exportUserData(interaction.user.id);
+        const exportData = await exportCompleteUserData(interaction.user.id);
         const jsonString = JSON.stringify(exportData, null, 2);
 
-        // Vérifier si les données ne sont pas vides
-        const data = exportData as { commands: unknown[]; messages: unknown[] };
-        if (data.commands.length === 0 && data.messages.length === 0) {
+        // Calculer les totaux
+        const totalItems = 
+            exportData.stats.commands.length +
+            exportData.stats.messages.length +
+            exportData.personal.birthdays.length +
+            exportData.personal.reminders.length +
+            exportData.moderation.warnings.length +
+            exportData.moderation.history.length +
+            exportData.participations.giveaways.length;
+
+        if (totalItems === 0) {
             const embed = new EmbedBuilder()
                 .setColor('#f39c12')
                 .setTitle('📦 Export de vos données')
@@ -131,15 +135,28 @@ async function handleExportData(interaction: ChatInputCommandInteraction) {
         const embed = new EmbedBuilder()
             .setColor('#2ecc71')
             .setTitle('📦 Export de vos données')
-            .setDescription('Voici l\'export complet de vos données au format JSON.\n\n*Ce fichier contient toutes les informations que nous avons collectées vous concernant.*')
+            .setDescription('Voici l\'export complet de vos données au format JSON.')
             .addFields(
-                { name: '📊 Contenu', value: `${data.commands.length} commandes\n${data.messages.length} entrées de messages`, inline: true },
+                { 
+                    name: '📊 Statistiques', 
+                    value: `${exportData.stats.commands.length} commandes\n${exportData.stats.messages.length} entrées messages`, 
+                    inline: true 
+                },
+                { 
+                    name: '🎂 Personnel', 
+                    value: `${exportData.personal.birthdays.length} anniversaires\n${exportData.personal.reminders.length} rappels`, 
+                    inline: true 
+                },
+                { 
+                    name: '⚖️ Modération', 
+                    value: `${exportData.moderation.warnings.length} warnings\n${exportData.moderation.history.length} entrées historique`, 
+                    inline: true 
+                },
                 { name: '📅 Date d\'export', value: new Date().toLocaleDateString('fr-FR'), inline: true }
             )
             .setFooter({ text: 'RGPD - Droit à la portabilité des données' })
             .setTimestamp();
 
-        // Envoyer le fichier JSON
         const buffer = Buffer.from(jsonString, 'utf-8');
         
         await interaction.editReply({
@@ -156,7 +173,9 @@ async function handleExportData(interaction: ChatInputCommandInteraction) {
 }
 
 async function handleDeleteData(interaction: ChatInputCommandInteraction) {
-    // Créer les boutons de confirmation
+    // Récupérer d'abord un résumé pour informer l'utilisateur
+    const summary = await getCompleteUserDataSummary(interaction.user.id);
+
     const confirmButton = new ButtonBuilder()
         .setCustomId('confirm_delete_data')
         .setLabel('✅ Confirmer la suppression')
@@ -170,20 +189,41 @@ async function handleDeleteData(interaction: ChatInputCommandInteraction) {
     const row = new ActionRowBuilder<ButtonBuilder>()
         .addComponents(confirmButton, cancelButton);
 
+    // Liste des données qui seront supprimées
+    const toDelete: string[] = [];
+    if (summary.commandCount > 0) toDelete.push(`• ${summary.commandCount} statistiques de commandes`);
+    if (summary.messageCount > 0) toDelete.push(`• ${summary.messageCount} compteurs de messages`);
+    if (summary.birthdayCount > 0) toDelete.push(`• ${summary.birthdayCount} anniversaire(s)`);
+    if (summary.reminderCount > 0) toDelete.push(`• ${summary.reminderCount} rappel(s)`);
+    if (summary.giveawayParticipations > 0) toDelete.push(`• ${summary.giveawayParticipations} participation(s) aux giveaways`);
+
+    // Liste des données conservées
+    const kept: string[] = [];
+    if (summary.warningCount > 0) kept.push(`• ${summary.warningCount} avertissement(s)`);
+    if (summary.moderationHistoryCount > 0) kept.push(`• ${summary.moderationHistoryCount} entrée(s) de modération`);
+    if (summary.activeTempBans > 0) kept.push(`• ${summary.activeTempBans} ban(s) temporaire(s)`);
+    if (summary.activeTempMutes > 0) kept.push(`• ${summary.activeTempMutes} mute(s) temporaire(s)`);
+
     const embed = new EmbedBuilder()
         .setColor('#e74c3c')
         .setTitle('⚠️ Suppression de vos données')
         .setDescription([
-            '**Êtes-vous sûr de vouloir supprimer toutes vos données ?**',
+            '**Êtes-vous sûr de vouloir supprimer vos données ?**',
             '',
-            'Cette action est **irréversible** et supprimera :',
-            '• Toutes vos statistiques de commandes',
-            '• Tous vos compteurs de messages',
+            toDelete.length > 0 ? `**Données qui seront supprimées :**\n${toDelete.join('\n')}` : '*Aucune donnée à supprimer*',
             '',
-            '*Les données anonymisées dans les statistiques globales seront conservées.*'
-        ].join('\n'))
+            kept.length > 0 ? `**Données conservées (sécurité) :**\n${kept.join('\n')}\n*Les données de modération ne peuvent pas être supprimées pour des raisons de sécurité du serveur.*` : ''
+        ].filter(Boolean).join('\n'))
         .setFooter({ text: 'Cette action expire dans 60 secondes' })
         .setTimestamp();
+
+    if (toDelete.length === 0) {
+        embed.setColor('#95a5a6');
+        embed.setDescription('✨ Vous n\'avez aucune donnée supprimable.\n\n' + 
+            (kept.length > 0 ? `**Données de modération conservées :**\n${kept.join('\n')}` : ''));
+        await interaction.reply({ embeds: [embed], ephemeral: true });
+        return;
+    }
 
     const response = await interaction.reply({
         embeds: [embed],
@@ -201,17 +241,27 @@ async function handleDeleteData(interaction: ChatInputCommandInteraction) {
         if (confirmation.customId === 'confirm_delete_data') {
             await confirmation.deferUpdate();
 
-            const result = await deleteUserData(interaction.user.id);
+            const result = await deleteVoluntaryUserData(interaction.user.id);
+
+            const totalDeleted = 
+                result.commandsDeleted + 
+                result.messagesDeleted + 
+                result.birthdaysDeleted + 
+                result.remindersDeleted +
+                result.giveawayParticipationsDeleted;
 
             const successEmbed = new EmbedBuilder()
                 .setColor('#2ecc71')
                 .setTitle('✅ Données supprimées')
                 .setDescription([
-                    'Toutes vos données personnelles ont été supprimées avec succès.',
+                    `**${totalDeleted} entrée(s) supprimée(s) avec succès.**`,
                     '',
-                    `**Données effacées :**`,
-                    `• ${result.commandsDeleted} entrées de commandes`,
-                    `• ${result.messagesDeleted} entrées de messages`
+                    '**Détail :**',
+                    `• ${result.commandsDeleted} commande(s)`,
+                    `• ${result.messagesDeleted} message(s)`,
+                    `• ${result.birthdaysDeleted} anniversaire(s)`,
+                    `• ${result.remindersDeleted} rappel(s)`,
+                    `• ${result.giveawayParticipationsDeleted} participation(s)`
                 ].join('\n'))
                 .setFooter({ text: 'RGPD - Droit à l\'effacement' })
                 .setTimestamp();
@@ -227,7 +277,6 @@ async function handleDeleteData(interaction: ChatInputCommandInteraction) {
             await confirmation.update({ embeds: [cancelEmbed], components: [] });
         }
     } catch {
-        // Timeout - désactiver les boutons
         const timeoutEmbed = new EmbedBuilder()
             .setColor('#95a5a6')
             .setTitle('⏰ Temps écoulé')
@@ -242,43 +291,65 @@ async function handleInfo(interaction: ChatInputCommandInteraction) {
     const embed = new EmbedBuilder()
         .setColor('#9b59b6')
         .setTitle('🔐 Politique de confidentialité')
-        .setDescription('Informations sur la collecte et le traitement de vos données.')
+        .setDescription('Informations sur la collecte et le traitement de vos données conformément au RGPD.')
         .addFields(
             {
                 name: '📊 Données collectées',
                 value: [
-                    '• **Commandes** : Nom de la commande, date/heure, serveur',
-                    '• **Messages** : Compteur quotidien par canal (pas le contenu)',
-                    '• **Identifiants** : Votre ID Discord (pour lier les données)'
+                    '**Statistiques (90 jours)**',
+                    '• Commandes exécutées (nom, date, serveur)',
+                    '• Compteur de messages par canal',
+                    '',
+                    '**Données personnelles**',
+                    '• Anniversaire (si configuré)',
+                    '• Rappels créés',
+                    '• Participations aux giveaways',
+                    '',
+                    '**Modération (2 ans)**',
+                    '• Avertissements reçus',
+                    '• Historique des sanctions'
                 ].join('\n'),
                 inline: false
             },
             {
-                name: '🎯 Finalité',
-                value: 'Ces données servent uniquement à générer des statistiques d\'utilisation du bot pour son propriétaire. Elles ne sont jamais vendues ni partagées.',
+                name: '🎯 Finalités',
+                value: [
+                    '• **Statistiques** : Analyse d\'utilisation du bot',
+                    '• **Anniversaires** : Souhaiter votre anniversaire',
+                    '• **Rappels** : Service demandé par vous',
+                    '• **Modération** : Sécurité des serveurs'
+                ].join('\n'),
                 inline: false
             },
             {
-                name: '⏰ Durée de conservation',
-                value: 'Les données sont automatiquement supprimées après **90 jours**. Une purge automatique est effectuée régulièrement.',
+                name: '⏰ Conservation',
+                value: [
+                    '• **Statistiques** : 90 jours',
+                    '• **Modération** : 2 ans',
+                    '• **Anniversaires/Rappels** : Jusqu\'à suppression manuelle',
+                    '',
+                    'Une purge automatique est effectuée quotidiennement.'
+                ].join('\n'),
                 inline: false
             },
             {
                 name: '🔒 Vos droits (RGPD)',
                 value: [
-                    '• `/mesdonnees voir` - Droit d\'accès',
-                    '• `/mesdonnees exporter` - Droit à la portabilité',
-                    '• `/mesdonnees supprimer` - Droit à l\'effacement'
+                    '• `/mesdonnees voir` - **Droit d\'accès**',
+                    '• `/mesdonnees exporter` - **Droit à la portabilité**',
+                    '• `/mesdonnees supprimer` - **Droit à l\'effacement**',
+                    '',
+                    '⚠️ *Les données de modération ne peuvent pas être supprimées par l\'utilisateur pour des raisons de sécurité.*'
                 ].join('\n'),
                 inline: false
             },
             {
-                name: '📧 Contact',
-                value: 'Pour toute question concernant vos données, contactez le propriétaire du bot.',
+                name: '📧 Contact DPO',
+                value: 'Pour toute question concernant vos données, contactez le propriétaire du bot ou l\'administrateur du serveur.',
                 inline: false
             }
         )
-        .setFooter({ text: 'Conforme au Règlement Général sur la Protection des Données (RGPD)' })
+        .setFooter({ text: 'Conforme au Règlement Général sur la Protection des Données (UE 2016/679)' })
         .setTimestamp();
 
     await interaction.reply({ embeds: [embed], ephemeral: true });
