@@ -4,6 +4,8 @@
     "dayjs": "^1.11.13",
     "discord.js": "14.14.1",
     "dotenv": "^16.4.7",
+    "qrcode": "^1.5.3",
+    "sharp": "^0.33.1",
     "@supabase/supabase-js": "^2.39.0",
     "whois-json": "^2.0.4"
   },

@@ -8,6 +8,7 @@ import {
     ButtonStyle,
     ComponentType
 } from 'discord.js';
+import version from '../../version.json' assert { type: 'json' };
 
 export const data = new SlashCommandBuilder()
     .setName('help')
@@ -90,7 +91,7 @@ function createMainMenuEmbed(client: any): EmbedBuilder {
             '📋 **Général** - Commandes générales\n\n' +
             '*Sélectionnez une catégorie pour voir les commandes disponibles.*'
         )
-        .setFooter({ text: 'Utilisez le menu déroulant pour naviguer' })
+        .setFooter({ text: `v${version.version} • ${version.codename}` })
         .setTimestamp();
 }
 

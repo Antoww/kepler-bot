@@ -1,104 +1,149 @@
-# Structure des Événements
+# 🎯 Événements Discord
 
-## Organisation
+Ce dossier gère tous les événements Discord et les gestionnaires automatisés du bot.
 
-Le dossier `events` est maintenant organisé de manière claire avec une structure hiérarchique :
+## 📁 Structure
 
 ```
 events/
-├── core/           # Événements fondamentaux du bot
-├── handlers/       # Gestionnaires d'événements Discord
-├── logs/          # Fonctions de logging réutilisables
-├── logEvents.js   # Ancien système de logs (à migrer/supprimer)
-└── remind.js      # Système de rappels (à migrer/supprimer)
+├── core/           # Gestionnaires principaux et managers
+├── handlers/       # Événements Discord (logs, tracking)
+├── logs/           # Fonctions de logging réutilisables
+├── logEvents.js    # [Legacy] Ancien système
+└── remind.js       # [Legacy] Bouton répéter rappel
 ```
 
-## Dossiers
+---
 
-### 📁 `core/`
-Contient les événements essentiels au fonctionnement du bot :
-- `ready.ts` - Événement de démarrage du bot
-- `interactionCreate.ts` - Gestion des interactions (commandes slash)
-- `birthdayManager.ts` - Gestionnaire d'anniversaires
+## 🔧 Core (`/core/`)
 
-### 📁 `handlers/`
-Contient tous les gestionnaires d'événements Discord organisés par catégorie :
+Gestionnaires principaux qui tournent en permanence.
 
-**Canaux :**
-- `channelCreate.ts` - Création de canal
-- `channelDelete.ts` - Suppression de canal  
-- `channelUpdate.ts` - Modification de canal
+| Fichier | Description |
+|---------|-------------|
+| `ready.ts` | Événement de démarrage du bot |
+| `interactionCreate.ts` | Gestion des commandes slash et boutons |
+| `birthdayManager.ts` | Vérification quotidienne des anniversaires |
+| `reminderManager.ts` | Gestion des rappels (déclenchement) |
+| `moderationManager.ts` | Débans/unmutes automatiques |
+| `giveawayManager.ts` | Fin automatique des giveaways |
+| `countingManager.ts` | Jeu de comptage |
+| `rgpdManager.ts` | Purge automatique RGPD (90j stats, 2ans modération) |
 
-**Messages :**
-- `messageDelete.ts` - Suppression de message
-- `messageUpdate.ts` - Modification de message
-- `messageDeleteBulk.ts` - Suppression en masse
+### Cycle de vie
 
-**Membres :**
-- `guildMemberAdd.ts` - Arrivée de membre
-- `guildMemberRemove.ts` - Départ/kick de membre
-- `guildMemberUpdate.ts` - Modification de membre
-- `voiceStateUpdate.ts` - Événements vocaux
+```
+Bot démarre
+    │
+    ├─► ready.ts (initialisation)
+    │       │
+    │       ├─► BirthdayManager.start()     (check toutes les heures)
+    │       ├─► ReminderManager.start()     (check toutes les 30s)
+    │       ├─► ModerationManager.start()   (check toutes les minutes)
+    │       ├─► GiveawayManager.start()     (check toutes les 30s)
+    │       └─► RGPDManager.start()         (purge quotidienne)
+    │
+    └─► interactionCreate.ts (écoute les commandes)
+```
 
-**Modération :**
-- `guildBanAdd.ts` - Bannissement
-- `guildBanRemove.ts` - Débannissement
+---
 
-**Rôles :**
-- `roleCreate.ts` - Création de rôle
-- `roleDelete.ts` - Suppression de rôle
-- `roleUpdate.ts` - Modification de rôle
+## 📡 Handlers (`/handlers/`)
 
-**Serveur :**
-- `guildUpdate.ts` - Modification du serveur
+Événements Discord pour le système de logs.
 
-**Invitations :**
-- `inviteCreate.ts` - Création d'invitation
-- `inviteDelete.ts` - Suppression d'invitation
+### Canaux
+| Fichier | Événement |
+|---------|-----------|
+| `channelCreate.ts` | Création de canal |
+| `channelDelete.ts` | Suppression de canal |
+| `channelUpdate.ts` | Modification de canal |
 
-**Emojis & Stickers :**
-- `emojiCreate.ts` - Création d'emoji
-- `emojiDelete.ts` - Suppression d'emoji
-- `emojiUpdate.ts` - Modification d'emoji
-- `stickerCreate.ts` - Création de sticker
-- `stickerDelete.ts` - Suppression de sticker
+### Messages
+| Fichier | Événement |
+|---------|-----------|
+| `messageCreate.ts` | Nouveau message (tracking stats) |
+| `messageDelete.ts` | Suppression de message |
+| `messageDeleteBulk.ts` | Suppression en masse |
+| `messageUpdate.ts` | Modification de message |
 
-### 📁 `logs/`
-Contient les fonctions de logging réutilisables :
-- `guildLogs.ts` - Logs pour canaux, rôles, serveur
-- `messageLogs.ts` - Logs pour les messages
-- `memberLogs.ts` - Logs pour les membres et modération
-- `voiceAndMemberLogs.ts` - Logs vocaux et modifications membres
-- `miscLogs.ts` - Logs pour invitations, emojis, stickers
+### Membres
+| Fichier | Événement |
+|---------|-----------|
+| `guildMemberAdd.ts` | Arrivée d'un membre |
+| `guildMemberRemove.ts` | Départ/kick d'un membre |
+| `guildMemberUpdate.ts` | Modification (rôles, pseudo) |
+| `voiceStateUpdate.ts` | Connexion/déconnexion vocale |
 
-## Fonctionnement
+### Modération
+| Fichier | Événement |
+|---------|-----------|
+| `guildBanAdd.ts` | Bannissement |
+| `guildBanRemove.ts` | Débannissement |
 
-1. **Chargement Automatique** : Le système charge automatiquement tous les fichiers `.ts` et `.js` de manière récursive
-2. **Imports Relatifs** : Les handlers importent les fonctions depuis `../logs/`
-3. **Separation of Concerns** : Chaque handler ne fait qu'une chose : écouter un événement et appeler la fonction de log appropriée
+### Serveur
+| Fichier | Événement |
+|---------|-----------|
+| `guildUpdate.ts` | Modification du serveur |
+| `roleCreate.ts` | Création de rôle |
+| `roleDelete.ts` | Suppression de rôle |
+| `roleUpdate.ts` | Modification de rôle |
+| `inviteCreate.ts` | Création d'invitation |
+| `inviteDelete.ts` | Suppression d'invitation |
 
-## Exemple de Handler
+### Emojis & Stickers
+| Fichier | Événement |
+|---------|-----------|
+| `emojiCreate.ts` | Création d'emoji |
+| `emojiDelete.ts` | Suppression d'emoji |
+| `emojiUpdate.ts` | Modification d'emoji |
+| `stickerCreate.ts` | Création de sticker |
+| `stickerDelete.ts` | Suppression de sticker |
+
+---
+
+## 📋 Logs (`/logs/`)
+
+Fonctions utilitaires pour créer les embeds de logs.
+
+| Fichier | Contenu |
+|---------|---------|
+| `guildLogs.ts` | Logs serveur (canaux, rôles) |
+| `memberLogs.ts` | Logs membres (join, leave, update) |
+| `messageLogs.ts` | Logs messages (delete, edit) |
+| `miscLogs.ts` | Logs divers (emojis, invites) |
+| `voiceAndMemberLogs.ts` | Logs vocaux |
+
+---
+
+## 🔧 Création d'un handler
+
+### Structure de base
 
 ```typescript
-import { Events, Message, PartialMessage } from 'discord.js';
-import { logMessageDelete } from '../logs/messageLogs.ts';
+import { Events } from 'discord.js';
 
-export const name = Events.MessageDelete;
-export const once = false;
+export const name = Events.MessageCreate;
+export const once = false; // true = exécuté une seule fois
 
-export async function execute(message: Message | PartialMessage) {
-    await logMessageDelete(message);
+export async function execute(message) {
+    // Ignorer les bots
+    if (message.author.bot) return;
+    
+    // Logique...
 }
 ```
 
-## Avantages de cette Structure
+### Avec client
 
-1. **Lisibilité** : Chaque type d'événement est dans son propre dossier
-2. **Maintenabilité** : Les fonctions de log sont réutilisables et centralisées
-3. **Extensibilité** : Facile d'ajouter de nouveaux événements
-4. **Debugging** : Plus facile de trouver et debugger un événement spécifique
-5. **Performance** : Chargement optimisé avec logs de débogage
+```typescript
+import { Events, Client } from 'discord.js';
 
-## Migration des Anciens Fichiers
+export const name = Events.ClientReady;
+export const once = true;
 
-Les fichiers `logEvents.js` et `remind.js` sont les anciens systèmes qui doivent être migrés ou supprimés une fois que tous les nouveaux logs sont fonctionnels.
+export async function execute(client: Client) {
+    console.log(`Connecté en tant que ${client.user?.tag}`);
+}
+```
+

@@ -11,27 +11,27 @@ Kepler est un bot Discord polyvalent en **développement actif**, conçu pour en
 - **⚙️ Administration Avancée** : Configuration granulaire et outils d'administration
 - **🎮 Divertissement** : Large gamme de jeux et commandes interactives
 - **🔧 TypeScript + Deno** : Code moderne, performant et sécurisé
-- **💾 Base Supabase** : Stockage fiable avec PostgreSQL
 
 ---
 
 ## 🚀 Fonctionnalités
 
 ### 🛡️ Système de Modération Avancé
-- **Commandes de base** : `/ban`, `/unban`, `/kick`, `/mute`, `/unmute`
-- **Système d'avertissements** : `/warn`, `/unwarn`, `/warnings`
-- **Gestion des sanctions** : Numérotation automatique, durées personnalisées
+- **Commandes de base** : `/ban`, `/unban`, `/kick`, `/mute`, `/unmute`, `/timeout`, `/untimeout`
+- **Système d'avertissements** : `/warn`, `/warnings`
+- **Gestion des sanctions** : Numérotation automatique, historique complet avec `/modinfo`
+- **Gestion personnalisée** : `/sanctions voir` et `/sanctions supprimer` pour gérer les historiques
 - **Système de mute hybride** : Timeout Discord (≤28j) ou rôles personnalisés (>28j)
 - **Configuration flexible** : `/muteroleconfig` pour personnaliser le système de mute
-- **Logs automatiques** : Suivi complet des actions de modération
+- **Logs automatiques** : Suivi complet des actions de modération via `/moderationconfig`
 - **Expirations automatiques** : Débannissement et démute automatiques
+- **Audit serveur** : `/audit` pour vérifier la configuration des canaux et rôles
 
 ### 📌 Commandes Utilitaires
-- **Informations serveur** : `/serverinfo`, `/channelinfo`, `/roleinfo`
-- **Informations utilisateur** : `/userinfo`, `/rolelist`
+- **Informations serveur** : `/serverinfo`, `/channelinfo`, `/roleinfo`, `/rolelist`
+- **Informations utilisateur** : `/userinfo`
 - **Outils pratiques** : `/genpass`, `/minecraft-uuid`
-- **Système de rappels** : `/reminder` pour ne rien oublier
-- **Intégration WoW** : `/wowguilde` pour les guildes World of Warcraft
+- **Système de rappels** : `/reminder`, `/reminders` pour ne rien oublier
 
 ### 🎂 Système d'Anniversaires
 - **Gestion complète** : Ajout, modification, suppression d'anniversaires
@@ -41,13 +41,17 @@ Kepler est un bot Discord polyvalent en **développement actif**, conçu pour en
 ### 🎉 Commandes Fun & Jeux
 - **Jeux classiques** : `/coinflip`, `/chifoumi`, `/8ball`
 - **Jeux avancés** : `/puissance4`, `/golem`
+- **Jeu de comptage** : `/count` pour un mini-jeu collaboratif
 - **Divertissement** : `/blague`, `/meme`
-- **Gifs et interactions** pour animer vos salons
 
 ### ⚙️ Administration & Configuration
-- **Configuration des logs** : `/logconfig` pour personnaliser les journaux
-- **Gestion des anniversaires** : `/bdayconfig` pour configurer le système
+- **Configuration des logs** : `/logconfig` pour personnaliser les journaux serveur
+- **Configuration des anniversaires** : `/bdayconfig` pour configurer le système
+- **Configuration des mutes** : `/muteroleconfig` pour le système de mute hybride
+- **Configuration de la modération** : `/moderationconfig` pour les logs de modération
 - **Annonces** : `/annonce` pour communiquer avec votre communauté
+- **Audit serveur** : `/audit` pour vérifier la configuration complète
+- **Gestion des anniversaires** : `/birthday` pour ajouter/modifier/supprimer des anniversaires
 - **Système de permissions** avancé pour une administration sécurisée
 
 ---
@@ -61,15 +65,20 @@ Kepler est un bot Discord polyvalent en **développement actif**, conçu pour en
 - **Système d'anniversaires** : ✅ Gestion complète des anniversaires
 - **Logs de modération** : ✅ Système de journalisation configurable
 
-### 🔄 Beta (En cours - Été 2025)
-- **Optimisations performances** : Amélioration de la vitesse et stabilité
-- **Nouvelles commandes fun** : Extension du catalogue de jeux
-- **Système de niveaux** : XP et rangs pour les utilisateurs
+### 🔄 Beta 1.3 (En cours - Janvier 2026)
+- **Audit serveur avancé** : ✅ Vérification automatique de la configuration
+- **Gestion personnalisée des sanctions** : ✅ Suppression et visualisation des sanctions
+- **Jeu de comptage collaboratif** : ✅ Mini-jeu `/count` pour les serveurs
+- **Timeout Discord** : ✅ Support complet de la nouvelle fonctionnalité de timeout Discord
+- **Historique détaillé** : ✅ `/modinfo` avec suivi complet des sanctions
+- **Optimisations performances** : 🔧 Amélioration de la vitesse et stabilité
+- **Nouvelles commandes fun** : 🔧 Extension du catalogue de jeux
+- **Gestion des événements serveur** : 🔧 Logs enrichis pour tous les événements
 
-### 🚀 Release (Été 2025)
+### 🚀 Release (Janvier/Février 2026)
 - **Lancement officiel** de Kepler v1.0
 - **Site web dédié** avec documentation complète
-- **Support multilingue** : Français et Anglais
+- **Système de niveaux** : XP et rangs pour les utilisateurs
 
 ---
 
@@ -78,27 +87,46 @@ Kepler est un bot Discord polyvalent en **développement actif**, conçu pour en
 ### Modération
 ```
 /ban <utilisateur> [durée] [raison]     # Bannir un utilisateur
+/unban <user_id> [raison]               # Débannir un utilisateur
 /kick <utilisateur> [raison]            # Expulser un utilisateur  
 /mute <utilisateur> <durée> [raison]    # Rendre muet un utilisateur
-/warn <utilisateur> [raison]            # Avertir un utilisateur
+/unmute <utilisateur> [raison]          # Annuler le mute
+/timeout <utilisateur> <durée> [raison] # Timeout Discord
+/untimeout <utilisateur> [raison]       # Retirer le timeout
+/warn <utilisateur> <raison>            # Avertir un utilisateur
 /warnings <utilisateur>                 # Voir les avertissements
-/modinfo <numéro_sanction>             # Infos sur une sanction
+/modinfo <utilisateur>                  # Infos complètes de modération
+/sanctions voir <utilisateur>           # Voir toutes les sanctions
+/sanctions supprimer <numero>           # Supprimer une sanction
 ```
 
 ### Administration
 ```
-/muteroleconfig <set|create|disable>   # Configurer le système de mute
-/logconfig <canal>                     # Configurer les logs
-/bdayconfig <canal>                    # Configurer les anniversaires
-/annonce <message>                     # Faire une annonce
+/muteroleconfig set <role>              # Configurer le rôle de mute
+/muteroleconfig create [nom]            # Créer un rôle de mute
+/muteroleconfig disable                 # Désactiver le rôle de mute
+/moderationconfig <canal>               # Configurer les logs de modération
+/logconfig <canal>                      # Configurer les logs du serveur
+/bdayconfig <canal>                     # Configurer le canal des anniversaires
+/annonce <message>                      # Faire une annonce
+/audit channel                          # Auditer les canaux configurés
+/audit roles                            # Auditer les rôles configurés
 ```
 
 ### Utilitaires
 ```
 /userinfo <utilisateur>                # Informations utilisateur
-/serverinfo                           # Informations serveur
-/reminder <durée> <message>           # Créer un rappel
-/genpass [longueur]                   # Générer un mot de passe
+/serverinfo                            # Informations serveur
+/channelinfo <canal>                   # Informations canal
+/roleinfo <rôle>                       # Informations rôle
+/rolelist                              # Liste des rôles du serveur
+/reminder <durée> <message>            # Créer un rappel personnel
+/reminders                             # Voir vos rappels
+/birthday add <date> [notes]           # Ajouter un anniversaire
+/birthday remove <utilisateur>         # Retirer un anniversaire
+/birthday list                         # Voir tous les anniversaires
+/genpass [longueur]                    # Générer un mot de passe
+/minecraft-uuid <pseudo>               # Obtenir l'UUID Minecraft
 ```
 
 ---

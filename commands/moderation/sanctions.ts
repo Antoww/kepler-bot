@@ -12,7 +12,9 @@ import {
     getModerationHistory, 
     getUserWarnings, 
     removeWarningBySanctionNumber, 
-    addModerationHistory 
+    addModerationHistory,
+    getActiveTempBan,
+    getActiveTempMute
 } from '../../database/db.ts';
 import { logModeration } from '../../utils/moderationLogger.ts';
 
@@ -22,7 +24,7 @@ export const data = new SlashCommandBuilder()
     .addSubcommand(subcommand =>
         subcommand
             .setName('voir')
-            .setDescription('Affiche toutes les sanctions d\'un utilisateur')
+            .setDescription('Affiche toutes les sanctions et le statut de modération d\'un utilisateur')
             .addUserOption(option => option.setName('utilisateur')
                 .setDescription('L\'utilisateur dont afficher les sanctions')
                 .setRequired(true))
@@ -68,17 +70,65 @@ async function handleViewSanctions(interaction: CommandInteraction) {
         const history = await getModerationHistory(interaction.guild!.id, target.id, 50);
         const warnings = await getUserWarnings(interaction.guild!.id, target.id);
 
-        if (!history || history.length === 0) {
-            const embed = new EmbedBuilder()
-                .setAuthor({ 
-                    name: `Sanctions - ${target.tag}`, 
-                    iconURL: target.displayAvatarURL({ forceStatic: false }) 
-                })
-                .setColor('#0099ff')
-                .setDescription('❌ Aucune sanction trouvée pour cet utilisateur.')
-                .setTimestamp();
+        // Vérifier si l'utilisateur a des sanctions actives
+        const activeBan = await getActiveTempBan(interaction.guild!.id, target.id);
+        const activeMute = await getActiveTempMute(interaction.guild!.id, target.id);
 
-            await interaction.reply({ embeds: [embed] });
+        // Vérifier si l'utilisateur est en timeout Discord
+        const targetMember = interaction.guild!.members.cache.get(target.id);
+        const isTimedOut = targetMember?.isCommunicationDisabled();
+        const timeoutUntil = targetMember?.communicationDisabledUntil;
+
+        // Calculer les statistiques
+        const stats = {
+            ban: history?.filter(h => h.action_type === 'ban' || h.action_type === 'tempban').length || 0,
+            kick: history?.filter(h => h.action_type === 'kick').length || 0,
+            mute: history?.filter(h => h.action_type === 'mute' || h.action_type === 'tempmute').length || 0,
+            timeout: history?.filter(h => h.action_type === 'timeout').length || 0,
+            warn: history?.filter(h => h.action_type === 'warn').length || 0
+        };
+
+        const statsText = [
+            `🔨 Bans: **${stats.ban}**`,
+            `👢 Kicks: **${stats.kick}**`,
+            `🔇 Mutes: **${stats.mute}**`,
+            `⏱️ Timeouts: **${stats.timeout}**`,
+            `⚠️ Warns: **${stats.warn}**`
+        ].join(' • ');
+
+        // Créer l'embed de base
+        const baseEmbed = new EmbedBuilder()
+            .setAuthor({ 
+                name: `Sanctions - ${target.username}`, 
+                iconURL: target.displayAvatarURL({ forceStatic: false }) 
+            })
+            .setColor('#0099ff')
+            .setThumbnail(target.displayAvatarURL({ forceStatic: false }))
+            .setTimestamp();
+
+        // Sanctions actives
+        let activeStatus = '✅ Aucune sanction active';
+        if (activeBan) {
+            activeStatus = `🔨 **Ban temporaire actif**\nExpire: <t:${Math.floor(new Date(activeBan.end_time).getTime() / 1000)}:F>\nRaison: ${activeBan.reason}`;
+        } else if (activeMute) {
+            activeStatus = `🔇 **Mute temporaire actif**\nExpire: <t:${Math.floor(new Date(activeMute.end_time).getTime() / 1000)}:F>\nRaison: ${activeMute.reason}`;
+        } else if (isTimedOut && timeoutUntil) {
+            activeStatus = `⏱️ **Timeout actif**\nExpire: <t:${Math.floor(timeoutUntil.getTime() / 1000)}:F>`;
+        }
+
+        baseEmbed.addFields(
+            { name: '📊 Statut actuel', value: activeStatus, inline: false },
+            { name: '📈 Statistiques', value: statsText, inline: false }
+        );
+
+        if (!history || history.length === 0) {
+            baseEmbed.addFields({ name: '📜 Historique', value: 'Aucune action de modération enregistrée', inline: false });
+            baseEmbed.setFooter({
+                text: 'Demandé par ' + interaction.user.username,
+                iconURL: interaction.user.displayAvatarURL({ forceStatic: false })
+            });
+
+            await interaction.reply({ embeds: [baseEmbed] });
             return;
         }
 
@@ -91,14 +141,8 @@ async function handleViewSanctions(interaction: CommandInteraction) {
             const end = start + itemsPerPage;
             const currentSanctions = history.slice(start, end);
 
-            const embed = new EmbedBuilder()
-                .setAuthor({ 
-                    name: `Sanctions - ${target.tag}`, 
-                    iconURL: target.displayAvatarURL({ forceStatic: false }) 
-                })
-                .setColor('#0099ff')
-                .setFooter({ text: `Page ${page + 1}/${totalPages} • ${history.length} sanctions total` })
-                .setTimestamp();
+            const embed = EmbedBuilder.from(baseEmbed.toJSON());
+            embed.setFooter({ text: `Page ${page + 1}/${totalPages} • ${history.length} sanctions total • Demandé par ${interaction.user.username}` });
 
             const sanctionsText = currentSanctions.map(entry => {
                 const date = new Date(entry.created_at);
@@ -107,31 +151,14 @@ async function handleViewSanctions(interaction: CommandInteraction) {
                 const sanctionNum = entry.sanction_number ? `#${entry.sanction_number}` : '';
                 const emoji = getActionEmoji(entry.action_type);
                 
-                return `**${sanctionNum}** ${emoji} **${entry.action_type.toUpperCase()}**${duration}\n📝 ${entry.reason}\n🕐 <t:${timestamp}:F> (<t:${timestamp}:R>)\n🛡️ Modérateur: <@${entry.moderator_id}>`;
+                return `**${sanctionNum}** ${emoji} **${entry.action_type.toUpperCase()}**${duration}\n📝 ${entry.reason}\n🕐 <t:${timestamp}:R> | 🛡️ <@${entry.moderator_id}>`;
             }).join('\n\n');
 
-            embed.setDescription(sanctionsText);
-
-            // Statistiques
-            const stats = {
-                ban: history.filter(h => h.action_type === 'ban' || h.action_type === 'tempban').length,
-                kick: history.filter(h => h.action_type === 'kick').length,
-                mute: history.filter(h => h.action_type === 'mute' || h.action_type === 'tempmute').length,
-                warn: warnings.length,
-                unban: history.filter(h => h.action_type === 'unban').length,
-                unmute: history.filter(h => h.action_type === 'unmute').length
-            };
-
-            const statsText = [
-                `🔨 Bans: **${stats.ban}**`,
-                `👢 Kicks: **${stats.kick}**`,
-                `🔇 Mutes: **${stats.mute}**`,
-                `⚠️ Warns actifs: **${stats.warn}**`,
-                `✅ Unbans: **${stats.unban}**`,
-                `🔊 Unmutes: **${stats.unmute}**`
-            ].join('\n');
-
-            embed.addFields({ name: '📈 Statistiques', value: statsText, inline: true });
+            embed.addFields({ 
+                name: `📜 Historique (Page ${page + 1}/${totalPages})`, 
+                value: sanctionsText, 
+                inline: false 
+            });
 
             return embed;
         };
@@ -276,6 +303,10 @@ function getActionEmoji(action: string): string {
         case 'mute':
         case 'tempmute':
             return '🔇';
+        case 'timeout':
+            return '⏱️';
+        case 'untimeout':
+            return '✅';
         case 'warn':
             return '⚠️';
         case 'unban':

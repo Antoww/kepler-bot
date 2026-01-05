@@ -650,4 +650,215 @@ export async function getMuteRole(guildId: string): Promise<string | null> {
 export async function closeDatabase(): Promise<void> {
     // Avec Supabase, pas besoin de fermer explicitement la connexion
     console.log('🔌 Connexion Supabase fermée');
-} 
+}
+
+// Interface pour les giveaways
+export interface Giveaway {
+    id: string;
+    guild_id: string;
+    channel_id: string;
+    message_id: string;
+    title: string;
+    quantity: number;
+    reward: string;
+    role_id?: string;
+    winner_role_id?: string;
+    end_time: Date;
+    created_at: Date;
+    ended: boolean;
+}
+
+// Interface pour les participants au giveaway
+export interface GiveawayParticipant {
+    id: number;
+    giveaway_id: string;
+    user_id: string;
+    created_at: Date;
+}
+
+// Créer un giveaway
+export async function createGiveaway(
+    giveawayId: string,
+    guildId: string,
+    channelId: string,
+    messageId: string,
+    title: string,
+    quantity: number,
+    reward: string,
+    roleId: string | undefined,
+    endTime: Date,
+    winnerRoleId?: string
+): Promise<void> {
+    const { error } = await supabase
+        .from('giveaways')
+        .insert({
+            id: giveawayId,
+            guild_id: guildId,
+            channel_id: channelId,
+            message_id: messageId,
+            title: title,
+            quantity: quantity,
+            reward: reward,
+            role_id: roleId || null,
+            winner_role_id: winnerRoleId || null,
+            end_time: endTime.toISOString(),
+            created_at: new Date().toISOString(),
+            ended: false
+        });
+    
+    if (error) throw error;
+}
+
+// Récupérer un giveaway par son ID
+export async function getGiveaway(giveawayId: string): Promise<Giveaway | null> {
+    const { data, error } = await supabase
+        .from('giveaways')
+        .select('*')
+        .eq('id', giveawayId)
+        .single();
+    
+    if (error) {
+        if (error.code === 'PGRST116') return null;
+        throw error;
+    }
+    
+    return data;
+}
+
+// Récupérer tous les giveaways actifs d'une guild
+export async function getActiveGiveaways(guildId: string): Promise<Giveaway[]> {
+    const { data, error } = await supabase
+        .from('giveaways')
+        .select('*')
+        .eq('guild_id', guildId)
+        .eq('ended', false)
+        .gt('end_time', new Date().toISOString());
+    
+    if (error) throw error;
+    return data || [];
+}
+
+// Récupérer les giveaways expirés
+export async function getExpiredGiveaways(): Promise<Giveaway[]> {
+    return withNetworkRetry(async () => {
+        const { data, error } = await supabase
+            .from('giveaways')
+            .select('*')
+            .eq('ended', false)
+            .lt('end_time', new Date().toISOString());
+        
+        if (error) throw error;
+        return data || [];
+    }, 'récupération des giveaways expirés');
+}
+
+// Marquer un giveaway comme terminé
+export async function endGiveaway(giveawayId: string): Promise<void> {
+    const { error } = await supabase
+        .from('giveaways')
+        .update({
+            ended: true,
+            updated_at: new Date().toISOString()
+        })
+        .eq('id', giveawayId);
+    
+    if (error) throw error;
+}
+
+// Supprimer un giveaway
+export async function deleteGiveaway(giveawayId: string): Promise<void> {
+    const { error } = await supabase
+        .from('giveaways')
+        .delete()
+        .eq('id', giveawayId);
+    
+    if (error) throw error;
+}
+
+// Ajouter un participant au giveaway
+export async function addGiveawayParticipant(giveawayId: string, userId: string): Promise<boolean> {
+    const { data: existing, error: checkError } = await supabase
+        .from('giveaway_participants')
+        .select('id')
+        .eq('giveaway_id', giveawayId)
+        .eq('user_id', userId)
+        .single();
+    
+    // Si le participant existe déjà, retourner false
+    if (existing) return false;
+    
+    const { error } = await supabase
+        .from('giveaway_participants')
+        .insert({
+            giveaway_id: giveawayId,
+            user_id: userId,
+            created_at: new Date().toISOString()
+        });
+    
+    if (error) throw error;
+    return true;
+}
+
+// Retirer un participant du giveaway
+export async function removeGiveawayParticipant(giveawayId: string, userId: string): Promise<boolean> {
+    const { data, error } = await supabase
+        .from('giveaway_participants')
+        .delete()
+        .eq('giveaway_id', giveawayId)
+        .eq('user_id', userId);
+    
+    if (error) throw error;
+    return true;
+}
+
+// Vérifier si un utilisateur participe à un giveaway
+export async function isParticipant(giveawayId: string, userId: string): Promise<boolean> {
+    const { data, error } = await supabase
+        .from('giveaway_participants')
+        .select('id')
+        .eq('giveaway_id', giveawayId)
+        .eq('user_id', userId)
+        .single();
+    
+    if (error) {
+        if (error.code === 'PGRST116') return false;
+        throw error;
+    }
+    
+    return !!data;
+}
+
+// Récupérer tous les participants d'un giveaway
+export async function getGiveawayParticipants(giveawayId: string): Promise<GiveawayParticipant[]> {
+    const { data, error } = await supabase
+        .from('giveaway_participants')
+        .select('*')
+        .eq('giveaway_id', giveawayId);
+    
+    if (error) throw error;
+    return data || [];
+}
+
+// Récupérer le nombre de participants d'un giveaway
+export async function getGiveawayParticipantCount(giveawayId: string): Promise<number> {
+    const { count, error } = await supabase
+        .from('giveaway_participants')
+        .select('*', { count: 'exact', head: true })
+        .eq('giveaway_id', giveawayId);
+    
+    if (error) throw error;
+    return count || 0;
+}
+
+// Mettre à jour le rôle de récompense d'un giveaway
+export async function updateGiveawayWinnerRole(giveawayId: string, winnerRoleId: string | null): Promise<void> {
+    const { error } = await supabase
+        .from('giveaways')
+        .update({
+            winner_role_id: winnerRoleId,
+            updated_at: new Date().toISOString()
+        })
+        .eq('id', giveawayId);
+    
+    if (error) throw error;
+}

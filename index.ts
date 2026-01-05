@@ -4,6 +4,7 @@ import { Client, Collection, GatewayIntentBits, REST, Routes } from 'discord.js'
 import { initDatabase } from './database/supabase.ts';
 import { BirthdayManager } from './events/core/birthdayManager.ts';
 import { ModerationManager } from './events/core/moderationManager.ts';
+import { RGPDManager } from './events/core/rgpdManager.ts';
 
 // Initialisation du client
 const client = new Client({ 
@@ -132,6 +133,11 @@ client.once('ready', async (client) => {
     const moderationManager = new ModerationManager(client);
     moderationManager.start();
     console.log(`[LOG : ${new Date().toLocaleTimeString()}] Gestionnaire de modération initialisé.`);
+
+    // Initialiser le gestionnaire RGPD (purge automatique des données anciennes)
+    const rgpdManager = new RGPDManager();
+    rgpdManager.start();
+    console.log(`[LOG : ${new Date().toLocaleTimeString()}] Gestionnaire RGPD initialisé (conservation: 90 jours).`);
 
     const rest = new REST({ version: '10' }).setToken(Deno.env.get('TOKEN') as string);
 

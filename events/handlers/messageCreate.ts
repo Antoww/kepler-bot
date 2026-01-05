@@ -1,24 +1,25 @@
-import { type Message, Events } from "discord.js";
+import { type Message } from 'discord.js';
+import { CountingManager } from '../core/countingManager.ts';
 import { trackMessage } from '../../utils/statsTracker.ts';
 
-export const name = Events.MessageCreate;
+export const name = 'messageCreate';
 
 export async function execute(message: Message) {
-    // Ignorer les messages des bots
-    if (message.author.bot) return;
-    
-    // Ignorer les messages en DM
+    // Vérifier si c'est un message dans un serveur
     if (!message.guild) return;
 
+    // Ne pas traiter les messages des bots
+    if (message.author.bot) return;
+
     // Tracker le message pour les statistiques
-    try {
-        await trackMessage({
-            guild_id: message.guild.id,
-            channel_id: message.channel.id,
-            user_id: message.author.id
-        });
-    } catch (_error) {
-        // Log silencieux pour ne pas spammer la console
-        // Les erreurs de tracking ne doivent pas affecter le fonctionnement du bot
-    }
+    trackMessage({
+        guild_id: message.guild.id,
+        channel_id: message.channel.id,
+        user_id: message.author.id
+    }).catch(() => {
+        // Ignorer silencieusement les erreurs de tracking
+    });
+
+    // Traiter le comptage
+    await CountingManager.handleMessage(message);
 }
