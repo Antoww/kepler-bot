@@ -70,6 +70,7 @@ async function loadEvents() {
         'events/handlers/guildUpdate.ts',
         'events/handlers/inviteCreate.ts',
         'events/handlers/inviteDelete.ts',
+        'events/handlers/messageCreate.ts',
         'events/handlers/messageDelete.ts',
         'events/handlers/messageDeleteBulk.ts',
         'events/handlers/messageUpdate.ts',
