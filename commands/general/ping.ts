@@ -4,17 +4,28 @@ export const data = new SlashCommandBuilder()
     .setName('ping')
     .setDescription('Donne la latence du bot et de l\'API Discord.');
 export async function execute(interaction: CommandInteraction) {
-    const botPing = interaction.client.ws.ping;
-    const apiPing = Date.now() - interaction.createdTimestamp;
+    // Envoyer un message initial pour mesurer le temps de réponse réel
+    const sent = await interaction.reply({ content: '🏓 Calcul du ping...', fetchReply: true });
+    
+    // Latence WebSocket (heartbeat Discord) - peut être -1 au démarrage
+    const wsPing = interaction.client.ws.ping;
+    const wsPingDisplay = wsPing >= 0 ? `${wsPing}ms` : 'Calcul...';
+    
+    // Latence aller-retour réelle (temps entre commande et réponse)
+    const roundTrip = sent.createdTimestamp - interaction.createdTimestamp;
 
     const embed = new EmbedBuilder()
-        .setTitle('Pong ! 🏓')
-        .setDescription(`Latence du bot : ${botPing}ms\nLatence de l'API : ${apiPing}ms`)
+        .setColor('#00ff00')
+        .setTitle('🏓 Pong !')
+        .addFields(
+            { name: '📡 WebSocket', value: wsPingDisplay, inline: true },
+            { name: '⚡ Aller-retour', value: `${roundTrip}ms`, inline: true }
+        )
         .setFooter({
             text: 'Demandé par ' + interaction.user.username,
             iconURL: interaction.user.displayAvatarURL({ forceStatic: false })
         })
         .setTimestamp();
 
-    await interaction.reply({ embeds: [embed] });
+    await interaction.editReply({ content: null, embeds: [embed] });
 } 
