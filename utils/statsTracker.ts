@@ -419,3 +419,163 @@ export function generateTrendChart(data: DailyStatsData[], metric: 'commands' | 
 
     return lines.join('\n');
 }
+
+// ============================================
+// Fonctions RGPD - Gestion des données personnelles
+// ============================================
+
+export interface UserDataSummary {
+    commandCount: number;
+    messageCount: number;
+    firstActivity: string | null;
+    lastActivity: string | null;
+    guilds: string[];
+}
+
+/**
+ * Récupère un résumé des données d'un utilisateur (RGPD - Droit d'accès)
+ */
+export async function getUserDataSummary(userId: string): Promise<UserDataSummary> {
+    // Compter les commandes
+    const { data: commandData } = await supabase
+        .from('command_stats')
+        .select('guild_id, executed_at')
+        .eq('user_id', userId)
+        .order('executed_at', { ascending: true });
+
+    // Compter les messages
+    const { data: messageData } = await supabase
+        .from('message_stats')
+        .select('guild_id, message_count, message_date')
+        .eq('user_id', userId)
+        .order('message_date', { ascending: true });
+
+    const commandCount = commandData?.length || 0;
+    const messageCount = (messageData || []).reduce((sum, row) => sum + row.message_count, 0);
+
+    // Collecter les guilds uniques
+    const guildsSet = new Set<string>();
+    commandData?.forEach(row => guildsSet.add(row.guild_id));
+    messageData?.forEach(row => guildsSet.add(row.guild_id));
+
+    // Déterminer les dates d'activité
+    let firstActivity: string | null = null;
+    let lastActivity: string | null = null;
+
+    if (commandData && commandData.length > 0) {
+        firstActivity = commandData[0].executed_at;
+        lastActivity = commandData[commandData.length - 1].executed_at;
+    }
+
+    if (messageData && messageData.length > 0) {
+        const firstMsgDate = messageData[0].message_date;
+        const lastMsgDate = messageData[messageData.length - 1].message_date;
+        
+        if (!firstActivity || firstMsgDate < firstActivity) {
+            firstActivity = firstMsgDate;
+        }
+        if (!lastActivity || lastMsgDate > lastActivity) {
+            lastActivity = lastMsgDate;
+        }
+    }
+
+    return {
+        commandCount,
+        messageCount,
+        firstActivity,
+        lastActivity,
+        guilds: Array.from(guildsSet)
+    };
+}
+
+/**
+ * Supprime toutes les données d'un utilisateur (RGPD - Droit à l'effacement)
+ */
+export async function deleteUserData(userId: string): Promise<{ commandsDeleted: number; messagesDeleted: number }> {
+    // Supprimer les commandes
+    const { data: deletedCommands } = await supabase
+        .from('command_stats')
+        .delete()
+        .eq('user_id', userId)
+        .select('id');
+
+    // Supprimer les messages
+    const { data: deletedMessages } = await supabase
+        .from('message_stats')
+        .delete()
+        .eq('user_id', userId)
+        .select('id');
+
+    return {
+        commandsDeleted: deletedCommands?.length || 0,
+        messagesDeleted: deletedMessages?.length || 0
+    };
+}
+
+/**
+ * Purge les données anciennes (RGPD - Limitation de conservation)
+ * Par défaut, supprime les données de plus de 90 jours
+ */
+export async function purgeOldData(retentionDays: number = 90): Promise<{ commandsPurged: number; messagesPurged: number }> {
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - retentionDays);
+    const cutoffDateStr = cutoffDate.toISOString();
+    const cutoffDateOnly = cutoffDate.toISOString().split('T')[0];
+
+    // Purger les anciennes commandes
+    const { data: purgedCommands } = await supabase
+        .from('command_stats')
+        .delete()
+        .lt('executed_at', cutoffDateStr)
+        .select('id');
+
+    // Purger les anciens messages
+    const { data: purgedMessages } = await supabase
+        .from('message_stats')
+        .delete()
+        .lt('message_date', cutoffDateOnly)
+        .select('id');
+
+    // Purger les anciennes stats journalières
+    await supabase
+        .from('daily_stats')
+        .delete()
+        .lt('stat_date', cutoffDateOnly);
+
+    await supabase
+        .from('global_daily_stats')
+        .delete()
+        .lt('stat_date', cutoffDateOnly);
+
+    console.log(`[RGPD] Purge effectuée: ${purgedCommands?.length || 0} commandes, ${purgedMessages?.length || 0} entrées de messages supprimées (données > ${retentionDays} jours)`);
+
+    return {
+        commandsPurged: purgedCommands?.length || 0,
+        messagesPurged: purgedMessages?.length || 0
+    };
+}
+
+/**
+ * Exporte les données d'un utilisateur au format JSON (RGPD - Portabilité)
+ */
+export async function exportUserData(userId: string): Promise<object> {
+    const { data: commands } = await supabase
+        .from('command_stats')
+        .select('command_name, guild_id, executed_at, success')
+        .eq('user_id', userId)
+        .order('executed_at', { ascending: false });
+
+    const { data: messages } = await supabase
+        .from('message_stats')
+        .select('guild_id, channel_id, message_date, message_count')
+        .eq('user_id', userId)
+        .order('message_date', { ascending: false });
+
+    return {
+        export_date: new Date().toISOString(),
+        user_id: userId,
+        data_retention_days: 90,
+        commands: commands || [],
+        messages: messages || []
+    };
+}
