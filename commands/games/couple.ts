@@ -3,6 +3,10 @@ import sharp from 'sharp';
 import axios from 'axios';
 import { Buffer } from 'node:buffer';
 
+// Cache simple pour les avatars (évite les téléchargements répétés)
+const avatarCache = new Map<string, { buffer: Buffer; timestamp: number }>();
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
 export const data = new SlashCommandBuilder()
     .setName('couple')
     .setDescription('Crée un couple avec deux membres du serveur')
@@ -13,6 +17,39 @@ export const data = new SlashCommandBuilder()
         .setDescription('Deuxième personne du couple')
         .setRequired(false));
 
+/**
+ * Télécharge et redimensionne un avatar avec cache
+ */
+async function getProcessedAvatar(user: User, size: number): Promise<Buffer> {
+    const cacheKey = `${user.id}-${user.avatar}`;
+    const cached = avatarCache.get(cacheKey);
+    
+    // Retourner depuis le cache si valide
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+        return cached.buffer;
+    }
+    
+    // Télécharger en taille réduite (128px suffit pour un affichage 150px)
+    const avatarURL = user.displayAvatarURL({ size: 128, extension: 'png' });
+    const response = await axios.get(avatarURL, { responseType: 'arraybuffer' });
+    
+    // Redimensionner
+    const buffer = await sharp(Buffer.from(response.data), { animated: false })
+        .resize(size, size, { fit: 'cover' })
+        .toBuffer();
+    
+    // Mettre en cache
+    avatarCache.set(cacheKey, { buffer, timestamp: Date.now() });
+    
+    // Nettoyer les anciennes entrées du cache (limite à 100)
+    if (avatarCache.size > 100) {
+        const oldestKey = avatarCache.keys().next().value;
+        if (oldestKey) avatarCache.delete(oldestKey);
+    }
+    
+    return buffer;
+}
+
 async function generateCoupleImage(user1: User, user2: User): Promise<Buffer> {
     try {
         console.log(`[COUPLE] Génération d'image pour ${user1.username} et ${user2.username}...`);
@@ -22,25 +59,11 @@ async function generateCoupleImage(user1: User, user2: User): Promise<Buffer> {
         const avatarSize = 150;
         const padding = 15;
 
-        // Get avatars URLs
-        const avatar1URL = user1.displayAvatarURL({ size: 512, extension: 'png' });
-        const avatar2URL = user2.displayAvatarURL({ size: 512, extension: 'png' });
-
-        // Download avatars in parallel (handles PNG, JPG, GIF - extracts first frame)
+        // Télécharger les avatars en parallèle (avec cache)
         console.log(`[COUPLE] Téléchargement...`);
-        const [avatar1Data, avatar2Data] = await Promise.all([
-            axios.get(avatar1URL, { responseType: 'arraybuffer' }),
-            axios.get(avatar2URL, { responseType: 'arraybuffer' })
-        ]);
-
-        // Resize avatars, extract first frame if GIF
         const [avatar1Buffer, avatar2Buffer] = await Promise.all([
-            sharp(Buffer.from(avatar1Data.data), { animated: false })
-                .resize(avatarSize, avatarSize, { fit: 'cover' })
-                .toBuffer(),
-            sharp(Buffer.from(avatar2Data.data), { animated: false })
-                .resize(avatarSize, avatarSize, { fit: 'cover' })
-                .toBuffer()
+            getProcessedAvatar(user1, avatarSize),
+            getProcessedAvatar(user2, avatarSize)
         ]);
 
         // Position avatars
@@ -56,7 +79,7 @@ async function generateCoupleImage(user1: User, user2: User): Promise<Buffer> {
             </svg>`
         );
 
-        // Create the final image
+        // Create the final image (WebP pour réduire la taille ~60%)
         const buffer = await sharp({
             create: {
                 width: canvasWidth,
@@ -74,10 +97,10 @@ async function generateCoupleImage(user1: User, user2: User): Promise<Buffer> {
                     top: Math.floor(canvasHeight / 2 - 55)
                 }
             ])
-            .png()
+            .webp({ quality: 85 }) // WebP avec qualité 85% (bon compromis)
             .toBuffer();
 
-        console.log(`[COUPLE] ✅ Générée (${buffer.length} bytes)`);
+        console.log(`[COUPLE] ✅ Générée (${buffer.length} bytes, ~${(buffer.length / 1024).toFixed(1)} Ko)`);
         return buffer;
     } catch (error) {
         console.error('[COUPLE] Erreur lors de la génération:', error);
@@ -150,7 +173,7 @@ export async function execute(interaction: CommandInteraction) {
 
         // Generate the couple image
         const coupleImage = await generateCoupleImage(user1, user2);
-        const attachment = new AttachmentBuilder(coupleImage, { name: 'couple.png' });
+        const attachment = new AttachmentBuilder(coupleImage, { name: 'couple.webp' });
 
         // Random descriptions
         const descriptions = [
@@ -174,7 +197,7 @@ export async function execute(interaction: CommandInteraction) {
             .setColor('#ff1744')
             .setTitle(`❤️ Amour entre ${user1.username} et ${user2.username}`)
             .setDescription(randomDescription)
-            .setImage('attachment://couple.png')
+            .setImage('attachment://couple.webp')
             .setFooter({
             text: 'Demandé par ' + interaction.user.username,
             iconURL: interaction.user.displayAvatarURL({ forceStatic: false })
