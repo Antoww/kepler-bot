@@ -2,6 +2,7 @@ import { type CommandInteraction, type ButtonInteraction, EmbedBuilder, ActionRo
 import { createReminder } from '../../database/supabase.ts';
 import { addGiveawayParticipant, removeGiveawayParticipant, isParticipant, getGiveaway, getGiveawayParticipantCount } from '../../database/db.ts';
 import { formatTimeRemaining, generateGiveawayEmbed } from './giveawayManager.ts';
+import { trackCommand } from '../../utils/statsTracker.ts';
 
 export const name = 'interactionCreate';
 
@@ -18,11 +19,13 @@ async function handleCommandInteraction(interaction: CommandInteraction) {
 
     if (!command) return;
 
+    let success = true;
     try {
         await command.execute(interaction);
         console.log(`Commande ${interaction.commandName} exécutée avec succès.`);
         console.log(`[LOG : ${new Date().toLocaleTimeString()}] Commande ${interaction.commandName} executée par ${interaction.user.tag} (${interaction.user.id})`);
     } catch (error) {
+        success = false;
         console.error(`Erreur dans la commande ${interaction.commandName}:`, error);
         
         // Vérifier si l'interaction a déjà été gérée
@@ -43,6 +46,16 @@ async function handleCommandInteraction(interaction: CommandInteraction) {
             } catch (editError) {
                 console.error("Erreur lors de l'édition de la réponse d'erreur:", editError);
             }
+        }
+    } finally {
+        // Tracker la commande (même en cas d'erreur)
+        if (interaction.guildId) {
+            trackCommand({
+                command_name: interaction.commandName,
+                user_id: interaction.user.id,
+                guild_id: interaction.guildId,
+                success
+            }).catch(err => console.error('[StatsTracker] Erreur tracking commande:', err));
         }
     }
 }
