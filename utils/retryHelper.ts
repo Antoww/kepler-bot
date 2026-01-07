@@ -75,6 +75,114 @@ export function isNetworkError(error: unknown): boolean {
 }
 
 /**
+ * Vérifie si une erreur est due à une maintenance (5xx errors)
+ */
+export function isMaintenanceError(error: unknown): boolean {
+    const errorMessage = (error as Error)?.message?.toLowerCase() || '';
+    const errorString = String(error).toLowerCase();
+    
+    return (
+        errorMessage.includes('upstream connect error') ||
+        errorMessage.includes('delayed connect error: 111') ||
+        errorMessage.includes('ssl handshake failed') ||
+        errorMessage.includes('web server is down') ||
+        errorMessage.includes('error code 521') ||
+        errorMessage.includes('error code 525') ||
+        errorMessage.includes('error code 502') ||
+        errorMessage.includes('error code 503') ||
+        errorString.includes('<!doctype html>') // Erreurs HTML Cloudflare
+    );
+}
+
+/**
+ * Circuit breaker pour gérer les maintenances prolongées
+ */
+class CircuitBreaker {
+    private failureCount: number = 0;
+    private lastFailureTime: number = 0;
+    private isOpen: boolean = false;
+    private readonly threshold: number;
+    private readonly timeout: number;
+    private readonly cooldownPeriod: number;
+
+    constructor(
+        threshold: number = 3,
+        timeout: number = 5 * 60 * 1000, // 5 minutes
+        cooldownPeriod: number = 60 * 1000 // 1 minute
+    ) {
+        this.threshold = threshold;
+        this.timeout = timeout;
+        this.cooldownPeriod = cooldownPeriod;
+    }
+
+    /**
+     * Enregistre un succès et réinitialise le compteur
+     */
+    recordSuccess(): void {
+        this.failureCount = 0;
+        this.isOpen = false;
+    }
+
+    /**
+     * Enregistre un échec
+     */
+    recordFailure(): void {
+        this.failureCount++;
+        this.lastFailureTime = Date.now();
+
+        if (this.failureCount >= this.threshold) {
+            this.isOpen = true;
+        }
+    }
+
+    /**
+     * Vérifie si le circuit breaker autorise une tentative
+     */
+    canAttempt(): boolean {
+        if (!this.isOpen) {
+            return true;
+        }
+
+        const timeSinceLastFailure = Date.now() - this.lastFailureTime;
+        
+        // Après le timeout, on teste avec un cooldown progressif
+        if (timeSinceLastFailure >= this.timeout) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Obtient le temps restant avant la prochaine tentative
+     */
+    getTimeUntilNextAttempt(): number {
+        if (!this.isOpen) return 0;
+        
+        const timeSinceLastFailure = Date.now() - this.lastFailureTime;
+        const remaining = this.timeout - timeSinceLastFailure;
+        
+        return Math.max(0, remaining);
+    }
+
+    /**
+     * Obtient le statut du circuit breaker
+     */
+    getStatus(): { isOpen: boolean; failureCount: number; nextAttemptIn: number } {
+        return {
+            isOpen: this.isOpen,
+            failureCount: this.failureCount,
+            nextAttemptIn: this.getTimeUntilNextAttempt()
+        };
+    }
+}
+
+// Instance partagée du circuit breaker pour la base de données
+const dbCircuitBreaker = new CircuitBreaker(3, 5 * 60 * 1000, 60 * 1000);
+
+export { CircuitBreaker, dbCircuitBreaker };
+
+/**
  * Retry spécifique pour les appels réseau
  */
 export function withNetworkRetry<T>(
