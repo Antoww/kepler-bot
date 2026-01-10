@@ -241,13 +241,13 @@ export async function execute(interaction: CommandInteraction) {
         try {
             // Essayer d'abord les commandes globales
             applicationCommands = await interaction.client.application?.commands.fetch();
-            logger.debug(`${applicationCommands?.size || 0} commandes globales récupérées`, undefined, 'Help');
+            logger.info(`${applicationCommands?.size || 0} commandes API récupérées`, undefined, 'Help');
             
             // Si on est dans une guild, essayer aussi les commandes de guild
             if (interaction.guild && applicationCommands) {
                 try {
                     const guildCommands = await interaction.guild.commands.fetch();
-                    logger.debug(`${guildCommands.size} commandes de guild récupérées`, undefined, 'Help');
+                    logger.info(`${guildCommands.size} commandes de guild récupérées`, undefined, 'Help');
                     
                     // Fusionner les deux collections
                     guildCommands.forEach(cmd => applicationCommands?.set(cmd.id, cmd));
@@ -263,6 +263,11 @@ export async function execute(interaction: CommandInteraction) {
         // Mapper les commandes avec leurs IDs réels
         const commandsWithIds = allCommands.map(cmd => {
             const registeredCommand = applicationCommands?.find(appCmd => appCmd.name === cmd.name);
+            if (registeredCommand) {
+                logger.debug(`Commande ${cmd.name} a l'ID: ${registeredCommand.id}`, undefined, 'Help');
+            } else {
+                logger.warn(`Commande ${cmd.name} n'a pas d'ID trouvé dans l'API`, undefined, 'Help');
+            }
             return {
                 ...cmd,
                 id: registeredCommand?.id || null
