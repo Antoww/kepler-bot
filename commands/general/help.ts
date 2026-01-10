@@ -261,11 +261,14 @@ export async function execute(interaction: CommandInteraction) {
         }
         
         // Mapper les commandes avec leurs IDs réels
+        let idsFound = 0;
+        let idsMissing = 0;
         const commandsWithIds = allCommands.map(cmd => {
             const registeredCommand = applicationCommands?.find(appCmd => appCmd.name === cmd.name);
             if (registeredCommand) {
-                logger.debug(`Commande ${cmd.name} a l'ID: ${registeredCommand.id}`, undefined, 'Help');
+                idsFound++;
             } else {
+                idsMissing++;
                 logger.warn(`Commande ${cmd.name} n'a pas d'ID trouvé dans l'API`, undefined, 'Help');
             }
             return {
@@ -273,6 +276,7 @@ export async function execute(interaction: CommandInteraction) {
                 id: registeredCommand?.id || null
             };
         });
+        logger.info(`IDs trouvés: ${idsFound}/${allCommands.length}`, undefined, 'Help');
         
         // Créer et envoyer le menu principal
         const mainEmbed = createMainMenuEmbed(interaction.client);
