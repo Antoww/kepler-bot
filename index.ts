@@ -1,10 +1,6 @@
 import * as path from "jsr:@std/path";
 import type { Event, Command } from './types.d.ts';
-import { Client, Collection, GatewayIntentBits, REST, Routes } from 'discord.js';
-import { initDatabase } from './database/supabase.ts';
-import { BirthdayManager } from './events/core/birthdayManager.ts';
-import { ModerationManager } from './events/core/moderationManager.ts';
-import { RGPDManager } from './events/core/rgpdManager.ts';
+import { Client, Collection, GatewayIntentBits } from 'discord.js';
 import { logger } from './utils/logger.ts';
 
 // Initialisation du client
@@ -111,49 +107,6 @@ await loadCommands(commandsPath);
 
 // Chargement des événements
 await loadEvents();
-
-// Enregistrement des commandes après l'événement 'ready'
-client.once('ready', async (client) => {
-    logger.success(`Bot connecté: ${client.user.tag}`, undefined, 'BOT');
-    logger.info(`Prêt sur ${client.guilds.cache.size} serveur(s)`, undefined, 'BOT');
-
-    // Initialiser la base de données
-    try {
-        await initDatabase();
-        logger.success('Base de données initialisée', undefined, 'DATABASE');
-    } catch (error) {
-        logger.error('Erreur initialisation base de données', error, 'DATABASE');
-    }
-
-    // Initialiser le gestionnaire d'anniversaires
-    const birthdayManager = new BirthdayManager(client);
-    birthdayManager.startBirthdayCheck();
-    logger.success('Gestionnaire d\'anniversaires démarré', undefined, 'MANAGER');
-
-    // Initialiser le gestionnaire de modération
-    const moderationManager = new ModerationManager(client);
-    moderationManager.start();
-    logger.success('Gestionnaire de modération démarré', undefined, 'MANAGER');
-
-    // Initialiser le gestionnaire RGPD (purge automatique des données anciennes)
-    const rgpdManager = new RGPDManager();
-    rgpdManager.start();
-    logger.success('Gestionnaire RGPD démarré (90 jours)', undefined, 'MANAGER');
-
-    const rest = new REST({ version: '10' }).setToken(Deno.env.get('TOKEN') as string);
-
-    try {
-        const commands = client.commands.map(command => command.data.toJSON());
-        await rest.put(
-            Routes.applicationCommands(client.user.id),
-            { body: commands }
-        );
-        logger.success(`${commands.length} commande(s) slash enregistrée(s)`, undefined, 'BOT');
-    } catch (error) {
-        logger.error('Erreur enregistrement commandes slash', error, 'BOT');
-    }
-    logger.success('Bot prêt !', undefined, 'BOT');
-});
 
 // Connexion du client
 client.login(Deno.env.get('TOKEN') as string);

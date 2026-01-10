@@ -8,7 +8,8 @@ import {
     ButtonStyle,
     ComponentType
 } from 'discord.js';
-import version from '../../version.json' assert { type: 'json' };
+import version from '../../version.json' with { type: 'json' };
+import { logger } from '../../utils/logger.ts';
 
 export const data = new SlashCommandBuilder()
     .setName('help')
@@ -45,12 +46,12 @@ async function getAllCommands(): Promise<CommandInfo[]> {
                             });
                         }
                     } catch (error) {
-                        console.error(`Erreur lors du chargement de ${fullPath}:`, error);
+                        logger.error(`Erreur chargement commande ${fullPath}`, error, 'LOADER');
                     }
                 }
             }
         } catch (error) {
-            console.error(`Erreur lors de la lecture du dossier ${dirPath}:`, error);
+            logger.error(`Erreur lecture dossier ${dirPath}`, error, 'LOADER');
         }
     }
     
