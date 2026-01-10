@@ -120,8 +120,11 @@ function createCategoryEmbed(client: any, commands: CommandInfo[], category: str
                 ? pageCommands.map(cmd => {
                     // Si on a l'ID de la commande, créer un lien cliquable
                     if (cmd.id) {
-                        return `</${cmd.name}:${cmd.id}> - ${cmd.description}`;
+                        const cmdLink = `</${cmd.name}:${cmd.id}>`;
+                        logger.debug(`Création lien: ${cmdLink} pour ${cmd.name}`, undefined, 'Help');
+                        return `${cmdLink} - ${cmd.description}`;
                     } else {
+                        logger.warn(`Pas d'ID pour ${cmd.name}, affichage texte simple`, undefined, 'Help');
                         return `**/${cmd.name}** - ${cmd.description}`;
                     }
                 }).join('\n')
