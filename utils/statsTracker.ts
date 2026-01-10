@@ -1,4 +1,5 @@
 import { supabase } from '../database/supabase.ts';
+import { logger } from './logger.ts';
 
 // ============================================
 // Module de tracking des statistiques du bot
@@ -57,7 +58,7 @@ export async function trackCommand(stat: CommandStat): Promise<void> {
         // Mettre à jour les stats globales
         await updateGlobalDailyStats('command', stat.guild_id);
     } catch (error) {
-        console.error('[StatsTracker] Erreur lors du tracking de commande:', error);
+        logger.error('Erreur tracking commande', error, 'StatsTracker');
     }
 }
 
@@ -108,7 +109,7 @@ export async function trackMessage(stat: MessageStat): Promise<void> {
         await updateDailyStats(stat.guild_id, 'message');
         await updateGlobalDailyStats('message', stat.guild_id);
     } catch (error) {
-        console.error('[StatsTracker] Erreur lors du tracking de message:', error);
+        logger.error('Erreur tracking message', error, 'StatsTracker');
     }
 }
 

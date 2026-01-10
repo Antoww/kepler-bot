@@ -1,4 +1,5 @@
 import { supabase } from '../database/supabase.ts';
+import { logger } from './logger.ts';
 
 // ============================================
 // Module RGPD - Gestion complète des données utilisateur

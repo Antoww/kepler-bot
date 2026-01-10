@@ -1,4 +1,5 @@
 import { Message, Collection } from 'discord.js';
+import { logger } from './logger.ts';
 
 /**
  * Formate les messages supprimés en texte lisible
@@ -56,7 +57,7 @@ export function formatMessagesForArchive(messages: Collection<string, Message>):
         archive += `${'-'.repeat(60)}\n\n`;
     });
 
-    console.log(`[MessageArchiver] Archive formatée: ${archive.length} caractères`);
+    logger.debug(`Archive formatée: ${archive.length} caractères`, undefined, 'Archiver');
     return archive;
 }
 
@@ -64,19 +65,14 @@ export function formatMessagesForArchive(messages: Collection<string, Message>):
  * Upload vers Pastebin et retourne l'URL avec monitoring détaillé
  */
 export async function uploadToPastebin(content: string, title: string): Promise<string | null> {
-    console.log('[Pastebin] Début de l\'upload...');
-    console.log(`[Pastebin] Titre: ${title}`);
-    console.log(`[Pastebin] Taille du contenu: ${content.length} caractères`);
+    logger.debug(`Upload Pastebin: ${title} (${content.length} car.)`, undefined, 'Pastebin');
     
     const apiKey = Deno.env.get('PASTEBIN_API_KEY');
     
     if (!apiKey) {
-        console.error('[Pastebin] ❌ ERREUR: Clé API Pastebin non configurée dans les variables d\'environnement');
-        console.error('[Pastebin] Vérifiez que PASTEBIN_API_KEY est définie dans votre fichier .env');
+        logger.error('Clé API Pastebin manquante', undefined, 'Pastebin');
         return null;
     }
-    
-    console.log(`[Pastebin] ✓ Clé API trouvée (${apiKey.substring(0, 8)}...${apiKey.substring(apiKey.length - 4)})`);
 
     try {
         const formData = new URLSearchParams({
@@ -87,15 +83,7 @@ export async function uploadToPastebin(content: string, title: string): Promise<
             api_paste_private: '1', // 0=public, 1=unlisted, 2=private
             api_paste_expire_date: '1M' // Expire dans 1 mois
         });
-        
-        console.log('[Pastebin] Paramètres de la requête:');
-        console.log(`  - api_option: paste`);
-        console.log(`  - api_paste_private: 1 (unlisted)`);
-        console.log(`  - api_paste_expire_date: 1M`);
-        console.log(`  - api_paste_name: ${title}`);
-        console.log(`  - Longueur du body: ${formData.toString().length} caractères`);
 
-        console.log('[Pastebin] Envoi de la requête à https://pastebin.com/api/api_post.php...');
         const response = await fetch('https://pastebin.com/api/api_post.php', {
             method: 'POST',
             headers: {
@@ -103,39 +91,25 @@ export async function uploadToPastebin(content: string, title: string): Promise<
             },
             body: formData.toString()
         });
-
-        console.log(`[Pastebin] Statut HTTP: ${response.status} ${response.statusText}`);
         
         const result = await response.text();
-        console.log(`[Pastebin] Réponse brute: ${result}`);
         
         // Si la réponse contient "Bad API request", c'est une erreur
         if (result.includes('Bad API request')) {
-            console.error('[Pastebin] ❌ ERREUR API Pastebin:', result);
-            console.error('[Pastebin] Causes possibles:');
-            console.error('  - Clé API invalide ou expirée');
-            console.error('  - Limite de rate limit atteinte');
-            console.error('  - Format de requête incorrect');
+            logger.error('Erreur API Pastebin', result, 'Pastebin');
             return null;
         }
 
         // Si la réponse commence par http, c'est un succès
         if (result.startsWith('http')) {
-            console.log(`[Pastebin] ✅ SUCCÈS! URL générée: ${result}`);
+            logger.success('Archive uploadée', result, 'Pastebin');
             return result;
         }
 
-        console.error('[Pastebin] ❌ Réponse inattendue (ni erreur ni URL valide):', result);
-        console.error('[Pastebin] Type de réponse:', typeof result);
-        console.error('[Pastebin] Longueur de la réponse:', result.length);
+        logger.error('Réponse inattendue de Pastebin', result, 'Pastebin');
         return null;
     } catch (error) {
-        console.error('[Pastebin] ❌ EXCEPTION lors de l\'upload:', error);
-        console.error('[Pastebin] Type d\'erreur:', error.constructor.name);
-        if (error instanceof Error) {
-            console.error('[Pastebin] Message d\'erreur:', error.message);
-            console.error('[Pastebin] Stack trace:', error.stack);
-        }
+        logger.error('Exception lors de l\'upload', error, 'Pastebin');
         return null;
     }
 }

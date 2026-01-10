@@ -2,6 +2,7 @@
  * Cache temporaire pour stocker les URLs d'archives Pastebin
  * Utilisé pour transmettre les URLs entre la commande clear et l'événement MessageBulkDelete
  */
+import { logger } from './logger.ts';
 
 interface ArchiveEntry {
     url: string;
@@ -40,7 +41,7 @@ export function storeArchiveUrl(guildId: string, channelId: string, messageIds: 
         url,
         timestamp: Date.now()
     });
-    console.log(`[ArchiveCache] URL stockée avec la clé: ${key}`);
+    logger.debug('URL archive stockée', { key }, 'ArchiveCache');
 }
 
 /**
@@ -51,12 +52,12 @@ export function getArchiveUrl(guildId: string, channelId: string, messageIds: st
     const entry = archiveCache.get(key);
     
     if (entry) {
-        console.log(`[ArchiveCache] URL trouvée pour la clé: ${key}`);
+        logger.debug('URL archive récupérée', { key }, 'ArchiveCache');
         // Supprimer l'entrée après utilisation
         archiveCache.delete(key);
         return entry.url;
     }
     
-    console.log(`[ArchiveCache] Aucune URL trouvée pour la clé: ${key}`);
+    logger.debug('URL archive non trouvée', { key }, 'ArchiveCache');
     return null;
 }

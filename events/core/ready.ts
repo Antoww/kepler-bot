@@ -1,15 +1,14 @@
 import { type Client } from 'discord.js';
-import config from '../../config.json' with { type: 'json' };
 import version from '../../version.json' with { type: 'json' };
 import { initializeGiveaways } from './giveawayManager.ts';
+import { logger } from '../../utils/logger.ts';
 
 export const name = 'ready';
 export const once = true;
 
 export async function execute(client: Client<true>) {
-    console.log(`[LOG : ${new Date().toLocaleDateString()}] Bot connecté en tant que ${client.user?.tag}`);
-    console.log(`[LOG : ${new Date().toLocaleDateString()}] Prêt à servir ${client.guilds.cache.size} serveur(s)`);
-    console.log(`[LOG : ${new Date().toLocaleDateString()}] Version ${version.version} - ${version.codename}`);
+    logger.success(`Bot connecté: ${client.user?.tag}`, undefined, 'BOT');
+    logger.info(`${client.guilds.cache.size} serveur(s) - v${version.version} (${version.codename})`, undefined, 'BOT');
     
     // Définir le statut du bot avec la version depuis version.json
     // Types d'activité Discord :
@@ -25,6 +24,6 @@ export async function execute(client: Client<true>) {
     try {
         await initializeGiveaways(client);
     } catch (error) {
-        console.error('❌ Erreur lors de l\'initialisation des giveaways:', error);
+        logger.error('Erreur initialisation giveaways', error, 'Giveaway');
     }
 }
