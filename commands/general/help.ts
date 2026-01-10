@@ -227,6 +227,14 @@ export async function execute(interaction: CommandInteraction) {
     try {
         // Récupérer toutes les commandes depuis le client
         const allCommands = getAllCommands(interaction.client);
+        logger.info(`Total commandes récupérées: ${allCommands.length}`, undefined, 'Help');
+        
+        // Log des commandes par catégorie
+        const categoryCounts: Record<string, number> = {};
+        allCommands.forEach(cmd => {
+            categoryCounts[cmd.category] = (categoryCounts[cmd.category] || 0) + 1;
+        });
+        logger.info(`Commandes par catégorie: ${JSON.stringify(categoryCounts)}`, undefined, 'Help');
         
         // Récupérer les commandes slash enregistrées avec leurs IDs
         let applicationCommands;
