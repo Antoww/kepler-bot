@@ -43,7 +43,17 @@ class Logger {
         let formatted = `${timestamp} ${icon} ${prefix} ${message}`;
         
         if (data !== undefined) {
-            formatted += ' ' + (typeof data === 'object' ? JSON.stringify(data, null, 2) : data);
+            // Gestion spéciale pour les erreurs
+            if (data instanceof Error) {
+                formatted += `\n  Message: ${data.message}`;
+                if (data.stack) {
+                    formatted += `\n  Stack: ${data.stack}`;
+                }
+            } else if (typeof data === 'object') {
+                formatted += ' ' + JSON.stringify(data, null, 2);
+            } else {
+                formatted += ' ' + data;
+            }
         }
         
         return formatted;
