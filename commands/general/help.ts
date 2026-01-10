@@ -22,56 +22,37 @@ interface CommandInfo {
     id?: string | null;
 }
 
-// Fonction pour charger toutes les commandes automatiquement
-async function getAllCommands(): Promise<CommandInfo[]> {
+// Fonction pour récupérer toutes les commandes depuis client.commands
+function getAllCommands(client: any): CommandInfo[] {
     const commands: CommandInfo[] = [];
     
-    async function loadCommandsFromDir(dirPath: string, category: string) {
-        try {
-            for (const entry of Deno.readDirSync(dirPath)) {
-                const fullPath = dirPath + '/' + entry.name;
-                
-                if (entry.isDirectory) {
-                    // Récursivement charger les sous-dossiers
-                    await loadCommandsFromDir(fullPath, entry.name);
-                } else if (entry.isFile && (entry.name.endsWith('.js') || entry.name.endsWith('.ts'))) {
-                    try {
-                        const command = await import(`file://${fullPath}`);
-                        
-                        if (command.data && command.data.name) {
-                            commands.push({
-                                name: command.data.name,
-                                description: command.data.description || 'Aucune description disponible',
-                                category: category
-                            });
-                            logger.debug(`Commande chargée: ${command.data.name} (${category})`, undefined, 'Help');
-                        } else {
-                            logger.warn(`Commande invalide dans ${entry.name}: data ou name manquant`, undefined, 'Help');
-                        }
-                    } catch (error) {
-                        logger.error(`Erreur chargement commande ${fullPath}`, error, 'Help');
-                    }
-                }
-            }
-        } catch (error) {
-            logger.error(`Erreur lecture dossier ${dirPath}`, error, 'LOADER');
-        }
-    }
+    // Catégories basées sur la structure des dossiers
+    const categoryMap: Record<string, string> = {
+        'administration': 'administration',
+        'moderation': 'moderation',
+        'games': 'games',
+        'utilitaires': 'utilitaires',
+        'general': 'general'
+    };
     
-    const commandsPath = Deno.cwd() + '/commands';
-    
-    // Charger chaque dossier de catégorie
     try {
-        for (const entry of Deno.readDirSync(commandsPath)) {
-            if (entry.isDirectory) {
-                await loadCommandsFromDir(commandsPath + '/' + entry.name, entry.name);
-            }
-        }
+        // Utiliser les commandes déjà chargées dans client.commands
+        client.commands.forEach((command: any) => {
+            // Déterminer la catégorie depuis la propriété category ou depuis le nom du fichier
+            let category = command.category || 'general';
+            
+            commands.push({
+                name: command.data.name,
+                description: command.data.description || 'Aucune description disponible',
+                category: category
+            });
+        });
+        
+        logger.debug(`${commands.length} commande(s) chargée(s) depuis client.commands`, undefined, 'Help');
     } catch (error) {
-        logger.error('Erreur lecture dossier commands', error, 'LOADER');
+        logger.error('Erreur récupération commandes', error, 'Help');
     }
     
-    logger.debug(`${commands.length} commande(s) chargée(s) au total`, undefined, 'Help');
     return commands;
 }
 
@@ -244,8 +225,8 @@ function createNavigationButtons(currentPage: number, totalPages: number, catego
 
 export async function execute(interaction: CommandInteraction) {
     try {
-        // Charger toutes les commandes automatiquement
-        const allCommands = await getAllCommands();
+        // Récupérer toutes les commandes depuis le client
+        const allCommands = getAllCommands(interaction.client);
         
         // Récupérer les commandes slash enregistrées avec leurs IDs
         let applicationCommands;

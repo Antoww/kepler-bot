@@ -23,21 +23,23 @@ const client = new Client({
 client.commands = new Collection();
 
 // Fonction pour charger les commandes récursivement
-async function loadCommands(dirPath: string) {
+async function loadCommands(dirPath: string, category: string = 'general') {
     for (const entry of Deno.readDirSync(dirPath)) {
         const fullPath = path.join(dirPath, entry.name);
         
         if (entry.isDirectory) {
-            // Récursivement charger les sous-dossiers
-            await loadCommands(fullPath);
+            // Récursivement charger les sous-dossiers avec la catégorie mise à jour
+            await loadCommands(fullPath, entry.name);
         } else if (entry.isFile && (entry.name.endsWith('.js') || entry.name.endsWith('.ts'))) {
             // Charger les fichiers de commandes
             try {
                 const command = await import(`file:${fullPath}`) as Command;
                 
                 if (command.data && command.data.name) {
+                    // Ajouter la propriété category
+                    (command as any).category = category;
                     client.commands.set(command.data.name, command);
-                    logger.debug(`Commande chargée: ${command.data.name}`, undefined, 'LOADER');
+                    logger.debug(`Commande chargée: ${command.data.name} (${category})`, undefined, 'LOADER');
                 } else {
                     logger.error(`Commande invalide dans ${fullPath}`, undefined, 'LOADER');
                 }
