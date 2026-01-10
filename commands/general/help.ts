@@ -44,9 +44,12 @@ async function getAllCommands(): Promise<CommandInfo[]> {
                                 description: command.data.description || 'Aucune description disponible',
                                 category: category
                             });
+                            logger.debug(`Commande chargée: ${command.data.name} (${category})`, undefined, 'Help');
+                        } else {
+                            logger.warn(`Commande invalide dans ${entry.name}: data ou name manquant`, undefined, 'Help');
                         }
                     } catch (error) {
-                        logger.error(`Erreur chargement commande ${fullPath}`, error, 'LOADER');
+                        logger.error(`Erreur chargement commande ${fullPath}`, error, 'Help');
                     }
                 }
             }
@@ -65,9 +68,10 @@ async function getAllCommands(): Promise<CommandInfo[]> {
             }
         }
     } catch (error) {
-        console.error(`Erreur lors de la lecture du dossier commands:`, error);
+        logger.error('Erreur lecture dossier commands', error, 'LOADER');
     }
     
+    logger.debug(`${commands.length} commande(s) chargée(s) au total`, undefined, 'Help');
     return commands;
 }
 
@@ -248,33 +252,28 @@ export async function execute(interaction: CommandInteraction) {
         try {
             // Essayer d'abord les commandes globales
             applicationCommands = await interaction.client.application?.commands.fetch();
-            console.log(`✅ ${applicationCommands?.size || 0} commandes globales récupérées`);
+            logger.debug(`${applicationCommands?.size || 0} commandes globales récupérées`, undefined, 'Help');
             
             // Si on est dans une guild, essayer aussi les commandes de guild
             if (interaction.guild && applicationCommands) {
                 try {
                     const guildCommands = await interaction.guild.commands.fetch();
-                    console.log(`✅ ${guildCommands.size} commandes de guild récupérées`);
+                    logger.debug(`${guildCommands.size} commandes de guild récupérées`, undefined, 'Help');
                     
                     // Fusionner les deux collections
                     guildCommands.forEach(cmd => applicationCommands?.set(cmd.id, cmd));
                 } catch (guildError) {
-                    console.log('⚠️ Impossible de récupérer les commandes de guild:', guildError);
+                    logger.warn('Impossible de récupérer les commandes de guild', guildError, 'Help');
                 }
             }
         } catch (error) {
-            console.error('❌ Erreur lors de la récupération des commandes:', error);
+            logger.error('Erreur récupération commandes', error, 'Help');
             applicationCommands = new Map();
         }
         
         // Mapper les commandes avec leurs IDs réels
         const commandsWithIds = allCommands.map(cmd => {
             const registeredCommand = applicationCommands?.find(appCmd => appCmd.name === cmd.name);
-            if (registeredCommand) {
-                console.log(`✅ ID trouvé pour /${cmd.name}: ${registeredCommand.id}`);
-            } else {
-                console.log(`⚠️ Aucun ID trouvé pour /${cmd.name}`);
-            }
             return {
                 ...cmd,
                 id: registeredCommand?.id || null
