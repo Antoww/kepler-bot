@@ -312,6 +312,8 @@ export async function execute(interaction: CommandInteraction) {
             const categoryCommands = commandsWithIds.filter(cmd => cmd.category === selectedCategory);
             const totalPages = Math.ceil(categoryCommands.length / 10);
             
+            logger.info(`Catégorie sélectionnée: ${selectedCategory}, ${categoryCommands.length} commandes, ${totalPages} page(s)`, undefined, 'Help');
+            
             const categoryEmbed = createCategoryEmbed(interaction.client, categoryCommands, selectedCategory, 0);
             const components = [createCategorySelectMenu()];
             
