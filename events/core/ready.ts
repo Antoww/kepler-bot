@@ -44,7 +44,9 @@ export async function execute(client: Client<true>) {
     // Enregistrer les commandes slash
     const rest = new REST({ version: '10' }).setToken(Deno.env.get('TOKEN') as string);
     try {
+        logger.debug(`client.commands contient ${(client as any).commands.size} commandes`, undefined, 'BOT');
         const commands = (client as any).commands.map((command: any) => command.data.toJSON());
+        logger.debug(`Enregistrement de ${commands.length} commandes...`, undefined, 'BOT');
         await rest.put(
             Routes.applicationCommands(client.user.id),
             { body: commands }
