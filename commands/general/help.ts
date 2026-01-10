@@ -121,7 +121,7 @@ function createCategoryEmbed(client: any, commands: CommandInfo[], category: str
                     // Si on a l'ID de la commande, créer un lien cliquable
                     if (cmd.id) {
                         const cmdLink = `</${cmd.name}:${cmd.id}>`;
-                        logger.debug(`Création lien: ${cmdLink} pour ${cmd.name}`, undefined, 'Help');
+                        logger.info(`Lien créé: "${cmdLink}" pour ${cmd.name}`, undefined, 'Help');
                         return `${cmdLink} - ${cmd.description}`;
                     } else {
                         logger.warn(`Pas d'ID pour ${cmd.name}, affichage texte simple`, undefined, 'Help');
