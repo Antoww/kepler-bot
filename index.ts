@@ -36,9 +36,12 @@ async function loadCommands(dirPath: string, category: string = 'general') {
                 const command = await import(`file:${fullPath}`) as Command;
                 
                 if (command.data && command.data.name) {
-                    // Ajouter la propriété category
-                    (command as any).category = category;
-                    client.commands.set(command.data.name, command);
+                    // Créer un nouvel objet avec la propriété category
+                    const commandWithCategory = {
+                        ...command,
+                        category: category
+                    };
+                    client.commands.set(command.data.name, commandWithCategory);
                     logger.debug(`Commande chargée: ${command.data.name} (${category})`, undefined, 'LOADER');
                 } else {
                     logger.error(`Commande invalide dans ${fullPath}`, undefined, 'LOADER');
