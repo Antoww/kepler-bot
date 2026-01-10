@@ -2,6 +2,7 @@ import { Client } from 'discord.js';
 import { getExpiredTempBans, getExpiredTempMutes, removeTempBan, removeTempMute } from '../../database/db.ts';
 import { logModeration } from '../../utils/moderationLogger.ts';
 import { isNetworkError, isMaintenanceError, dbCircuitBreaker } from '../../utils/retryHelper.ts';
+import { logger } from '../../utils/logger.ts';
 
 export class ModerationManager {
     private client: Client;
@@ -13,12 +14,11 @@ export class ModerationManager {
     }
 
     start() {
+        logger.manager('ModerationManager', 'démarré');
         // Vérifier toutes les minutes
         this.checkInterval = setInterval(() => {
             this.checkExpiredSanctions();
         }, 60000); // 60 secondes
-
-        console.log('📋 Gestionnaire de modération démarré');
     }
 
     stop() {
@@ -26,7 +26,7 @@ export class ModerationManager {
             clearInterval(this.checkInterval);
             this.checkInterval = null;
         }
-        console.log('📋 Gestionnaire de modération arrêté');
+        logger.manager('ModerationManager', 'arrêté');
     }
 
     private async checkExpiredSanctions() {

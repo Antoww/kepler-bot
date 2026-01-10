@@ -28,8 +28,6 @@ export class BirthdayManager {
                 this.checkBirthdays();
             }, 24 * 60 * 60 * 1000); // 24 heures
         }, timeUntilMidnight);
-
-        console.log('🎂 Système de vérification des anniversaires démarré');
     }
 
     // Arrêter la vérification automatique

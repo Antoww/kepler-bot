@@ -1,46 +1,33 @@
 import { type CommandInteraction, SlashCommandBuilder, EmbedBuilder } from 'discord.js';
-import process from 'node:process';
-import version from '../../version.json' assert { type: 'json' };
+import version from '../../version.json' with { type: 'json' };
 
 export const data = new SlashCommandBuilder()
     .setName('botstats')
     .setDescription('Affiche les statistiques du bot');
 
 export async function execute(interaction: CommandInteraction) {
-    const uptime = process.uptime();
+    // Calculer l'uptime depuis le démarrage du bot
+    const startTime = interaction.client.readyTimestamp || Date.now();
+    const uptime = (Date.now() - startTime) / 1000;
     const days = Math.floor(uptime / 86400);
     const hours = Math.floor((uptime % 86400) / 3600);
     const minutes = Math.floor((uptime % 3600) / 60);
     const seconds = Math.floor(uptime % 60);
 
     // Récupération des informations sur l'utilisation des ressources
-    const memoryUsage = process.memoryUsage();
-    // Utiliser RSS pour la mémoire utilisée (plus représentative de l'utilisation réelle du processus)
-    const memoryUsedMB = Math.round((memoryUsage.rss / 1024 / 1024) * 100) / 100;
+    const memoryUsage = Deno.memoryUsage();
+    // Utiliser heapUsed pour la mémoire utilisée
+    const memoryUsedMB = Math.round((memoryUsage.heapUsed / 1024 / 1024) * 100) / 100;
 
-    // Récupérer la RAM totale de la machine (pas seulement le heap V8)
-    let totalMemBytes: number | undefined;
+    // Récupérer la RAM totale du système
+    let memoryTotalMB = 0;
     try {
-        // Deno fournit des infos système fiables
-        if (typeof Deno !== 'undefined' && typeof Deno.systemMemoryInfo === 'function') {
-            const sys = Deno.systemMemoryInfo();
-            // total est en octets
-            totalMemBytes = sys.total as number;
-        }
+        const sys = Deno.systemMemoryInfo();
+        memoryTotalMB = Math.round((sys.total / 1024 / 1024) * 100) / 100;
     } catch (_) {
-        // ignore (ex: permission manquante)
+        // Si pas d'accès, utiliser heapTotal
+        memoryTotalMB = Math.round((memoryUsage.heapTotal / 1024 / 1024) * 100) / 100;
     }
-    if (!totalMemBytes) {
-        try {
-            // Fallback Node:os (supporté par Deno en mode compat)
-            const os = await import('node:os');
-            totalMemBytes = os.totalmem();
-        } catch (_) {
-            // Dernier recours: utiliser heapTotal (moins précis)
-            totalMemBytes = memoryUsage.heapTotal;
-        }
-    }
-    const memoryTotalMB = Math.round(((totalMemBytes ?? 0) / 1024 / 1024) * 100) / 100;
     
     // CPU: Deno ne supporte pas process.cpuUsage(), on utilise une alternative
     let cpuPercent = 0;

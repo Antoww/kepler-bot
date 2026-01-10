@@ -1,5 +1,6 @@
 import { Client, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, TextChannel, Message } from 'discord.js';
 import { getExpiredGiveaways, endGiveaway, getGiveawayParticipants, deleteGiveaway, getGiveaway } from '../../database/db.ts';
+import { logger } from '../../utils/logger.ts';
 
 // Map pour stocker les timers actifs
 const activeGiveawayTimers = new Map<string, NodeJS.Timeout>();
@@ -8,8 +9,6 @@ const activeGiveawayTimers = new Map<string, NodeJS.Timeout>();
  * Initialiser les giveaways existants au démarrage du bot
  */
 export async function initializeGiveaways(client: Client): Promise<void> {
-    console.log('🎁 Initialisation des giveaways en cours...');
-    
     try {
         // Récupérer les giveaways expirés
         const expiredGiveaways = await getExpiredGiveaways();
@@ -18,13 +17,15 @@ export async function initializeGiveaways(client: Client): Promise<void> {
             try {
                 await finishGiveaway(client, giveaway.id);
             } catch (error) {
-                console.error(`Erreur lors de la finalisation du giveaway ${giveaway.id}:`, error);
+                logger.error(`Erreur finalisation giveaway ${giveaway.id}`, error, 'Giveaway');
             }
         }
         
-        console.log(`✅ ${expiredGiveaways.length} giveaway(s) finalisé(s)`);
+        if (expiredGiveaways.length > 0) {
+            logger.info(`${expiredGiveaways.length} giveaway(s) finalisé(s)`, undefined, 'Giveaway');
+        }
     } catch (error) {
-        console.error('❌ Erreur lors de l\'initialisation des giveaways:', error);
+        logger.error('Erreur initialisation giveaways', error, 'Giveaway');
     }
 }
 
