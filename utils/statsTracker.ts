@@ -291,6 +291,40 @@ export async function getTopUsers(days: number = 30, limit: number = 10, guildId
         .slice(0, limit);
 }
 
+export interface ChannelActivity {
+    channel_id: string;
+    message_count: number;
+}
+
+/**
+ * Récupère les canaux les plus actifs
+ */
+export async function getTopChannels(days: number = 30, limit: number = 10, guildId: string): Promise<ChannelActivity[]> {
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
+    const startDateStr = startDate.toISOString().split('T')[0];
+
+    const { data, error } = await supabase
+        .from('message_stats')
+        .select('channel_id, message_count')
+        .eq('guild_id', guildId)
+        .gte('message_date', startDateStr);
+
+    if (error) throw error;
+
+    // Agréger par canal
+    const channelCounts: Record<string, number> = {};
+    for (const row of data || []) {
+        channelCounts[row.channel_id] = (channelCounts[row.channel_id] || 0) + row.message_count;
+    }
+
+    // Trier et limiter
+    return Object.entries(channelCounts)
+        .map(([channel_id, message_count]) => ({ channel_id, message_count }))
+        .sort((a, b) => b.message_count - a.message_count)
+        .slice(0, limit);
+}
+
 /**
  * Récupère les statistiques totales
  */
