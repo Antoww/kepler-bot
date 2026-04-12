@@ -1,23 +1,24 @@
 import { Client } from 'discord.js';
 import { getExpiredTempBans, getExpiredTempMutes, removeTempBan, removeTempMute } from '../../database/db.ts';
 import { logModeration } from '../../utils/moderationLogger.ts';
-import { isNetworkError } from '../../utils/retryHelper.ts';
+import { isNetworkError, isMaintenanceError, dbCircuitBreaker } from '../../utils/retryHelper.ts';
+import { logger } from '../../utils/logger.ts';
 
 export class ModerationManager {
     private client: Client;
     private checkInterval: NodeJS.Timeout | null = null;
+    private lastMaintenanceLog: number = 0;
 
     constructor(client: Client) {
         this.client = client;
     }
 
     start() {
+        logger.manager('ModerationManager', 'démarré');
         // Vérifier toutes les minutes
         this.checkInterval = setInterval(() => {
             this.checkExpiredSanctions();
         }, 60000); // 60 secondes
-
-        console.log('📋 Gestionnaire de modération démarré');
     }
 
     stop() {
@@ -25,13 +26,30 @@ export class ModerationManager {
             clearInterval(this.checkInterval);
             this.checkInterval = null;
         }
-        console.log('📋 Gestionnaire de modération arrêté');
+        logger.manager('ModerationManager', 'arrêté');
     }
 
     private async checkExpiredSanctions() {
+        // Vérifier le circuit breaker
+        if (!dbCircuitBreaker.canAttempt()) {
+            const status = dbCircuitBreaker.getStatus();
+            const nextAttemptMin = Math.ceil(status.nextAttemptIn / 60000);
+            
+            // Logger une seule fois par période de 5 minutes
+            const now = Date.now();
+            if (now - this.lastMaintenanceLog >= 5 * 60 * 1000) {
+                console.log(`🔒 Circuit breaker actif - Prochaine tentative dans ~${nextAttemptMin} minutes (${status.failureCount} échecs consécutifs détectés)`);
+                this.lastMaintenanceLog = now;
+            }
+            return;
+        }
+
         try {
             await this.checkExpiredTempBans();
             await this.checkExpiredTempMutes();
+            
+            // Succès : réinitialiser le circuit breaker
+            dbCircuitBreaker.recordSuccess();
         } catch (error) {
             console.error('Erreur lors de la vérification des sanctions expirées:', error);
         }
@@ -74,10 +92,16 @@ export class ModerationManager {
                 }
             }
         } catch (error) {
-            // Distinguer les erreurs réseau des autres erreurs
-            if (isNetworkError(error)) {
+            // Distinguer les différents types d'erreurs
+            if (isMaintenanceError(error)) {
+                dbCircuitBreaker.recordFailure();
+                const status = dbCircuitBreaker.getStatus();
+                console.warn(`🔧 Maintenance Supabase détectée (${status.failureCount}/${3}) - Passage en mode attente si persistant`);
+            } else if (isNetworkError(error)) {
+                dbCircuitBreaker.recordFailure();
                 console.warn('⚠️ Erreur réseau lors de la vérification des bans temporaires (sera réessayé):', (error as Error).message);
             } else {
+                // Erreur non liée au réseau : ne pas activer le circuit breaker
                 console.error('❌ Erreur lors de la vérification des bans temporaires:', {
                     message: (error as Error).message,
                     details: error,
@@ -111,10 +135,16 @@ export class ModerationManager {
                 }
             }
         } catch (error) {
-            // Distinguer les erreurs réseau des autres erreurs
-            if (isNetworkError(error)) {
+            // Distinguer les différents types d'erreurs
+            if (isMaintenanceError(error)) {
+                dbCircuitBreaker.recordFailure();
+                const status = dbCircuitBreaker.getStatus();
+                console.warn(`🔧 Maintenance Supabase détectée (${status.failureCount}/${3}) - Passage en mode attente si persistant`);
+            } else if (isNetworkError(error)) {
+                dbCircuitBreaker.recordFailure();
                 console.warn('⚠️ Erreur réseau lors de la vérification des mutes temporaires (sera réessayé):', (error as Error).message);
             } else {
+                // Erreur non liée au réseau : ne pas activer le circuit breaker
                 console.error('❌ Erreur lors de la vérification des mutes temporaires:', {
                     message: (error as Error).message,
                     details: error,

@@ -34,8 +34,6 @@ export interface ServerConfig {
 // Initialiser la connexion à Supabase
 export async function initDatabase(): Promise<void> {
     try {
-        console.log('🔄 Connexion à Supabase...');
-        
         // Tester la connexion en récupérant une ligne de test
         const { data, error } = await supabase
             .from('reminders')
@@ -45,10 +43,8 @@ export async function initDatabase(): Promise<void> {
         if (error) {
             throw error;
         }
-        
-        console.log('✅ Connexion à Supabase établie avec succès');
     } catch (error) {
-        console.error('❌ Erreur lors de la connexion à Supabase:', error);
+        logger.error('Erreur connexion Supabase', error, 'DATABASE');
         throw error;
     }
 }

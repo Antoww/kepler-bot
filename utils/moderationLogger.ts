@@ -1,5 +1,6 @@
 import { EmbedBuilder, Guild, User, TextChannel } from 'discord.js';
 import { getModerationChannel } from '../database/db.ts';
+import { logger } from './logger.ts';
 
 export async function logModeration(
     guild: Guild,
@@ -13,14 +14,12 @@ export async function logModeration(
         const moderationChannelId = await getModerationChannel(guild.id);
         
         if (!moderationChannelId) {
-            console.log('Aucun canal de modération configuré pour ce serveur');
             return;
         }
 
         const channel = guild.channels.cache.get(moderationChannelId) as TextChannel;
         
         if (!channel) {
-            console.log('Canal de modération introuvable');
             return;
         }
 
@@ -44,7 +43,7 @@ export async function logModeration(
 
         await channel.send({ embeds: [embed] });
     } catch (error) {
-        console.error('Erreur lors de l\'envoi du log de modération:', error);
+        logger.error('Erreur envoi log modération', error, 'ModerationLogger');
     }
 }
 

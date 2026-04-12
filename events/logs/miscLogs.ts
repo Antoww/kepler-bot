@@ -7,6 +7,7 @@ import {
     Sticker
 } from 'discord.js';
 import { getLogChannel } from '../../database/supabase.ts';
+import { logger } from '../../utils/logger.ts';
 
 // Fonction utilitaire pour envoyer un log
 async function sendLog(guild: any, embed: EmbedBuilder) {
@@ -203,16 +204,22 @@ export async function logEmojiDelete(emoji: GuildEmoji) {
 
 // Log de modification d'emoji
 export async function logEmojiUpdate(oldEmoji: GuildEmoji, newEmoji: GuildEmoji) {
-    const auditEntry = await getAuditLog(newEmoji.guild, newEmoji.id, AuditLogEvent.EmojiUpdate);
-    const client = newEmoji.client;
-    
-    const changes: string[] = [];
-    
-    if (oldEmoji.name !== newEmoji.name) {
-        changes.push(`**Ancien nom:** \`${oldEmoji.name}\`\n**Nouveau nom:** \`${newEmoji.name}\``);
-    }
+    try {
+        const auditEntry = await getAuditLog(newEmoji.guild, newEmoji.id, AuditLogEvent.EmojiUpdate);
+        const client = newEmoji.client;
+        
+        const changes: string[] = [];
+        
+        if (oldEmoji.name !== newEmoji.name) {
+            changes.push(`**Ancien nom:** \`${oldEmoji.name}\`\n**Nouveau nom:** \`${newEmoji.name}\``);
+        }
 
-    if (changes.length === 0) return;
+        if (changes.length === 0) {
+            logger.debug(`Emoji ${newEmoji.name} modifié mais aucun changement détecté`, undefined, 'Logs');
+            return;
+        }
+        
+        logger.info(`Emoji modifié: ${oldEmoji.name} → ${newEmoji.name}`, undefined, 'Logs');
 
     const fields: any[] = [
         { name: '🆔 ID', value: `\`${newEmoji.id}\``, inline: true },
@@ -241,7 +248,10 @@ export async function logEmojiUpdate(oldEmoji: GuildEmoji, newEmoji: GuildEmoji)
         })
         .setTimestamp();
 
-    await sendLog(newEmoji.guild, embed);
+        await sendLog(newEmoji.guild, embed);
+    } catch (error) {
+        logger.error('Erreur log emoji update', error, 'Logs');
+    }
 }
 
 // Log de création de sticker

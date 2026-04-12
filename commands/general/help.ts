@@ -8,7 +8,8 @@ import {
     ButtonStyle,
     ComponentType
 } from 'discord.js';
-import version from '../../version.json' assert { type: 'json' };
+import version from '../../version.json' with { type: 'json' };
+import { logger } from '../../utils/logger.ts';
 
 export const data = new SlashCommandBuilder()
     .setName('help')
@@ -21,50 +22,35 @@ interface CommandInfo {
     id?: string | null;
 }
 
-// Fonction pour charger toutes les commandes automatiquement
-async function getAllCommands(): Promise<CommandInfo[]> {
+// Fonction pour récupérer toutes les commandes depuis client.commands
+function getAllCommands(client: any): CommandInfo[] {
     const commands: CommandInfo[] = [];
     
-    async function loadCommandsFromDir(dirPath: string, category: string) {
-        try {
-            for (const entry of Deno.readDirSync(dirPath)) {
-                const fullPath = dirPath + '/' + entry.name;
-                
-                if (entry.isDirectory) {
-                    // Récursivement charger les sous-dossiers
-                    await loadCommandsFromDir(fullPath, entry.name);
-                } else if (entry.isFile && (entry.name.endsWith('.js') || entry.name.endsWith('.ts'))) {
-                    try {
-                        const command = await import(`file://${fullPath}`);
-                        
-                        if (command.data && command.data.name) {
-                            commands.push({
-                                name: command.data.name,
-                                description: command.data.description || 'Aucune description disponible',
-                                category: category
-                            });
-                        }
-                    } catch (error) {
-                        console.error(`Erreur lors du chargement de ${fullPath}:`, error);
-                    }
-                }
-            }
-        } catch (error) {
-            console.error(`Erreur lors de la lecture du dossier ${dirPath}:`, error);
-        }
-    }
+    // Catégories basées sur la structure des dossiers
+    const categoryMap: Record<string, string> = {
+        'administration': 'administration',
+        'moderation': 'moderation',
+        'games': 'games',
+        'utilitaires': 'utilitaires',
+        'general': 'general'
+    };
     
-    const commandsPath = Deno.cwd() + '/commands';
-    
-    // Charger chaque dossier de catégorie
     try {
-        for (const entry of Deno.readDirSync(commandsPath)) {
-            if (entry.isDirectory) {
-                await loadCommandsFromDir(commandsPath + '/' + entry.name, entry.name);
-            }
-        }
+        // Utiliser les commandes déjà chargées dans client.commands
+        client.commands.forEach((command: any) => {
+            // Déterminer la catégorie depuis la propriété category ou depuis le nom du fichier
+            let category = command.category || 'general';
+            
+            commands.push({
+                name: command.data.name,
+                description: command.data.description || 'Aucune description disponible',
+                category: category
+            });
+        });
+        
+        logger.debug(`${commands.length} commande(s) chargée(s) depuis client.commands`, undefined, 'Help');
     } catch (error) {
-        console.error(`Erreur lors de la lecture du dossier commands:`, error);
+        logger.error('Erreur récupération commandes', error, 'Help');
     }
     
     return commands;
@@ -134,8 +120,11 @@ function createCategoryEmbed(client: any, commands: CommandInfo[], category: str
                 ? pageCommands.map(cmd => {
                     // Si on a l'ID de la commande, créer un lien cliquable
                     if (cmd.id) {
-                        return `</${cmd.name}:${cmd.id}> - ${cmd.description}`;
+                        const cmdLink = `</${cmd.name}:${cmd.id}>`;
+                        logger.info(`Lien créé: "${cmdLink}" pour ${cmd.name}`, undefined, 'Help');
+                        return `${cmdLink} - ${cmd.description}`;
                     } else {
+                        logger.warn(`Pas d'ID pour ${cmd.name}, affichage texte simple`, undefined, 'Help');
                         return `**/${cmd.name}** - ${cmd.description}`;
                     }
                 }).join('\n')
@@ -239,46 +228,58 @@ function createNavigationButtons(currentPage: number, totalPages: number, catego
 
 export async function execute(interaction: CommandInteraction) {
     try {
-        // Charger toutes les commandes automatiquement
-        const allCommands = await getAllCommands();
+        // Récupérer toutes les commandes depuis le client
+        const allCommands = getAllCommands(interaction.client);
+        logger.info(`Total commandes récupérées: ${allCommands.length}`, undefined, 'Help');
+        
+        // Log des commandes par catégorie
+        const categoryCounts: Record<string, number> = {};
+        allCommands.forEach(cmd => {
+            categoryCounts[cmd.category] = (categoryCounts[cmd.category] || 0) + 1;
+        });
+        logger.info(`Commandes par catégorie: ${JSON.stringify(categoryCounts)}`, undefined, 'Help');
         
         // Récupérer les commandes slash enregistrées avec leurs IDs
         let applicationCommands;
         try {
             // Essayer d'abord les commandes globales
             applicationCommands = await interaction.client.application?.commands.fetch();
-            console.log(`✅ ${applicationCommands?.size || 0} commandes globales récupérées`);
+            logger.info(`${applicationCommands?.size || 0} commandes API récupérées`, undefined, 'Help');
             
             // Si on est dans une guild, essayer aussi les commandes de guild
             if (interaction.guild && applicationCommands) {
                 try {
                     const guildCommands = await interaction.guild.commands.fetch();
-                    console.log(`✅ ${guildCommands.size} commandes de guild récupérées`);
+                    logger.info(`${guildCommands.size} commandes de guild récupérées`, undefined, 'Help');
                     
                     // Fusionner les deux collections
                     guildCommands.forEach(cmd => applicationCommands?.set(cmd.id, cmd));
                 } catch (guildError) {
-                    console.log('⚠️ Impossible de récupérer les commandes de guild:', guildError);
+                    logger.warn('Impossible de récupérer les commandes de guild', guildError, 'Help');
                 }
             }
         } catch (error) {
-            console.error('❌ Erreur lors de la récupération des commandes:', error);
+            logger.error('Erreur récupération commandes', error, 'Help');
             applicationCommands = new Map();
         }
         
         // Mapper les commandes avec leurs IDs réels
+        let idsFound = 0;
+        let idsMissing = 0;
         const commandsWithIds = allCommands.map(cmd => {
             const registeredCommand = applicationCommands?.find(appCmd => appCmd.name === cmd.name);
             if (registeredCommand) {
-                console.log(`✅ ID trouvé pour /${cmd.name}: ${registeredCommand.id}`);
+                idsFound++;
             } else {
-                console.log(`⚠️ Aucun ID trouvé pour /${cmd.name}`);
+                idsMissing++;
+                logger.warn(`Commande ${cmd.name} n'a pas d'ID trouvé dans l'API`, undefined, 'Help');
             }
             return {
                 ...cmd,
                 id: registeredCommand?.id || null
             };
         });
+        logger.info(`IDs trouvés: ${idsFound}/${allCommands.length}`, undefined, 'Help');
         
         // Créer et envoyer le menu principal
         const mainEmbed = createMainMenuEmbed(interaction.client);
@@ -322,6 +323,8 @@ export async function execute(interaction: CommandInteraction) {
             const selectedCategory = selectInteraction.values[0];
             const categoryCommands = commandsWithIds.filter(cmd => cmd.category === selectedCategory);
             const totalPages = Math.ceil(categoryCommands.length / 10);
+            
+            logger.info(`Catégorie sélectionnée: ${selectedCategory}, ${categoryCommands.length} commandes, ${totalPages} page(s)`, undefined, 'Help');
             
             const categoryEmbed = createCategoryEmbed(interaction.client, categoryCommands, selectedCategory, 0);
             const components = [createCategorySelectMenu()];

@@ -1,4 +1,5 @@
 import { supabase } from '../database/supabase.ts';
+import { logger } from './logger.ts';
 
 // ============================================
 // Module RGPD - Gestion complète des données utilisateur
@@ -345,7 +346,7 @@ export async function deleteCompleteUserData(
         result.giveawayParticipationsDeleted = giveaways.data?.length || 0;
     }
 
-    console.log(`[RGPD] Données supprimées pour l'utilisateur ${userId}:`, result);
+    logger.info(`Données utilisateur supprimées: ${userId}`, result, 'RGPD');
     return result;
 }
 
@@ -427,7 +428,7 @@ export async function purgeAllOldData(): Promise<{
         }
     };
 
-    console.log('[RGPD] Purge automatique effectuée:', result);
+    // Le log est déjà géré par events/core/rgpdManager.ts
     return result;
 }
 

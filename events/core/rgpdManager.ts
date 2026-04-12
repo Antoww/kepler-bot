@@ -1,4 +1,5 @@
 import { purgeAllOldData } from '../../utils/rgpdManager.ts';
+import { logger } from '../../utils/logger.ts';
 
 /**
  * Gestionnaire RGPD - Purge automatique des données anciennes
@@ -17,8 +18,8 @@ export class RGPDManager {
      * Démarre le gestionnaire RGPD
      */
     start(): void {
-        console.log('[RGPD] Gestionnaire démarré - Purge automatique activée');
-        console.log('[RGPD] Durées de conservation: Stats=90j, Modération=2ans');
+        logger.manager('RGPDManager', 'démarré - Purge auto activée');
+        logger.info('Conservation: Stats=90j, Modération=2ans', undefined, 'RGPD');
         
         // Effectuer une purge au démarrage (avec délai pour laisser le bot s'initialiser)
         setTimeout(() => {
@@ -38,7 +39,7 @@ export class RGPDManager {
         if (this.purgeInterval) {
             clearInterval(this.purgeInterval);
             this.purgeInterval = null;
-            console.log('[RGPD] Gestionnaire arrêté');
+            logger.manager('RGPDManager', 'arrêté');
         }
     }
 
@@ -47,7 +48,7 @@ export class RGPDManager {
      */
     private async performPurge(): Promise<void> {
         try {
-            console.log('[RGPD] Début de la purge automatique...');
+            logger.info('Début purge automatique...', undefined, 'RGPD');
             const result = await purgeAllOldData();
             
             const totalPurged = 
@@ -60,15 +61,12 @@ export class RGPDManager {
                 result.moderation.tempMutes;
 
             if (totalPurged > 0) {
-                console.log(`[RGPD] Purge terminée:`);
-                console.log(`  - Stats: ${result.stats.commands} commandes, ${result.stats.messages} messages, ${result.stats.daily} daily`);
-                console.log(`  - Personnel: ${result.personal.reminders} rappels expirés`);
-                console.log(`  - Modération: ${result.moderation.history} historique, ${result.moderation.tempBans} bans, ${result.moderation.tempMutes} mutes`);
+                logger.success(`Purge terminée: ${totalPurged} entrée(s)`, result, 'RGPD');
             } else {
-                console.log('[RGPD] Purge terminée: aucune donnée à supprimer');
+                logger.info('Purge terminée: aucune donnée à supprimer', undefined, 'RGPD');
             }
         } catch (error) {
-            console.error('[RGPD] Erreur lors de la purge:', error);
+            logger.error('Erreur purge RGPD', error, 'RGPD');
         }
     }
 

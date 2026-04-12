@@ -1,6 +1,7 @@
 import { Client, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
-import { getExpiredReminders, deleteReminder, getUserReminders } from '../../database/supabase.ts';
+import { getExpiredReminders, deleteReminder } from '../../database/supabase.ts';
 import { isNetworkError } from '../../utils/retryHelper.ts';
+import { logger } from '../../utils/logger.ts';
 
 export class ReminderManager {
     private client: Client;
@@ -12,7 +13,7 @@ export class ReminderManager {
     }
 
     async start() {
-        console.log('⏰ Gestionnaire de rappels démarré');
+        logger.manager('ReminderManager', 'démarré');
         
         // Charger les rappels existants au démarrage
         await this.loadExistingReminders();
@@ -35,12 +36,12 @@ export class ReminderManager {
         }
         this.activeReminders.clear();
 
-        console.log('⏰ Gestionnaire de rappels arrêté');
+        logger.manager('ReminderManager', 'arrêté');
     }
 
     async loadExistingReminders() {
         try {
-            console.log('🔄 Chargement des rappels existants...');
+            logger.debug('Chargement rappels existants...', undefined, 'Reminders');
             
             // Récupérer tous les rappels qui n'ont pas encore été déclenchés
             // Cette requête devrait récupérer tous les rappels futurs de tous les utilisateurs
@@ -51,23 +52,23 @@ export class ReminderManager {
                 .order('timestamp', { ascending: true });
 
             if (error) {
-                console.error('❌ Erreur lors du chargement des rappels:', error);
+                logger.error('Erreur chargement rappels', error, 'Reminders');
                 return;
             }
 
             if (!allReminders || allReminders.length === 0) {
-                console.log('📭 Aucun rappel futur trouvé');
+                logger.debug('Aucun rappel futur trouvé', undefined, 'Reminders');
                 return;
             }
 
-            console.log(`📬 ${allReminders.length} rappel(s) futur(s) trouvé(s)`);
+            logger.info(`${allReminders.length} rappel(s) futur(s) chargé(s)`, undefined, 'Reminders');
 
             for (const reminder of allReminders) {
                 this.scheduleReminder(reminder);
             }
 
         } catch (error) {
-            console.error('❌ Erreur lors du chargement des rappels existants:', error);
+            logger.error('Erreur chargement rappels existants', error, 'Reminders');
         }
     }
 
@@ -82,7 +83,7 @@ export class ReminderManager {
             }, delay);
 
             this.activeReminders.set(reminder.id, timeout);
-            console.log(`⏰ Rappel programmé: ID ${reminder.id} dans ${Math.round(delay / 1000)}s`);
+            logger.debug(`Rappel programmé: ${reminder.id} dans ${Math.round(delay / 1000)}s`, undefined, 'Reminders');
         } else if (delay <= 0) {
             // Le rappel a déjà expiré, le déclencher immédiatement
             this.triggerReminder(reminder);
@@ -117,18 +118,18 @@ export class ReminderManager {
 
             try {
                 await user.send({ embeds: [reminderEmbed], components: [row] });
-                console.log(`✅ [RAPPEL LIVRÉ] ID: ${reminder.id} | Utilisateur: ${user.username} | Méthode: Message privé`);
-            } catch (dmError) {
-                console.log(`⚠️ [RAPPEL NON LIVRÉ] ID: ${reminder.id} | Utilisateur: ${user.username} | Erreur: MP fermés`);
+                logger.debug(`Rappel livré: ${reminder.id}`, { user: user.username }, 'Reminders');
+            } catch (_dmError) {
+                logger.warn(`Rappel non livré (MP fermés): ${reminder.id}`, { user: user.username }, 'Reminders');
                 // Optionnel: Garder le rappel en base pour une nouvelle tentative plus tard
             }
 
             // Supprimer le rappel de la base de données
             await deleteReminder(reminder.id);
-            console.log(`🗑️ Rappel supprimé de la base: ID ${reminder.id}`);
+            logger.debug(`Rappel supprimé: ${reminder.id}`, undefined, 'Reminders');
 
         } catch (error) {
-            console.error(`❌ Erreur lors du déclenchement du rappel ${reminder.id}:`, error);
+            logger.error(`Erreur déclenchement rappel ${reminder.id}`, error, 'Reminders');
         }
     }
 
