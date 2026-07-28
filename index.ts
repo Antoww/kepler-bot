@@ -71,6 +71,7 @@ async function loadEvents() {
         'events/handlers/emojiCreate.ts',
         'events/handlers/emojiDelete.ts',
         'events/handlers/emojiUpdate.ts',
+        'events/handlers/guildCreate.ts',
         'events/handlers/guildBanAdd.ts',
         'events/handlers/guildBanRemove.ts',
         'events/handlers/guildMemberAdd.ts',

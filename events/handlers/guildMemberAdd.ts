@@ -8,6 +8,11 @@ export const name = Events.GuildMemberAdd;
 export const once = false;
 
 export async function execute(member: GuildMember) {
+    try {
+        await member.client.inviteManager?.handleMemberJoin(member);
+    } catch (error) {
+        logger.error(`Erreur détection invitation de ${member.id}`, error, 'INVITES');
+    }
     await logMemberJoin(member);
     try {
         const restoredRoles = await syncXpRewardRoles(member);

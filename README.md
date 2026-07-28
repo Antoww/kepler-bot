@@ -45,7 +45,7 @@ Kepler est un bot Discord polyvalent en **développement actif**, conçu pour en
 - **Divertissement** : `/blague`, `/meme`
 
 ### ⚙️ Administration & Configuration
-- **Configuration centralisée** : logs, anniversaires, mute, modération, tickets et XP via `/settings`
+- **Configuration centralisée** : logs, anniversaires, mute, modération, tickets, XP et invitations via `/settings`
 - **Annonces** : `/annonce` pour communiquer avec votre communauté
 - **Audit serveur** : `/audit` pour vérifier la configuration complète
 - **Gestion des anniversaires** : `/birthday` pour ajouter/modifier/supprimer des anniversaires
@@ -114,6 +114,8 @@ Kepler est un bot Discord polyvalent en **développement actif**, conçu pour en
 /rolelist                              # Liste des rôles du serveur
 /reminder <durée> <message>            # Créer un rappel personnel
 /reminders                             # Voir vos rappels
+/invitations classement               # Classement des inviteurs
+/invitations membre [utilisateur]      # Statistiques d'invitations
 /birthday add <date> [notes]           # Ajouter un anniversaire
 /birthday remove <utilisateur>         # Retirer un anniversaire
 /birthday list                         # Voir tous les anniversaires

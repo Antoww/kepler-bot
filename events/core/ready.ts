@@ -9,6 +9,7 @@ import { ModerationManager } from '../../managers/moderationManager.ts';
 import { RGPDManager } from '../../managers/rgpdManager.ts';
 import { XpManager } from '../../managers/xpManager.ts';
 import { ReminderManager } from '../../managers/reminderManager.ts';
+import { InviteManager } from '../../managers/inviteManager.ts';
 
 export const name = 'ready';
 export const once = true;
@@ -51,6 +52,11 @@ export async function execute(client: Client<true>) {
     client.reminderManager = reminderManager;
     await reminderManager.start();
     logger.success('Gestionnaire de rappels démarré', undefined, 'MANAGER');
+
+    const inviteManager = new InviteManager(client);
+    client.inviteManager = inviteManager;
+    await inviteManager.start();
+    logger.success('Gestionnaire d’invitations démarré', undefined, 'MANAGER');
 
     // Enregistrer les commandes slash
     const rest = new REST({ version: '10' }).setToken(Deno.env.get('TOKEN') as string);
