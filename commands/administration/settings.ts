@@ -61,6 +61,14 @@ export async function execute(interaction: ChatInputCommandInteraction) {
             await component.reply({ content: 'Ce panneau appartient à un autre administrateur.', ephemeral: true });
             return;
         }
+        const currentMember = await interaction.guild!.members.fetch(component.user.id).catch(() => null);
+        if (!currentMember?.permissions.has(PermissionFlagsBits.Administrator)) {
+            await component.reply({
+                content: 'Vos permissions administrateur ne sont plus valides.',
+                ephemeral: true
+            });
+            return;
+        }
 
         try {
             await handleComponent(component, interaction);

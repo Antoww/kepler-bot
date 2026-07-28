@@ -190,7 +190,9 @@ async function handleDeleteReminder(interaction: CommandInteraction) {
         }
 
         // Supprimer le rappel
-        await deleteReminder(reminderId);
+        // La propriété est aussi imposée dans la requête DELETE : le contrôle ne
+        // dépend pas seulement de la lecture précédente.
+        await deleteReminder(reminderId, interaction.user.id);
 
         const embed = createKeplerEmbed()
             .setColor(KEPLER_COLORS.danger)

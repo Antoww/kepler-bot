@@ -138,8 +138,21 @@ async function executeAction(
     proof: string
 ): Promise<number> {
     const guild = interaction.guild!;
+    const moderator = await guild.members.fetch(interaction.user.id).catch(() => null);
+    const requiredPermission = action === 'ban'
+        ? PermissionFlagsBits.BanMembers
+        : action === 'kick'
+            ? PermissionFlagsBits.KickMembers
+            : PermissionFlagsBits.ModerateMembers;
+    if (!moderator?.permissions.has(requiredPermission)) {
+        throw new Error('Vos permissions ne sont plus valides.');
+    }
+
     const target = await interaction.client.users.fetch(targetId);
     const targetMember = await guild.members.fetch(targetId).catch(() => null);
+    if (targetMember && moderator.roles.highest.position <= targetMember.roles.highest.position) {
+        throw new Error('La hiérarchie des rôles ne permet plus cette action.');
+    }
     const storedReason = proof ? `${reason}\nPreuve : ${proof}` : reason;
     let duration = durationInput;
 

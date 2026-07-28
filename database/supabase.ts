@@ -109,11 +109,14 @@ export async function getUserReminders(userId: string): Promise<DatabaseReminder
 }
 
 // Supprimer un rappel
-export async function deleteReminder(reminderId: number): Promise<void> {
-    const { error } = await supabase
+export async function deleteReminder(reminderId: number, userId?: string): Promise<void> {
+    let query = supabase
         .from('reminders')
         .delete()
         .eq('id', reminderId);
+
+    if (userId) query = query.eq('user_id', userId);
+    const { error } = await query;
 
     if (error) {
         throw new Error(`Erreur lors de la suppression du rappel: ${error.message}`);

@@ -23,6 +23,22 @@ async function handleCommandInteraction(interaction: CommandInteraction) {
 
     let success = true;
     try {
+        // Les permissions par défaut contrôlent surtout la visibilité/enregistrement
+        // de la commande côté Discord. On les revérifie au moment de l'exécution
+        // pour éviter un contournement via une configuration Discord obsolète.
+        const requiredPermissions = command.data.toJSON().default_member_permissions;
+        if (requiredPermissions) {
+            const memberPermissions = interaction.memberPermissions;
+            if (!interaction.inGuild() || !memberPermissions?.has(BigInt(requiredPermissions))) {
+                success = false;
+                await interaction.reply({
+                    content: '❌ Vous n’avez pas les permissions nécessaires pour cette commande.',
+                    ephemeral: true
+                });
+                return;
+            }
+        }
+
         await command.execute(interaction);
         console.log(`Commande ${interaction.commandName} exécutée avec succès.`);
         console.log(`[LOG : ${new Date().toLocaleTimeString()}] Commande ${interaction.commandName} executée par ${interaction.user.tag} (${interaction.user.id})`);
@@ -106,14 +122,26 @@ async function handleGiveawayJoin(interaction: ButtonInteraction) {
             await interaction.reply({ content: '❌ Ce giveaway n\'existe pas ou est terminé.', ephemeral: true });
             return;
         }
+        if (
+            !interaction.guildId
+            || giveaway.guild_id !== interaction.guildId
+            || giveaway.channel_id !== interaction.channelId
+            || giveaway.message_id !== message.id
+        ) {
+            await interaction.reply({ content: '❌ Ce bouton ne correspond pas à ce giveaway.', ephemeral: true });
+            return;
+        }
 
         // Vérifier si l'utilisateur a le rôle requis
-        if (giveaway.role_id && interaction.guild?.members.cache.get(interaction.user.id)?.roles.cache.has(giveaway.role_id) === false) {
-            await interaction.reply({
-                content: `❌ Vous devez avoir le rôle <@&${giveaway.role_id}> pour participer.`,
-                ephemeral: true
-            });
-            return;
+        if (giveaway.role_id) {
+            const member = await interaction.guild.members.fetch(interaction.user.id).catch(() => null);
+            if (!member?.roles.cache.has(giveaway.role_id)) {
+                await interaction.reply({
+                    content: `❌ Vous devez avoir le rôle <@&${giveaway.role_id}> pour participer.`,
+                    ephemeral: true
+                });
+                return;
+            }
         }
 
         // Ajouter le participant
@@ -173,6 +201,15 @@ async function handleGiveawayLeave(interaction: ButtonInteraction) {
         const giveaway = await getGiveaway(giveawayId);
         if (!giveaway) {
             await interaction.reply({ content: '❌ Ce giveaway n\'existe pas.', ephemeral: true });
+            return;
+        }
+        if (
+            !interaction.guildId
+            || giveaway.guild_id !== interaction.guildId
+            || giveaway.channel_id !== interaction.channelId
+            || giveaway.message_id !== message.id
+        ) {
+            await interaction.reply({ content: '❌ Ce bouton ne correspond pas à ce giveaway.', ephemeral: true });
             return;
         }
 
