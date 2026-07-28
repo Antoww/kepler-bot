@@ -464,7 +464,7 @@ export interface Warning {
 // Obtenir le prochain numéro de sanction pour un serveur
 export async function getNextSanctionNumber(guildId: string): Promise<number> {
     const { data, error } = await supabase
-        .rpc('get_next_sanction_number', { guild_id_param: guildId });
+        .rpc('get_next_sanction_number', { p_guild_id: guildId });
     
     if (error) throw error;
     return data;
