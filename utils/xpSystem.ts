@@ -1,4 +1,5 @@
 import {
+    ChannelType,
     type Guild,
     type GuildMember,
     type Message
@@ -32,6 +33,7 @@ export interface XpSettings {
     guild_id: string;
     enabled: boolean;
     announce_level_up: boolean;
+    level_up_channel_id: string | null;
     cooldown_seconds: number;
     boost_multiplier: number;
     boost_starts_at: string | null;
@@ -49,6 +51,7 @@ export interface XpRoleBoost {
 const DEFAULT_XP_SETTINGS: Omit<XpSettings, 'guild_id'> = {
     enabled: true,
     announce_level_up: true,
+    level_up_channel_id: null,
     cooldown_seconds: XP_COOLDOWN_SECONDS,
     boost_multiplier: 1,
     boost_starts_at: null,
@@ -145,6 +148,28 @@ export async function deleteXpReward(guildId: string, level: number): Promise<vo
         .eq('guild_id', guildId)
         .eq('level', level);
     if (error) throw error;
+}
+
+export async function resetXpProfile(guildId: string, userId: string): Promise<boolean> {
+    const { data, error } = await supabase
+        .from('guild_xp_profiles')
+        .delete()
+        .eq('guild_id', guildId)
+        .eq('user_id', userId)
+        .select('user_id');
+    if (error) throw error;
+    return Boolean(data?.length);
+}
+
+export async function removeXpRewardRoles(member: GuildMember): Promise<string[]> {
+    const rewards = await getXpRewards(member.guild.id);
+    const roleIds = rewards
+        .map(reward => reward.role_id)
+        .filter(roleId => member.roles.cache.has(roleId));
+    if (!roleIds.length) return [];
+
+    await member.roles.remove(roleIds, 'Réinitialisation du profil XP');
+    return roleIds;
 }
 
 export async function updateXpSettings(
@@ -289,6 +314,22 @@ export async function awardMessageXp(message: Message): Promise<void> {
         message.author,
         'Progression Kepler'
     );
+    if (settings.level_up_channel_id && settings.level_up_channel_id !== message.channel.id) {
+        try {
+            const configuredChannel = await message.guild.channels.fetch(settings.level_up_channel_id);
+            if (
+                configuredChannel &&
+                (configuredChannel.type === ChannelType.GuildText ||
+                    configuredChannel.type === ChannelType.GuildAnnouncement)
+            ) {
+                await configuredChannel.send({ embeds: [embed] });
+                return;
+            }
+            logger.warn('Salon d’annonce XP configuré introuvable ou invalide', undefined, 'XP');
+        } catch (error) {
+            logger.warn('Envoi dans le salon d’annonce XP impossible, utilisation du salon courant', error, 'XP');
+        }
+    }
     await message.channel.send({ embeds: [embed] });
 }
 

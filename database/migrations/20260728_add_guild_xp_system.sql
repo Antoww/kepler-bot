@@ -27,6 +27,7 @@ create table if not exists public.guild_xp_settings (
     guild_id text primary key,
     enabled boolean not null default true,
     announce_level_up boolean not null default true,
+    level_up_channel_id text,
     cooldown_seconds integer not null default 60 check (cooldown_seconds between 0 and 86400),
     boost_multiplier numeric(5,2) not null default 1 check (boost_multiplier between 1 and 100),
     boost_starts_at timestamptz,
@@ -103,7 +104,7 @@ begin
         now(),
         now()
     )
-    on conflict (guild_id, user_id) do update
+    on conflict on constraint guild_xp_profiles_pkey do update
     set xp = profiles.xp + excluded.xp,
         level = floor(sqrt((profiles.xp + excluded.xp)::numeric / 100))::integer,
         message_count = profiles.message_count + 1,

@@ -145,6 +145,12 @@ async function handleComponent(component: MessageComponentInteraction, source: C
             await showXpGeneralModal(component, source);
             return;
         }
+        if (component.customId === 'settings:xp:clear-level-channel') {
+            await component.deferUpdate();
+            await updateXpSettings(guild.id, { level_up_channel_id: null });
+            await component.editReply(await buildXpGeneral(guild));
+            return;
+        }
         if (component.customId === 'settings:xp:boosts') {
             await component.update(await buildXpBoosts(guild));
             return;
@@ -235,6 +241,12 @@ async function handleComponent(component: MessageComponentInteraction, source: C
 
     if (component.isChannelSelectMenu()) {
         const channelId = component.values[0];
+        if (component.customId === 'settings:xp:level-channel') {
+            await component.deferUpdate();
+            await updateXpSettings(guild.id, { level_up_channel_id: channelId });
+            await component.editReply(await buildXpGeneral(guild));
+            return;
+        }
         if (component.customId === 'settings:xp:excluded-channels') {
             await component.deferUpdate();
             await updateXpSettings(guild.id, { excluded_channel_ids: component.values });
@@ -592,6 +604,15 @@ async function buildXpHome(guild: Guild) {
 
 async function buildXpGeneral(guild: Guild) {
     const settings = await getXpSettings(guild.id);
+    const levelChannelSelect = new ChannelSelectMenuBuilder()
+        .setCustomId('settings:xp:level-channel')
+        .setPlaceholder('Salon des annonces de niveau')
+        .addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement)
+        .setMinValues(1)
+        .setMaxValues(1);
+    if (settings.level_up_channel_id && guild.channels.cache.has(settings.level_up_channel_id)) {
+        levelChannelSelect.setDefaultChannels(settings.level_up_channel_id);
+    }
     const embed = createKeplerEmbed(settings.enabled ? 'primary' : 'neutral')
         .setTitle('XP · Paramètres généraux')
         .setDescription('Le cooldown s’applique séparément à chaque membre sur ce serveur.')
@@ -602,18 +623,27 @@ async function buildXpGeneral(guild: Guild) {
                 name: 'Annonce des niveaux',
                 value: settings.announce_level_up ? '🟢 Activée' : '⚪ Désactivée',
                 inline: true
+            },
+            {
+                name: 'Salon d’annonce',
+                value: settings.level_up_channel_id
+                    ? formatChannel(guild, settings.level_up_channel_id)
+                    : 'Salon où le membre gagne son niveau',
+                inline: false
             }
         );
     return {
         content: '',
         embeds: [embed],
         components: [
+            new ActionRowBuilder<ChannelSelectMenuBuilder>().addComponents(levelChannelSelect),
             new ActionRowBuilder<ButtonBuilder>().addComponents(
                 new ButtonBuilder()
                     .setCustomId('settings:xp:toggle')
                     .setLabel(settings.enabled ? 'Désactiver' : 'Activer')
                     .setStyle(settings.enabled ? ButtonStyle.Danger : ButtonStyle.Success),
                 new ButtonBuilder().setCustomId('settings:xp:general-edit').setLabel('Modifier').setEmoji('✏️').setStyle(ButtonStyle.Primary),
+                new ButtonBuilder().setCustomId('settings:xp:clear-level-channel').setLabel('Salon automatique').setStyle(ButtonStyle.Secondary),
                 xpBackButton()
             )
         ]

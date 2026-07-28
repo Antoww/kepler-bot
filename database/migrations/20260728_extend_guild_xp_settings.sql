@@ -1,6 +1,7 @@
 -- Extension idempotente pour les installations ayant déjà appliqué la
 -- migration XP initiale.
 alter table public.guild_xp_settings
+    add column if not exists level_up_channel_id text,
     add column if not exists cooldown_seconds integer not null default 60,
     add column if not exists boost_multiplier numeric(5,2) not null default 1,
     add column if not exists boost_starts_at timestamptz,

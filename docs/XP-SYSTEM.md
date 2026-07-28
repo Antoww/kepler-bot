@@ -20,6 +20,8 @@ Ainsi, le niveau 1 commence à 100 XP, le niveau 2 à 400 XP, le niveau 3 à
 
 - `/xp profil [membre]` affiche le niveau, le rang et la progression.
 - `/xp classement` affiche les dix premiers membres du serveur.
+- `/xpadmin reset utilisateur:<mention ou ID>` réinitialise un profil sur le
+  serveur courant, même si l'utilisateur l'a quitté.
 
 ## Configuration administrateur
 
@@ -27,6 +29,8 @@ Toute la configuration est centralisée dans `/settings`, section
 **Expérience** :
 
 - **Général** : activation, cooldown en secondes et annonces de niveau.
+  Un salon d'annonce peut être choisi ; sans configuration, l'annonce est
+  envoyée dans le salon où le niveau est gagné.
 - **Boosts** : période temporaire avec dates et multiplicateur, boosts par rôle.
 - **Récompenses** : association entre niveaux et rôles automatiques.
 - **Exclusions** : salons et rôles qui ne peuvent pas gagner d'XP.
@@ -46,6 +50,8 @@ Exécuter les migrations suivantes dans Supabase avant de déployer le code :
 1. `database/migrations/20260728_add_guild_xp_system.sql`
 2. `database/migrations/20260728_extend_guild_xp_settings.sql`
 3. `database/migrations/20260728_secure_guild_xp_rls.sql`
+4. `database/migrations/20260728_fix_add_guild_xp_ambiguity.sql`
+5. `database/migrations/20260728_add_xp_level_channel.sql`
 
 La seconde est idempotente et peut aussi être appliquée à une installation
 ayant déjà reçu la première version du système. Les ajouts d'XP passent par une
