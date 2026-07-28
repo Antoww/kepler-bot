@@ -172,6 +172,11 @@ async function handleComponent(component: MessageComponentInteraction, source: C
             await confirmSettingChange(component, source, 'tickets', `Catégorie des tickets configurée sur <#${channelId}>.`);
             return;
         }
+        if (component.customId === 'settings:select:tickets-logs') {
+            await updateTicketConfig(guild.id, { ticket_log_channel_id: channelId });
+            await confirmSettingChange(component, source, 'tickets', `Salon des logs de tickets configuré sur <#${channelId}>.`);
+            return;
+        }
         if (component.customId === 'settings:select:tickets-channel') {
             await updateTicketConfig(guild.id, { ticket_panel_channel_id: channelId });
             await confirmSettingChange(component, source, 'tickets', `Salon du panneau configuré sur <#${channelId}>.`);
@@ -255,6 +260,7 @@ async function buildOverview(interaction: ChatInputCommandInteraction, notice?: 
             { name: '📣 Rôle mentionné', value: formatOptionalRole(guild, reportRole), inline: true },
             { name: '🎫 Panneau de tickets', value: formatChannel(guild, tickets.ticket_panel_channel_id), inline: true },
             { name: '📁 Catégorie des tickets', value: formatChannel(guild, tickets.ticket_category_id), inline: true },
+            { name: '🧾 Logs des tickets', value: formatChannel(guild, tickets.ticket_log_channel_id), inline: true },
             { name: '🧑‍💻 Rôle support', value: formatOptionalRole(guild, tickets.ticket_support_role_id), inline: true }
         )
         .setFooter({ text: 'Panneau privé • expiration dans 5 minutes' })
@@ -301,6 +307,12 @@ function buildSection(section: ConfigSection, guild: Guild) {
             .addChannelTypes(ChannelType.GuildCategory)
             .setMinValues(1)
             .setMaxValues(1);
+        const logChannelSelect = new ChannelSelectMenuBuilder()
+            .setCustomId('settings:select:tickets-logs')
+            .setPlaceholder('Salon des états et archives')
+            .addChannelTypes(ChannelType.GuildText)
+            .setMinValues(1)
+            .setMaxValues(1);
         return {
             content: '',
             embeds: [embed],
@@ -308,6 +320,7 @@ function buildSection(section: ConfigSection, guild: Guild) {
                 new ActionRowBuilder<ChannelSelectMenuBuilder>().addComponents(channelSelect),
                 new ActionRowBuilder<ChannelSelectMenuBuilder>().addComponents(categorySelect),
                 new ActionRowBuilder<RoleSelectMenuBuilder>().addComponents(roleSelect),
+                new ActionRowBuilder<ChannelSelectMenuBuilder>().addComponents(logChannelSelect),
                 new ActionRowBuilder<ButtonBuilder>().addComponents(
                     new ButtonBuilder().setCustomId('settings:tickets:customize').setLabel('Personnaliser').setEmoji('✏️').setStyle(ButtonStyle.Primary),
                     new ButtonBuilder().setCustomId('settings:tickets:publish').setLabel('Publier').setEmoji('📨').setStyle(ButtonStyle.Success),
@@ -424,6 +437,7 @@ async function disableSection(section: ConfigSection, guildId: string) {
         await updateTicketConfig(guildId, {
             ticket_panel_channel_id: null,
             ticket_category_id: null,
+            ticket_log_channel_id: null,
             ticket_support_role_id: null
         });
     } else await updateMuteRole(guildId, '');

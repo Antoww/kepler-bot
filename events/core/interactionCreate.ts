@@ -104,6 +104,10 @@ async function handleButtonInteraction(interaction: ButtonInteraction) {
                 content: KEPLER_MESSAGES.unexpectedError,
                 ephemeral: true
             });
+        } else if (interaction.deferred) {
+            await interaction.editReply({
+                content: KEPLER_MESSAGES.unexpectedError
+            });
         }
     }
 }
