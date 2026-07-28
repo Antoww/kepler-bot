@@ -152,7 +152,7 @@ async function runChannelsAudit(interaction: CommandInteraction) {
       iconURL: interaction.client.user?.displayAvatarURL({ forceStatic: false }),
     })
     .setTitle('🔎 Audit des canaux')
-    .setColor(globalMissing.length ? 0xffaa00 : 0x00ff88)
+    .setColor(globalMissing.length ? KEPLER_COLORS.warning : KEPLER_COLORS.success)
     .setTimestamp()
     .setFooter({
       text: `Demandé par ${interaction.user.tag}`,
@@ -472,7 +472,7 @@ async function runRolesAudit(interaction: CommandInteraction) {
       iconURL: interaction.client.user?.displayAvatarURL({ forceStatic: false }),
     })
     .setTitle('🔎 Audit des rôles')
-    .setColor(ok ? 0x00ff88 : 0xffaa00)
+    .setColor(ok ? KEPLER_COLORS.success : KEPLER_COLORS.warning)
     .setTimestamp()
     .setFooter({
       text: `Demandé par ${interaction.user.tag}`,

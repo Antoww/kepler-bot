@@ -1,6 +1,6 @@
-import { EmbedBuilder } from 'discord.js';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { createKeplerEmbed } from '../utils/theme.ts';
 
 const configFilePath = join(import.meta.dirname, '../database/confserver.json');
 
@@ -19,11 +19,9 @@ export default (client) => {
         if (guildConfig && guildConfig.logChannel) {
             const logChannel = ban.guild.channels.cache.get(guildConfig.logChannel);
             if (logChannel) {
-                const embed = new EmbedBuilder()
-                    .setColor('#ff0000')
+                const embed = createKeplerEmbed('danger')
                     .setTitle('Utilisateur Banni')
-                    .setDescription(`L'utilisateur ${ban.user.tag} a été banni.`)
-                    .setTimestamp();
+                    .setDescription(`L'utilisateur ${ban.user.tag} a été banni.`);
 
                 logChannel.send({ embeds: [embed] });
             }
@@ -37,11 +35,9 @@ export default (client) => {
         if (guildConfig && guildConfig.logChannel) {
             const logChannel = ban.guild.channels.cache.get(guildConfig.logChannel);
             if (logChannel) {
-                const embed = new EmbedBuilder()
-                    .setColor('#00ff00')
+                const embed = createKeplerEmbed('success')
                     .setTitle('Utilisateur Débanni')
-                    .setDescription(`L'utilisateur ${ban.user.tag} a été débanni.`)
-                    .setTimestamp();
+                    .setDescription(`L'utilisateur ${ban.user.tag} a été débanni.`);
 
                 logChannel.send({ embeds: [embed] });
             }
@@ -55,11 +51,9 @@ export default (client) => {
         if (guildConfig && guildConfig.logChannel) {
             const logChannel = channel.guild.channels.cache.get(guildConfig.logChannel);
             if (logChannel) {
-                const embed = new EmbedBuilder()
-                    .setColor('#00ff00')
+                const embed = createKeplerEmbed('success')
                     .setTitle('Salon Créé')
-                    .setDescription(`Le salon ${channel.name} a été créé.`)
-                    .setTimestamp();
+                    .setDescription(`Le salon ${channel.name} a été créé.`);
 
                 logChannel.send({ embeds: [embed] });
             }
@@ -73,11 +67,9 @@ export default (client) => {
         if (guildConfig && guildConfig.logChannel) {
             const logChannel = channel.guild.channels.cache.get(guildConfig.logChannel);
             if (logChannel) {
-                const embed = new EmbedBuilder()
-                    .setColor('#ff0000')
+                const embed = createKeplerEmbed('danger')
                     .setTitle('Salon Supprimé')
-                    .setDescription(`Le salon ${channel.name} a été supprimé.`)
-                    .setTimestamp();
+                    .setDescription(`Le salon ${channel.name} a été supprimé.`);
 
                 logChannel.send({ embeds: [embed] });
             }
@@ -91,11 +83,9 @@ export default (client) => {
         if (guildConfig && guildConfig.logChannel) {
             const logChannel = newChannel.guild.channels.cache.get(guildConfig.logChannel);
             if (logChannel) {
-                const embed = new EmbedBuilder()
-                    .setColor('#ffff00')
+                const embed = createKeplerEmbed('warning')
                     .setTitle('Salon Modifié')
-                    .setDescription(`Le salon ${oldChannel.name} a été modifié en ${newChannel.name}.`)
-                    .setTimestamp();
+                    .setDescription(`Le salon ${oldChannel.name} a été modifié en ${newChannel.name}.`);
 
                 logChannel.send({ embeds: [embed] });
             }
@@ -109,11 +99,9 @@ export default (client) => {
         if (guildConfig && guildConfig.logChannel) {
             const logChannel = member.guild.channels.cache.get(guildConfig.logChannel);
             if (logChannel) {
-                const embed = new EmbedBuilder()
-                    .setColor('#00ff00')
+                const embed = createKeplerEmbed('success')
                     .setTitle('Nouveau Membre')
-                    .setDescription(`L'utilisateur ${member.user.tag} a rejoint le serveur.`)
-                    .setTimestamp();
+                    .setDescription(`L'utilisateur ${member.user.tag} a rejoint le serveur.`);
 
                 logChannel.send({ embeds: [embed] });
             }
@@ -127,11 +115,9 @@ export default (client) => {
         if (guildConfig && guildConfig.logChannel) {
             const logChannel = member.guild.channels.cache.get(guildConfig.logChannel);
             if (logChannel) {
-                const embed = new EmbedBuilder()
-                    .setColor('#ff0000')
+                const embed = createKeplerEmbed('danger')
                     .setTitle('Membre Parti')
-                    .setDescription(`L'utilisateur ${member.user.tag} a quitté le serveur.`)
-                    .setTimestamp();
+                    .setDescription(`L'utilisateur ${member.user.tag} a quitté le serveur.`);
 
                 logChannel.send({ embeds: [embed] });
             }

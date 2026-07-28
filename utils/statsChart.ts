@@ -1,6 +1,7 @@
 import sharp from 'sharp';
 import { Buffer } from 'node:buffer';
 import { logger } from './logger.ts';
+import { KEPLER_CHART_COLORS, KEPLER_HEX } from './theme.ts';
 
 export interface ChartDatum {
     label: string;
@@ -44,31 +45,31 @@ function baseSvg(title: string, subtitle: string, content: string): string {
     return `<svg width="${WIDTH}" height="${HEIGHT}" viewBox="0 0 ${WIDTH} ${HEIGHT}" xmlns="http://www.w3.org/2000/svg">
         <defs>
             <linearGradient id="kepler-bg" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0" stop-color="#070a12"/>
-                <stop offset="1" stop-color="#101827"/>
+                <stop offset="0" stop-color="${KEPLER_HEX.graphite}"/>
+                <stop offset="1" stop-color="#0C1117"/>
             </linearGradient>
             <linearGradient id="kepler-panel" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0" stop-color="#151d2c"/>
-                <stop offset="1" stop-color="#0d131f"/>
+                <stop offset="0" stop-color="${KEPLER_HEX.panelRaised}"/>
+                <stop offset="1" stop-color="${KEPLER_HEX.panel}"/>
             </linearGradient>
         </defs>
         <rect width="${WIDTH}" height="${HEIGHT}" fill="url(#kepler-bg)"/>
-        <circle cx="1055" cy="-10" r="170" fill="none" stroke="#253552" stroke-width="1" opacity="0.7"/>
-        <ellipse cx="1055" cy="-10" rx="245" ry="92" fill="none" stroke="#3a5279" stroke-width="1" opacity="0.55" transform="rotate(-18 1055 -10)"/>
-        <circle cx="1120" cy="67" r="6" fill="#ff6b6b"/>
-        <circle cx="76" cy="38" r="2" fill="#63e6ff" opacity="0.8"/>
+        <circle cx="1055" cy="-10" r="170" fill="none" stroke="${KEPLER_HEX.border}" stroke-width="1" opacity="0.7"/>
+        <ellipse cx="1055" cy="-10" rx="245" ry="92" fill="none" stroke="${KEPLER_HEX.deepBlue}" stroke-width="1" opacity="0.55" transform="rotate(-18 1055 -10)"/>
+        <circle cx="1120" cy="67" r="6" fill="${KEPLER_HEX.success}"/>
+        <circle cx="76" cy="38" r="2" fill="${KEPLER_HEX.signalBlue}" opacity="0.8"/>
         <circle cx="420" cy="52" r="1.5" fill="#ffffff" opacity="0.35"/>
-        <circle cx="780" cy="32" r="2" fill="#63e6ff" opacity="0.45"/>
-        <rect x="24" y="24" width="1152" height="627" rx="14" fill="url(#kepler-panel)" stroke="#26344d"/>
-        <rect x="24" y="24" width="5" height="627" rx="2" fill="#45d7ff"/>
-        <text x="64" y="57" fill="#63e6ff" font-family="DejaVu Sans, sans-serif" font-size="13" font-weight="700" letter-spacing="2">KEPLER // ANALYTICS</text>
-        <text x="64" y="91" fill="#f7f9fc" font-family="DejaVu Sans, sans-serif" font-size="30" font-weight="700">${escapeXml(title)}</text>
-        <text x="64" y="119" fill="#91a0b8" font-family="DejaVu Sans, sans-serif" font-size="16">${escapeXml(subtitle)}</text>
+        <circle cx="780" cy="32" r="2" fill="${KEPLER_HEX.orbitalBlue}" opacity="0.45"/>
+        <rect x="24" y="24" width="1152" height="627" rx="18" fill="url(#kepler-panel)" stroke="${KEPLER_HEX.border}"/>
+        <rect x="24" y="24" width="6" height="627" rx="3" fill="${KEPLER_HEX.orbitalBlue}"/>
+        <text x="64" y="57" fill="${KEPLER_HEX.orbitalBlue}" font-family="DejaVu Sans, sans-serif" font-size="13" font-weight="700" letter-spacing="2">KEPLER • CENTRE DE CONTRÔLE</text>
+        <text x="64" y="91" fill="${KEPLER_HEX.lunarWhite}" font-family="DejaVu Sans, sans-serif" font-size="30" font-weight="700">${escapeXml(title)}</text>
+        <text x="64" y="119" fill="${KEPLER_HEX.silver}" font-family="DejaVu Sans, sans-serif" font-size="16">${escapeXml(subtitle)}</text>
         <g transform="translate(1100 74)">
-            <circle r="23" fill="none" stroke="#3a5279" stroke-width="1.5"/>
-            <ellipse rx="34" ry="12" fill="none" stroke="#63e6ff" stroke-width="1.5" transform="rotate(-20)"/>
-            <circle cx="29" cy="-8" r="4" fill="#ff6b6b"/>
-            <circle r="5" fill="#f7f9fc"/>
+            <circle r="23" fill="none" stroke="${KEPLER_HEX.deepBlue}" stroke-width="1.5"/>
+            <ellipse rx="34" ry="12" fill="none" stroke="${KEPLER_HEX.orbitalBlue}" stroke-width="1.5" transform="rotate(-20)"/>
+            <circle cx="29" cy="-8" r="4" fill="${KEPLER_HEX.success}"/>
+            <circle r="5" fill="${KEPLER_HEX.lunarWhite}"/>
         </g>
         ${content}
     </svg>`;
@@ -117,7 +118,7 @@ export async function renderBarChart(
     title: string,
     subtitle: string,
     data: ChartDatum[],
-    color = '#5865f2'
+    color = KEPLER_CHART_COLORS.messages
 ): Promise<Buffer> {
     const items = data.slice(0, 15);
     const maxValue = Math.max(...items.map(item => item.value), 1);
@@ -131,16 +132,16 @@ export async function renderBarChart(
         const y = chartTop + index * rowHeight;
         const width = Math.max(item.value > 0 ? 4 : 0, (item.value / maxValue) * chartWidth);
         return `
-            <text x="66" y="${y + barHeight - 2}" fill="#52627c" font-family="DejaVu Sans, sans-serif" font-size="13" font-weight="700">${String(index + 1).padStart(2, '0')}</text>
-            <text x="275" y="${y + barHeight - 2}" text-anchor="end" fill="#dce5f3" font-family="DejaVu Sans, sans-serif" font-size="16" font-weight="600">${escapeXml(item.label.slice(0, 24))}</text>
-            <rect x="${chartX}" y="${y}" width="${chartWidth}" height="${barHeight}" rx="6" fill="#1a2435"/>
+            <text x="66" y="${y + barHeight - 2}" fill="${KEPLER_HEX.muted}" font-family="DejaVu Sans, sans-serif" font-size="13" font-weight="700">${String(index + 1).padStart(2, '0')}</text>
+            <text x="275" y="${y + barHeight - 2}" text-anchor="end" fill="${KEPLER_HEX.lunarWhite}" font-family="DejaVu Sans, sans-serif" font-size="16" font-weight="600">${escapeXml(item.label.slice(0, 24))}</text>
+            <rect x="${chartX}" y="${y}" width="${chartWidth}" height="${barHeight}" rx="6" fill="${KEPLER_HEX.panelRaised}"/>
             <rect x="${chartX}" y="${y}" width="${width}" height="${barHeight}" rx="6" fill="${color}"/>
-            <circle cx="${chartX + width}" cy="${y + barHeight / 2}" r="4" fill="#f7f9fc"/>
-            <text x="1125" y="${y + barHeight - 2}" text-anchor="end" fill="#f7f9fc" font-family="DejaVu Sans, sans-serif" font-size="15" font-weight="700">${escapeXml(formatNumber(item.value))}</text>`;
+            <circle cx="${chartX + width}" cy="${y + barHeight / 2}" r="4" fill="${KEPLER_HEX.lunarWhite}"/>
+            <text x="1125" y="${y + barHeight - 2}" text-anchor="end" fill="${KEPLER_HEX.lunarWhite}" font-family="DejaVu Sans, sans-serif" font-size="15" font-weight="700">${escapeXml(formatNumber(item.value))}</text>`;
     }).join('');
 
     const empty = items.length === 0
-        ? '<text x="600" y="340" text-anchor="middle" fill="#9da6b7" font-family="DejaVu Sans, sans-serif" font-size="22">Aucune donnée disponible</text>'
+        ? `<text x="600" y="340" text-anchor="middle" fill="${KEPLER_HEX.silver}" font-family="DejaVu Sans, sans-serif" font-size="22">Aucune donnée disponible</text>`
         : '';
     const svg = baseSvg(title, subtitle, rows + empty);
     return renderCached(JSON.stringify(['bar', title, subtitle, items, color]), svg, title);
@@ -183,24 +184,24 @@ export async function renderLineChart(
         const ratio = index / 4;
         const y = plot.y + ratio * plot.height;
         const value = Math.round(maxValue * (1 - ratio));
-        return `<line x1="${plot.x}" y1="${y}" x2="${plot.x + plot.width}" y2="${y}" stroke="#26344d" stroke-dasharray="4 8" stroke-width="1"/>
-            <text x="80" y="${y + 5}" text-anchor="end" fill="#8d96a7" font-family="DejaVu Sans, sans-serif" font-size="14">${escapeXml(formatNumber(value))}</text>`;
+        return `<line x1="${plot.x}" y1="${y}" x2="${plot.x + plot.width}" y2="${y}" stroke="${KEPLER_HEX.border}" stroke-dasharray="4 8" stroke-width="1"/>
+            <text x="80" y="${y + 5}" text-anchor="end" fill="${KEPLER_HEX.muted}" font-family="DejaVu Sans, sans-serif" font-size="14">${escapeXml(formatNumber(value))}</text>`;
     }).join('');
 
     const lines = series.map(item => {
         const points = item.values.map((value, index) => `${xFor(index)},${yFor(value)}`).join(' ');
         const areaPoints = `${plot.x},${plot.y + plot.height} ${points} ${xFor(Math.max(item.values.length - 1, 0))},${plot.y + plot.height}`;
-        const dots = item.values.map((value, index) => `<circle cx="${xFor(index)}" cy="${yFor(value)}" r="4" fill="#0d131f" stroke="${item.color}" stroke-width="3"/>`).join('');
+        const dots = item.values.map((value, index) => `<circle cx="${xFor(index)}" cy="${yFor(value)}" r="4" fill="${KEPLER_HEX.panel}" stroke="${item.color}" stroke-width="3"/>`).join('');
         return `<polygon points="${areaPoints}" fill="${item.color}" opacity="0.08"/>
             <polyline points="${points}" fill="none" stroke="${item.color}" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>${dots}`;
     }).join('');
 
     const labelStep = Math.max(1, Math.ceil(labels.length / 8));
     const xLabels = labels.map((label, index) => index % labelStep === 0 || index === labels.length - 1
-        ? `<text x="${xFor(index)}" y="595" text-anchor="middle" fill="#8d96a7" font-family="DejaVu Sans, sans-serif" font-size="14">${escapeXml(label)}</text>`
+        ? `<text x="${xFor(index)}" y="595" text-anchor="middle" fill="${KEPLER_HEX.muted}" font-family="DejaVu Sans, sans-serif" font-size="14">${escapeXml(label)}</text>`
         : '').join('');
     const legend = series.map((item, index) => `<rect x="${95 + index * 210}" y="620" width="18" height="5" rx="2" fill="${item.color}"/>
-        <text x="${122 + index * 210}" y="627" fill="#cbd1dc" font-family="DejaVu Sans, sans-serif" font-size="15">${escapeXml(item.label)}</text>`).join('');
+        <text x="${122 + index * 210}" y="627" fill="${KEPLER_HEX.silver}" font-family="DejaVu Sans, sans-serif" font-size="15">${escapeXml(item.label)}</text>`).join('');
 
     const svg = baseSvg(title, subtitle, grid + lines + xLabels + legend);
     return renderCached(JSON.stringify(['line', title, subtitle, labels, series]), svg, title);

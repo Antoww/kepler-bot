@@ -1,5 +1,6 @@
-import { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 import { getReminder } from '../database/supabase.ts';
+import { createKeplerEmbed, setRequesterFooter } from '../utils/theme.ts';
 
 export const name = 'interactionCreate';
 export async function execute(interaction) {
@@ -31,15 +32,12 @@ export async function execute(interaction) {
         console.log(`🔔 [RAPPEL RÉPÉTÉ ENVOYÉ] ID: ${reminderId} | Utilisateur: ${interaction.user.username} | Message: "${message}"`);
         
         const user = await interaction.client.users.fetch(userId);
-        const embed = new EmbedBuilder()
-            .setColor('#0099ff')
+        const embed = setRequesterFooter(
+            createKeplerEmbed('primary')
             .setTitle('Rappel')
-            .setDescription(message)
-            .setFooter({
-                text: 'Demandé par ' + interaction.user.username,
-                iconURL: interaction.user.displayAvatarURL({ dynamic: true })
-            })
-            .setTimestamp();
+            .setDescription(message),
+            interaction.user
+        );
 
         const row = new ActionRowBuilder()
             .addComponents(

@@ -1,9 +1,9 @@
 import {
     ChannelType,
     Client,
-    EmbedBuilder,
     type TextBasedChannel
 } from 'discord.js';
+import { createKeplerEmbed } from './theme.ts';
 
 const KEPLER_ERROR_CHANNEL_ID = '1531755657269739570';
 const KEPLER_BETA_ERROR_CHANNEL_ID = '1531755978696167525';
@@ -72,12 +72,10 @@ export function initializeDiscordErrorReporter(client: Client): void {
 
             const description = truncate(values.map(stringify).join('\n'));
             const isError = level === 'error';
-            const embed = new EmbedBuilder()
-                .setColor(isError ? 0xED4245 : 0xFEE75C)
+            const embed = createKeplerEmbed(isError ? 'danger' : 'warning')
                 .setTitle(`${isError ? 'Erreur' : 'Avertissement'} ${client.user.username}`)
                 .setDescription(`\`\`\`\n${description.replaceAll('```', '`\u200b``')}\n\`\`\``)
-                .addFields({ name: 'Source', value: source, inline: true })
-                .setTimestamp();
+                .addFields({ name: 'Source', value: source, inline: true });
 
             await channel.send({ embeds: [embed] });
         } catch (error) {

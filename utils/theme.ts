@@ -1,17 +1,49 @@
 import { EmbedBuilder, type User } from 'discord.js';
 
+/**
+ * Identité visuelle Kepler
+ *
+ * Bleu orbital : couleur de marque issue du bandeau et du satellite.
+ * Graphite / blanc lunaire : fonds et textes inspirés de l'espace.
+ * Vert signal : état positif, à réserver aux confirmations.
+ */
 export const KEPLER_COLORS = {
-    primary: 0x45d7ff,
-    secondary: 0xff6b6b,
-    success: 0x57d69b,
-    warning: 0xf8c15c,
-    danger: 0xff5f6d,
-    accent: 0x9d8cff,
-    highlight: 0xff8fbd,
-    neutral: 0x91a0b8
+    primary: 0x5F91C4,
+    secondary: 0x3F6FA3,
+    success: 0x49B675,
+    warning: 0xF2C94C,
+    danger: 0xE05252,
+    accent: 0x78AEE8,
+    highlight: 0xA9C9EA,
+    neutral: 0x7F8C9D
 } as const;
 
 export type KeplerTone = keyof typeof KEPLER_COLORS;
+
+export const KEPLER_HEX = {
+    orbitalBlue: '#5F91C4',
+    deepBlue: '#3F6FA3',
+    signalBlue: '#78AEE8',
+    lunarWhite: '#E7EBF0',
+    silver: '#AAB4C0',
+    muted: '#7F8C9D',
+    graphite: '#121417',
+    panel: '#1A1E23',
+    panelRaised: '#222830',
+    border: '#33404E',
+    success: '#49B675',
+    warning: '#F2C94C',
+    danger: '#E05252'
+} as const;
+
+export const KEPLER_CHART_COLORS = {
+    messages: KEPLER_HEX.orbitalBlue,
+    commands: KEPLER_HEX.signalBlue,
+    members: KEPLER_HEX.deepBlue,
+    channels: KEPLER_HEX.success,
+    users: KEPLER_HEX.warning,
+    neutral: KEPLER_HEX.silver
+} as const;
 
 export const KEPLER_MESSAGES = {
     guildOnly: '❌ Cette commande est uniquement disponible sur un serveur.',

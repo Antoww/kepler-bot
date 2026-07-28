@@ -36,7 +36,7 @@ import { logger } from '../../utils/logger.ts';
 
 type ConfigSection = 'logs' | 'moderation' | 'birthdays' | 'mute' | 'reports' | 'tickets';
 
-const PANEL_COLOR = 0x45d7ff;
+const PANEL_COLOR = KEPLER_COLORS.primary;
 const PANEL_TIMEOUT = 5 * 60 * 1000;
 
 export const data = new SlashCommandBuilder()

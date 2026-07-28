@@ -1,4 +1,4 @@
-import { createKeplerEmbed, KEPLER_COLORS, KEPLER_MESSAGES } from '../../utils/theme.ts';
+import { createKeplerEmbed, KEPLER_CHART_COLORS, KEPLER_COLORS, KEPLER_MESSAGES } from '../../utils/theme.ts';
 import {
     type ChatInputCommandInteraction,
     ActionRowBuilder,
@@ -138,8 +138,8 @@ async function handleOverview(interaction: ChatInputCommandInteraction) {
         'Commandes et messages sur les 30 derniers jours',
         dailyStats30.map(d => formatChartDate(d.date)),
         [
-            { label: 'Messages', color: '#45d7ff', values: dailyStats30.map(d => d.messages) },
-            { label: 'Commandes', color: '#ff6b6b', values: dailyStats30.map(d => d.commands) }
+            { label: 'Messages', color: KEPLER_CHART_COLORS.messages, values: dailyStats30.map(d => d.messages) },
+            { label: 'Commandes', color: KEPLER_CHART_COLORS.commands, values: dailyStats30.map(d => d.commands) }
         ]
     );
     const overviewAttachment = new AttachmentBuilder(overviewBuffer, { name: 'global-overview.webp' });
@@ -211,7 +211,7 @@ async function handleCommandsStats(interaction: ChatInputCommandInteraction) {
         value: c.count
     }));
 
-    const chartBuffer = await renderBarChart('Top des commandes', periodLabel, chartData, '#ff6b6b');
+    const chartBuffer = await renderBarChart('Top des commandes', periodLabel, chartData, KEPLER_CHART_COLORS.commands);
     const chartAttachment = new AttachmentBuilder(chartBuffer, { name: 'global-commands.webp' });
 
 
@@ -271,7 +271,7 @@ async function handleMessagesStats(interaction: ChatInputCommandInteraction) {
             label: formatChartDate(d.date),
             value: d.messages
         })),
-        '#45d7ff'
+        KEPLER_CHART_COLORS.messages
     );
     const topDaysAttachment = new AttachmentBuilder(topDaysBuffer, { name: 'global-messages.webp' });
 
@@ -320,7 +320,7 @@ async function handleTrendStats(interaction: ChatInputCommandInteraction) {
     const min = Math.min(...values, 0);
 
     const title = type === 'commands' ? '📊 Tendance Globale - Commandes' : '💬 Tendance Globale - Messages';
-    const color = type === 'commands' ? '#ff6b6b' : '#45d7ff';
+    const color = type === 'commands' ? KEPLER_CHART_COLORS.commands : KEPLER_CHART_COLORS.messages;
     const trendBuffer = await renderLineChart(
         metricLabel,
         periodLabel,
