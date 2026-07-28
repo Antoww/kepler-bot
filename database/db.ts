@@ -106,6 +106,7 @@ export interface ServerConfig {
     report_channel_id?: string;
     report_role_id?: string;
     ticket_panel_channel_id?: string;
+    ticket_category_id?: string;
     ticket_support_role_id?: string;
     ticket_panel_title?: string;
     ticket_panel_message?: string;
@@ -119,6 +120,7 @@ export interface ServerConfig {
 export interface TicketConfig {
     guild_id: string;
     ticket_panel_channel_id: string | null;
+    ticket_category_id: string | null;
     ticket_support_role_id: string | null;
     ticket_panel_title: string;
     ticket_panel_message: string;
@@ -138,7 +140,7 @@ const DEFAULT_TICKET_CONFIG = {
 export async function getTicketConfig(guildId: string): Promise<TicketConfig> {
     const { data, error } = await supabase
         .from('server_configs')
-        .select('guild_id, ticket_panel_channel_id, ticket_support_role_id, ticket_panel_title, ticket_panel_message, ticket_button_label, ticket_button_emoji, ticket_button_style')
+        .select('guild_id, ticket_panel_channel_id, ticket_category_id, ticket_support_role_id, ticket_panel_title, ticket_panel_message, ticket_button_label, ticket_button_emoji, ticket_button_style')
         .eq('guild_id', guildId)
         .maybeSingle();
 
@@ -146,6 +148,7 @@ export async function getTicketConfig(guildId: string): Promise<TicketConfig> {
     return {
         guild_id: guildId,
         ticket_panel_channel_id: data?.ticket_panel_channel_id ?? null,
+        ticket_category_id: data?.ticket_category_id ?? null,
         ticket_support_role_id: data?.ticket_support_role_id ?? null,
         ticket_panel_title: data?.ticket_panel_title || DEFAULT_TICKET_CONFIG.ticket_panel_title,
         ticket_panel_message: data?.ticket_panel_message || DEFAULT_TICKET_CONFIG.ticket_panel_message,

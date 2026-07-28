@@ -28,8 +28,12 @@ export async function handleTicketButton(interaction: ButtonInteraction): Promis
         await requestTicketClose(interaction);
         return;
     }
-    if (interaction.customId.startsWith('ticket:confirm-close:')) {
-        await closeTicket(interaction);
+    if (interaction.customId.startsWith('ticket:confirm-user-close:')) {
+        await removeTicketOwner(interaction);
+        return;
+    }
+    if (interaction.customId.startsWith('ticket:confirm-delete:')) {
+        await deleteTicket(interaction);
     }
 }
 
@@ -53,7 +57,7 @@ async function openTicket(interaction: ButtonInteraction): Promise<void> {
         await guild.channels.fetch();
         const topic = `${TICKET_TOPIC_PREFIX}${interaction.user.id}`;
         const existing = guild.channels.cache.find(channel =>
-            channel.type === ChannelType.GuildText && channel.topic === topic
+            channel.type === ChannelType.GuildText && channel.topic?.startsWith(topic)
         );
         if (existing) {
             await interaction.editReply(`Vous avez déjà un ticket ouvert : ${existing}`);
@@ -61,6 +65,9 @@ async function openTicket(interaction: ButtonInteraction): Promise<void> {
         }
 
         const panelChannel = guild.channels.cache.get(config.ticket_panel_channel_id);
+        const configuredCategory = config.ticket_category_id
+            ? guild.channels.cache.get(config.ticket_category_id)
+            : null;
         const botMember = guild.members.me;
         if (!botMember) {
             await interaction.editReply('❌ Impossible de vérifier les permissions du bot.');
@@ -111,7 +118,9 @@ async function openTicket(interaction: ButtonInteraction): Promise<void> {
         const channel = await guild.channels.create({
             name: ticketChannelName(interaction.user.username, interaction.user.id),
             type: ChannelType.GuildText,
-            parent: panelChannel?.parentId ?? undefined,
+            parent: configuredCategory?.type === ChannelType.GuildCategory
+                ? configuredCategory.id
+                : panelChannel?.parentId ?? undefined,
             topic,
             permissionOverwrites,
             reason: `Ticket ouvert par ${interaction.user.tag}`
@@ -157,36 +166,86 @@ async function openTicket(interaction: ButtonInteraction): Promise<void> {
 
 async function requestTicketClose(interaction: ButtonInteraction): Promise<void> {
     const ownerId = getTicketOwnerId(interaction);
-    if (!ownerId || !(await canCloseTicket(interaction, ownerId))) {
+    if (!ownerId) {
+        await interaction.reply({ content: '❌ Vous ne pouvez pas fermer ce ticket.', ephemeral: true });
+        return;
+    }
+
+    const isOwner = interaction.user.id === ownerId;
+    const isStaff = await isTicketStaff(interaction);
+    if (!isOwner && !isStaff) {
         await interaction.reply({ content: '❌ Vous ne pouvez pas fermer ce ticket.', ephemeral: true });
         return;
     }
 
     const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
         new ButtonBuilder()
-            .setCustomId(`ticket:confirm-close:${ownerId}`)
-            .setLabel('Confirmer la fermeture')
+            .setCustomId(isOwner
+                ? `ticket:confirm-user-close:${ownerId}`
+                : `ticket:confirm-delete:${ownerId}`)
+            .setLabel(isOwner ? 'Confirmer et quitter' : 'Clôturer définitivement')
             .setStyle(ButtonStyle.Danger)
     );
     await interaction.reply({
-        content: 'Cette action supprimera définitivement le salon. Confirmer ?',
+        content: isOwner
+            ? 'Vous perdrez l’accès au ticket. L’équipe pourra ensuite le clôturer définitivement. Confirmer ?'
+            : 'Cette action supprimera définitivement le salon du ticket. Confirmer ?',
         components: [row],
         ephemeral: true
     });
 }
 
-async function closeTicket(interaction: ButtonInteraction): Promise<void> {
+async function removeTicketOwner(interaction: ButtonInteraction): Promise<void> {
     const ownerId = getTicketOwnerId(interaction);
-    const expectedOwnerId = interaction.customId.split(':')[2];
-    if (!ownerId || ownerId !== expectedOwnerId || !(await canCloseTicket(interaction, ownerId))) {
+    const expectedOwnerId = interaction.customId.split(':')[3];
+    if (!ownerId || ownerId !== expectedOwnerId || interaction.user.id !== ownerId) {
         await interaction.reply({ content: '❌ Confirmation de fermeture invalide.', ephemeral: true });
         return;
     }
 
-    await interaction.reply({ content: '🔒 Fermeture du ticket…', ephemeral: true });
     const channel = interaction.channel;
     if (!channel || channel.type !== ChannelType.GuildText) return;
-    await channel.delete(`Ticket fermé par ${interaction.user.tag}`);
+    await interaction.deferReply({ ephemeral: true });
+    await channel.permissionOverwrites.edit(ownerId, {
+        ViewChannel: false,
+        SendMessages: false
+    }, { reason: `Ticket quitté par ${interaction.user.tag}` });
+    if (!channel.topic?.endsWith(':closed')) {
+        await channel.setTopic(`${TICKET_TOPIC_PREFIX}${ownerId}:closed`, `Ticket quitté par ${interaction.user.tag}`);
+    }
+    await channel.send({
+        embeds: [
+            createKeplerEmbed()
+                .setColor(KEPLER_COLORS.warning)
+                .setTitle('🔒 Ticket fermé par l’utilisateur')
+                .setDescription(`<@${ownerId}> a quitté le ticket. L’équipe peut maintenant le clôturer définitivement.`)
+        ],
+        components: [
+            new ActionRowBuilder<ButtonBuilder>().addComponents(
+                new ButtonBuilder()
+                    .setCustomId('ticket:close')
+                    .setLabel('Clôturer définitivement')
+                    .setEmoji('🗑️')
+                    .setStyle(ButtonStyle.Danger)
+            )
+        ],
+        allowedMentions: { parse: [] }
+    });
+    await interaction.editReply('✅ Vous avez été retiré du ticket.');
+}
+
+async function deleteTicket(interaction: ButtonInteraction): Promise<void> {
+    const ownerId = getTicketOwnerId(interaction);
+    const expectedOwnerId = interaction.customId.split(':')[3];
+    if (!ownerId || ownerId !== expectedOwnerId || !(await isTicketStaff(interaction))) {
+        await interaction.reply({ content: '❌ Confirmation de clôture invalide.', ephemeral: true });
+        return;
+    }
+
+    await interaction.reply({ content: '🗑️ Clôture définitive du ticket…', ephemeral: true });
+    const channel = interaction.channel;
+    if (!channel || channel.type !== ChannelType.GuildText) return;
+    await channel.delete(`Ticket clôturé par ${interaction.user.tag}`);
 }
 
 function getTicketOwnerId(interaction: ButtonInteraction): string | null {
@@ -194,12 +253,11 @@ function getTicketOwnerId(interaction: ButtonInteraction): string | null {
     if (!channel || channel.type !== ChannelType.GuildText || !channel.topic?.startsWith(TICKET_TOPIC_PREFIX)) {
         return null;
     }
-    const ownerId = channel.topic.slice(TICKET_TOPIC_PREFIX.length);
+    const ownerId = channel.topic.slice(TICKET_TOPIC_PREFIX.length).split(':')[0];
     return /^\d{17,20}$/.test(ownerId) ? ownerId : null;
 }
 
-async function canCloseTicket(interaction: ButtonInteraction, ownerId: string): Promise<boolean> {
-    if (interaction.user.id === ownerId) return true;
+async function isTicketStaff(interaction: ButtonInteraction): Promise<boolean> {
     const member = await interaction.guild!.members.fetch(interaction.user.id).catch(() => null);
     if (!member) return false;
     if (member.permissions.has(PermissionFlagsBits.ManageChannels)) return true;

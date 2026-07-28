@@ -80,9 +80,11 @@ export async function execute(interaction: ChatInputCommandInteraction) {
             await handleComponent(component, interaction);
         } catch (error) {
             logger.error('Erreur dans le panneau de configuration', error, 'SettingsPanel');
-            const payload = { content: 'Une erreur est survenue pendant la mise à jour.', components: [] };
-            if (component.deferred || component.replied) await component.editReply(payload);
-            else await component.reply({ content: payload.content, ephemeral: true });
+            const content = error instanceof Error
+                ? `❌ ${error.message}`
+                : '❌ Une erreur est survenue pendant la mise à jour.';
+            if (component.deferred || component.replied) await component.followUp({ content, ephemeral: true });
+            else await component.reply({ content, ephemeral: true });
         }
     });
 
@@ -121,7 +123,7 @@ async function handleComponent(component: MessageComponentInteraction, source: C
             const section = component.customId.split(':')[2] as ConfigSection;
             await component.deferUpdate();
             await disableSection(section, guild.id);
-            await component.editReply(await buildOverview(source, `${sectionLabel(section)} désactivé.`));
+            await confirmSettingChange(component, source, section, `${sectionLabel(section)} désactivé.`);
             return;
         }
         if (component.customId === 'settings:create-mute') {
@@ -136,30 +138,28 @@ async function handleComponent(component: MessageComponentInteraction, source: C
             await component.deferUpdate();
             try {
                 await publishTicketPanel(source);
-                await component.editReply(await buildOverview(source, 'Panneau de tickets publié.'));
+                await confirmSettingChange(component, source, 'tickets', 'Panneau de tickets publié.');
             } catch (error) {
                 const message = error instanceof Error ? error.message : 'Impossible de publier le panneau.';
-                await component.editReply({
-                    content: `❌ ${message}`,
-                    embeds: [],
-                    components: [new ActionRowBuilder<ButtonBuilder>().addComponents(backButton())]
-                });
+                await component.followUp({ content: `❌ ${message}`, ephemeral: true });
             }
             return;
         }
         if (component.customId === 'settings:clear-report-role') {
             await component.deferUpdate();
             await updateReportRole(guild.id, '');
-            await component.editReply(await buildOverview(source, 'Le rôle mentionné lors des reports a été retiré.'));
+            await confirmSettingChange(component, source, 'reports', 'Le rôle mentionné lors des reports a été retiré.');
             return;
         }
         if (component.customId === 'settings:confirm-create-mute') {
             await component.deferUpdate();
             const result = await createMuteRole(guild, source.user.tag);
-            await component.editReply(await buildOverview(
+            await confirmSettingChange(
+                component,
                 source,
+                'mute',
                 `Rôle ${result.role} créé. Permissions appliquées dans ${result.success}/${result.total} salons.`
-            ));
+            );
         }
         return;
     }
@@ -167,19 +167,24 @@ async function handleComponent(component: MessageComponentInteraction, source: C
     if (component.isChannelSelectMenu()) {
         const channelId = component.values[0];
         await component.deferUpdate();
+        if (component.customId === 'settings:select:tickets-category') {
+            await updateTicketConfig(guild.id, { ticket_category_id: channelId });
+            await confirmSettingChange(component, source, 'tickets', `Catégorie des tickets configurée sur <#${channelId}>.`);
+            return;
+        }
         if (component.customId === 'settings:select:tickets-channel') {
             await updateTicketConfig(guild.id, { ticket_panel_channel_id: channelId });
-            await component.editReply(await buildOverview(source, `Salon du panneau de tickets configuré sur <#${channelId}>.`));
+            await confirmSettingChange(component, source, 'tickets', `Salon du panneau configuré sur <#${channelId}>.`);
             return;
         }
         if (component.customId === 'settings:select:reports-channel') {
             await updateReportChannel(guild.id, channelId);
-            await component.editReply(await buildOverview(source, `Salon des reports configuré sur <#${channelId}>.`));
+            await confirmSettingChange(component, source, 'reports', `Salon des reports configuré sur <#${channelId}>.`);
             return;
         }
         const section = component.customId.split(':')[2] as ConfigSection;
         await updateChannelSection(section, guild.id, channelId);
-        await component.editReply(await buildOverview(source, `${sectionLabel(section)} configuré sur <#${channelId}>.`));
+        await confirmSettingChange(component, source, section, `${sectionLabel(section)} configuré sur <#${channelId}>.`);
         return;
     }
 
@@ -193,7 +198,7 @@ async function handleComponent(component: MessageComponentInteraction, source: C
             }
             await component.deferUpdate();
             await updateTicketConfig(guild.id, { ticket_support_role_id: role.id });
-            await component.editReply(await buildOverview(source, `Rôle support configuré sur ${role}.`));
+            await confirmSettingChange(component, source, 'tickets', `Rôle support configuré sur ${role}.`);
             return;
         }
         if (component.customId === 'settings:select:reports-role') {
@@ -203,7 +208,7 @@ async function handleComponent(component: MessageComponentInteraction, source: C
             }
             await component.deferUpdate();
             await updateReportRole(guild.id, role.id);
-            await component.editReply(await buildOverview(source, `Rôle de report configuré sur ${role}.`));
+            await confirmSettingChange(component, source, 'reports', `Rôle de report configuré sur ${role}.`);
             return;
         }
         const botMember = guild.members.me;
@@ -217,7 +222,7 @@ async function handleComponent(component: MessageComponentInteraction, source: C
 
         await component.deferUpdate();
         await updateMuteRole(guild.id, role.id);
-        await component.editReply(await buildOverview(source, `Rôle de mute configuré sur ${role}.`));
+        await confirmSettingChange(component, source, 'mute', `Rôle de mute configuré sur ${role}.`);
     }
 }
 
@@ -249,6 +254,7 @@ async function buildOverview(interaction: ChatInputCommandInteraction, notice?: 
             { name: '🚩 Salon des reports', value: formatChannel(guild, reports), inline: true },
             { name: '📣 Rôle mentionné', value: formatOptionalRole(guild, reportRole), inline: true },
             { name: '🎫 Panneau de tickets', value: formatChannel(guild, tickets.ticket_panel_channel_id), inline: true },
+            { name: '📁 Catégorie des tickets', value: formatChannel(guild, tickets.ticket_category_id), inline: true },
             { name: '🧑‍💻 Rôle support', value: formatOptionalRole(guild, tickets.ticket_support_role_id), inline: true }
         )
         .setFooter({ text: 'Panneau privé • expiration dans 5 minutes' })
@@ -289,11 +295,18 @@ function buildSection(section: ConfigSection, guild: Guild) {
             .setPlaceholder('Rôle autorisé à voir les tickets')
             .setMinValues(1)
             .setMaxValues(1);
+        const categorySelect = new ChannelSelectMenuBuilder()
+            .setCustomId('settings:select:tickets-category')
+            .setPlaceholder('Catégorie où créer les tickets')
+            .addChannelTypes(ChannelType.GuildCategory)
+            .setMinValues(1)
+            .setMaxValues(1);
         return {
             content: '',
             embeds: [embed],
             components: [
                 new ActionRowBuilder<ChannelSelectMenuBuilder>().addComponents(channelSelect),
+                new ActionRowBuilder<ChannelSelectMenuBuilder>().addComponents(categorySelect),
                 new ActionRowBuilder<RoleSelectMenuBuilder>().addComponents(roleSelect),
                 new ActionRowBuilder<ButtonBuilder>().addComponents(
                     new ButtonBuilder().setCustomId('settings:tickets:customize').setLabel('Personnaliser').setEmoji('✏️').setStyle(ButtonStyle.Primary),
@@ -410,6 +423,7 @@ async function disableSection(section: ConfigSection, guildId: string) {
     } else if (section === 'tickets') {
         await updateTicketConfig(guildId, {
             ticket_panel_channel_id: null,
+            ticket_category_id: null,
             ticket_support_role_id: null
         });
     } else await updateMuteRole(guildId, '');
@@ -501,7 +515,11 @@ async function customizeTicketPanel(component: ButtonInteraction, source: ChatIn
             ticket_button_emoji: buttonEmoji || null,
             ticket_button_style: buttonStyle
         });
-        await submission.editReply(await buildOverview(source, 'Personnalisation du panneau de tickets enregistrée.'));
+        await submission.editReply(buildSection('tickets', source.guild!));
+        await submission.followUp({
+            content: '✅ Personnalisation du panneau de tickets enregistrée.',
+            ephemeral: true
+        });
     } catch (error: any) {
         if (error?.code !== 'InteractionCollectorError') throw error;
     }
@@ -565,6 +583,16 @@ function ticketButtonStyle(style: string): ButtonStyle {
         Success: ButtonStyle.Success,
         Danger: ButtonStyle.Danger
     } as Record<string, ButtonStyle>)[style] ?? ButtonStyle.Primary;
+}
+
+async function confirmSettingChange(
+    component: MessageComponentInteraction,
+    source: ChatInputCommandInteraction,
+    section: ConfigSection,
+    message: string
+) {
+    await component.editReply(buildSection(section, source.guild!));
+    await component.followUp({ content: `✅ ${message}`, ephemeral: true });
 }
 
 async function createMuteRole(guild: Guild, userTag: string) {
