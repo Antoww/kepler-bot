@@ -36,6 +36,7 @@ export async function execute(client: Client<true>) {
 
     // Initialiser le gestionnaire de modération
     const moderationManager = new ModerationManager(client);
+    client.moderationManager = moderationManager;
     moderationManager.start();
     logger.success('Gestionnaire de modération démarré', undefined, 'MANAGER');
 

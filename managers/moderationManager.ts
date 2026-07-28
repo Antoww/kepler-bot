@@ -1,16 +1,23 @@
-import { Client } from 'discord.js';
+import { Client, type Message } from 'discord.js';
 import { getExpiredTempBans, getExpiredTempMutes, removeTempBan, removeTempMute } from '../database/db.ts';
 import { logModeration } from '../utils/moderation/logger.ts';
 import { isNetworkError, isMaintenanceError, dbCircuitBreaker } from '../utils/retryHelper.ts';
 import { logger } from '../utils/logger.ts';
+import { AutoModeration } from '../utils/moderation/automod.ts';
 
 export class ModerationManager {
     private client: Client;
     private checkInterval: NodeJS.Timeout | null = null;
     private lastMaintenanceLog: number = 0;
+    private readonly autoModeration: AutoModeration;
 
     constructor(client: Client) {
         this.client = client;
+        this.autoModeration = new AutoModeration(client);
+    }
+
+    async handleMessage(message: Message): Promise<boolean> {
+        return this.autoModeration.handleMessage(message);
     }
 
     start() {

@@ -13,6 +13,12 @@ export async function execute(message: Message) {
     // Ne pas traiter les messages des bots
     if (message.author.bot) return;
 
+    try {
+        if (await message.client.moderationManager?.handleMessage(message)) return;
+    } catch (error) {
+        logger.error('Erreur auto-modération', error, 'AUTOMOD');
+    }
+
     // Tracker le message pour les statistiques
     trackMessage({
         guild_id: message.guild.id,

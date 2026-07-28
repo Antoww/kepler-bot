@@ -54,6 +54,7 @@ function getActionColor(action: string): number {
         case 'tempban':
             return KEPLER_COLORS.danger;
         case 'kick':
+        case 'automod':
             return KEPLER_COLORS.warning;
         case 'mute':
         case 'tempmute':

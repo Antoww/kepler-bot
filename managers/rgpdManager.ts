@@ -57,6 +57,7 @@ export class RGPDManager {
                 result.stats.daily +
                 result.personal.reminders +
                 result.moderation.history +
+                result.moderation.autoMod +
                 result.moderation.tempBans +
                 result.moderation.tempMutes;
 

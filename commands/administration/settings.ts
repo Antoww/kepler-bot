@@ -57,6 +57,10 @@ import {
     getInviteSettings,
     updateInviteSettings
 } from '../../utils/invites/service.ts';
+import {
+    getAutoModSettings,
+    updateAutoModSettings
+} from '../../utils/moderation/automodService.ts';
 
 type ConfigSection = 'logs' | 'moderation' | 'birthdays' | 'mute' | 'reports' | 'tickets' | 'xp' | 'invites' | 'timezone';
 type InviteDisplayKey =
@@ -66,6 +70,13 @@ type InviteDisplayKey =
     | 'show_invite_channel'
     | 'show_member_count'
     | 'show_account_age';
+type AutoModRuleKey =
+    | 'anti_link_enabled'
+    | 'anti_invite_enabled'
+    | 'anti_spam_enabled'
+    | 'anti_duplicate_enabled'
+    | 'anti_caps_enabled'
+    | 'anti_mention_enabled';
 
 const PANEL_COLOR = KEPLER_COLORS.primary;
 const PANEL_TIMEOUT = 5 * 60 * 1000;
@@ -223,6 +234,64 @@ async function handleComponent(component: MessageComponentInteraction, source: C
             await showTimezoneModal(component, source);
             return;
         }
+        if (component.customId === 'settings:automod:toggle') {
+            const settings = await getAutoModSettings(guild.id);
+            await component.deferUpdate();
+            await updateAutoModSettings(guild.id, { enabled: !settings.enabled });
+            await component.editReply(await buildAutoModHome(guild));
+            return;
+        }
+        if (component.customId === 'settings:automod:rules') {
+            await component.update(await buildAutoModRules(guild));
+            return;
+        }
+        if (component.customId === 'settings:automod:home') {
+            await component.update(await buildAutoModHome(guild));
+            return;
+        }
+        if (component.customId.startsWith('settings:automod:rule:')) {
+            const key = component.customId.split(':')[3] as AutoModRuleKey;
+            const settings = await getAutoModSettings(guild.id);
+            await component.deferUpdate();
+            await updateAutoModSettings(guild.id, { [key]: !settings[key] });
+            await component.editReply(await buildAutoModRules(guild));
+            return;
+        }
+        if (component.customId === 'settings:automod:own-invites') {
+            const settings = await getAutoModSettings(guild.id);
+            await component.deferUpdate();
+            await updateAutoModSettings(guild.id, { allow_own_invites: !settings.allow_own_invites });
+            await component.editReply(await buildAutoModHome(guild));
+            return;
+        }
+        if (component.customId === 'settings:automod:thresholds') {
+            await showAutoModThresholdsModal(component, source);
+            return;
+        }
+        if (component.customId === 'settings:automod:action') {
+            await showAutoModActionModal(component, source);
+            return;
+        }
+        if (component.customId === 'settings:automod:domains') {
+            await showAutoModDomainsModal(component, source);
+            return;
+        }
+        if (component.customId === 'settings:automod:exemptions') {
+            await component.update(await buildAutoModExemptions(guild));
+            return;
+        }
+        if (component.customId === 'settings:automod:clear-channels') {
+            await component.deferUpdate();
+            await updateAutoModSettings(guild.id, { excluded_channel_ids: [] });
+            await component.editReply(await buildAutoModExemptions(guild));
+            return;
+        }
+        if (component.customId === 'settings:automod:clear-roles') {
+            await component.deferUpdate();
+            await updateAutoModSettings(guild.id, { excluded_role_ids: [] });
+            await component.editReply(await buildAutoModExemptions(guild));
+            return;
+        }
         if (component.customId === 'settings:invites:toggle') {
             const settings = await getInviteSettings(guild.id);
             await component.deferUpdate();
@@ -373,6 +442,18 @@ async function handleComponent(component: MessageComponentInteraction, source: C
             await component.editReply(await buildInviteSection(guild));
             return;
         }
+        if (component.customId === 'settings:automod:log-channel') {
+            await component.deferUpdate();
+            await updateModerationChannel(guild.id, channelId);
+            await component.editReply(await buildAutoModHome(guild));
+            return;
+        }
+        if (component.customId === 'settings:automod:excluded-channels') {
+            await component.deferUpdate();
+            await updateAutoModSettings(guild.id, { excluded_channel_ids: component.values });
+            await component.editReply(await buildAutoModExemptions(guild));
+            return;
+        }
         await component.deferUpdate();
         if (component.customId === 'settings:select:tickets-category') {
             await updateTicketConfig(guild.id, { ticket_category_id: channelId });
@@ -422,6 +503,12 @@ async function handleComponent(component: MessageComponentInteraction, source: C
                 return;
             }
             await showXpRewardModal(component, source, role.id);
+            return;
+        }
+        if (component.customId === 'settings:automod:excluded-roles') {
+            await component.deferUpdate();
+            await updateAutoModSettings(guild.id, { excluded_role_ids: component.values });
+            await component.editReply(await buildAutoModExemptions(guild));
             return;
         }
         if (component.customId === 'settings:select:tickets-role') {
@@ -475,9 +562,10 @@ async function handleComponent(component: MessageComponentInteraction, source: C
 
 async function buildOverview(interaction: ChatInputCommandInteraction, notice?: string) {
     const guild = interaction.guild!;
-    const [logs, moderation, birthdays, mute, reports, reportRole, tickets, xpSettings, xpRewards, inviteSettings, timezone] = await Promise.all([
+    const [logs, moderation, automod, birthdays, mute, reports, reportRole, tickets, xpSettings, xpRewards, inviteSettings, timezone] = await Promise.all([
         getLogChannel(guild.id),
         getModerationChannel(guild.id),
+        getAutoModSettings(guild.id),
         getBirthdayChannel(guild.id),
         getMuteRole(guild.id),
         getReportChannel(guild.id),
@@ -499,7 +587,11 @@ async function buildOverview(interaction: ChatInputCommandInteraction, notice?: 
         .setDescription(notice ? `✅ ${notice}` : 'Sélectionnez une catégorie pour modifier sa configuration.')
         .addFields(
             { name: '📑 Logs serveur', value: formatChannel(guild, logs), inline: true },
-            { name: '🛡️ Modération', value: formatChannel(guild, moderation), inline: true },
+            {
+                name: '🛡️ Modération',
+                value: `${automod.enabled ? '🟢 AutoMod actif' : '⚪ AutoMod désactivé'} · ${formatChannel(guild, moderation)}`,
+                inline: true
+            },
             { name: '🎂 Anniversaires', value: formatChannel(guild, birthdays), inline: true },
             { name: '🔇 Rôle de mute', value: formatRole(guild, mute), inline: true },
             { name: '🚩 Salon des reports', value: formatChannel(guild, reports), inline: true },
@@ -552,6 +644,7 @@ async function buildSection(section: ConfigSection, guild: Guild) {
     if (section === 'xp') return buildXpHome(guild);
     if (section === 'invites') return buildInviteSection(guild);
     if (section === 'timezone') return buildTimezoneSection(guild);
+    if (section === 'moderation') return buildAutoModHome(guild);
     const embed = createKeplerEmbed()
         .setColor(PANEL_COLOR)
         .setTitle(sectionLabel(section))
@@ -843,6 +936,155 @@ async function buildInviteFields(guild: Guild) {
             new ActionRowBuilder<ButtonBuilder>().addComponents(...choices.slice(3).map(button)),
             new ActionRowBuilder<ButtonBuilder>().addComponents(
                 new ButtonBuilder().setCustomId('settings:invites:home').setLabel('Retour aux invitations').setEmoji('↩️').setStyle(ButtonStyle.Secondary)
+            )
+        ]
+    };
+}
+
+async function buildAutoModHome(guild: Guild) {
+    const [settings, logChannelId] = await Promise.all([
+        getAutoModSettings(guild.id),
+        getModerationChannel(guild.id)
+    ]);
+    const activeRules = [
+        settings.anti_link_enabled,
+        settings.anti_invite_enabled,
+        settings.anti_spam_enabled,
+        settings.anti_duplicate_enabled,
+        settings.anti_caps_enabled,
+        settings.anti_mention_enabled
+    ].filter(Boolean).length;
+    const logSelect = new ChannelSelectMenuBuilder()
+        .setCustomId('settings:automod:log-channel')
+        .setPlaceholder('Choisir le salon des logs de modération')
+        .addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement)
+        .setMinValues(1)
+        .setMaxValues(1);
+    const embed = createKeplerEmbed(settings.enabled ? 'primary' : 'neutral')
+        .setTitle('Auto-modération')
+        .setDescription(
+            'Les administrateurs et membres pouvant gérer les messages sont exemptés. ' +
+            'Les messages bloqués sont supprimés avant l’attribution d’XP et les autres traitements.'
+        )
+        .addFields(
+            { name: 'Moteur', value: settings.enabled ? '🟢 Actif' : '⚪ Désactivé', inline: true },
+            { name: 'Protections', value: `${activeRules}/6 actives`, inline: true },
+            { name: 'Logs', value: formatChannel(guild, logChannelId), inline: true },
+            {
+                name: 'Réponse',
+                value: settings.action === 'timeout'
+                    ? `Timeout ${formatSeconds(settings.timeout_seconds)} après ${settings.strike_threshold} infraction(s)`
+                    : settings.action === 'warn' ? 'Avertissement à chaque infraction' : 'Suppression uniquement',
+                inline: false
+            },
+            {
+                name: 'Tolérances',
+                value: `${settings.allowed_domains.length} domaine(s) · ` +
+                    `${settings.excluded_channel_ids.length} salon(s) · ${settings.excluded_role_ids.length} rôle(s)`,
+                inline: false
+            }
+        )
+        .setFooter({ text: guild.name });
+    return {
+        content: '',
+        embeds: [embed],
+        components: [
+            new ActionRowBuilder<ChannelSelectMenuBuilder>().addComponents(logSelect),
+            new ActionRowBuilder<ButtonBuilder>().addComponents(
+                new ButtonBuilder()
+                    .setCustomId('settings:automod:toggle')
+                    .setLabel(settings.enabled ? 'Désactiver' : 'Activer')
+                    .setStyle(settings.enabled ? ButtonStyle.Danger : ButtonStyle.Success),
+                new ButtonBuilder().setCustomId('settings:automod:rules').setLabel('Protections').setEmoji('🛡️').setStyle(ButtonStyle.Primary),
+                new ButtonBuilder().setCustomId('settings:automod:thresholds').setLabel('Seuils').setEmoji('🎚️').setStyle(ButtonStyle.Secondary),
+                new ButtonBuilder().setCustomId('settings:automod:action').setLabel('Sanctions').setEmoji('⚖️').setStyle(ButtonStyle.Secondary),
+                new ButtonBuilder().setCustomId('settings:automod:exemptions').setLabel('Exemptions').setEmoji('🕊️').setStyle(ButtonStyle.Secondary)
+            ),
+            new ActionRowBuilder<ButtonBuilder>().addComponents(
+                new ButtonBuilder().setCustomId('settings:automod:domains').setLabel('Domaines autorisés').setEmoji('🌐').setStyle(ButtonStyle.Secondary),
+                new ButtonBuilder()
+                    .setCustomId('settings:automod:own-invites')
+                    .setLabel(settings.allow_own_invites ? 'Invitations du serveur autorisées' : 'Toutes les invitations bloquées')
+                    .setStyle(settings.allow_own_invites ? ButtonStyle.Success : ButtonStyle.Secondary),
+                backButton()
+            )
+        ]
+    };
+}
+
+async function buildAutoModRules(guild: Guild) {
+    const settings = await getAutoModSettings(guild.id);
+    const rules: Array<[AutoModRuleKey, string, string]> = [
+        ['anti_link_enabled', 'Liens externes', '🌐'],
+        ['anti_invite_enabled', 'Invitations', '🔗'],
+        ['anti_spam_enabled', 'Rafales', '⚡'],
+        ['anti_duplicate_enabled', 'Doublons', '📋'],
+        ['anti_caps_enabled', 'Majuscules', '🔠'],
+        ['anti_mention_enabled', 'Mentions', '📣']
+    ];
+    const makeButton = ([key, label, emoji]: [AutoModRuleKey, string, string]) =>
+        new ButtonBuilder()
+            .setCustomId(`settings:automod:rule:${key}`)
+            .setLabel(label)
+            .setEmoji(emoji)
+            .setStyle(settings[key] ? ButtonStyle.Success : ButtonStyle.Secondary);
+    return {
+        content: '',
+        embeds: [
+            createKeplerEmbed('primary')
+                .setTitle('AutoMod · Protections')
+                .setDescription(
+                    'Activez uniquement les règles adaptées au serveur. Le filtre de majuscules ignore les messages courts, ' +
+                    'et le filtre de doublons normalise espaces, casse et ponctuation.'
+                )
+                .setFooter({ text: guild.name })
+        ],
+        components: [
+            new ActionRowBuilder<ButtonBuilder>().addComponents(...rules.slice(0, 3).map(makeButton)),
+            new ActionRowBuilder<ButtonBuilder>().addComponents(...rules.slice(3).map(makeButton)),
+            new ActionRowBuilder<ButtonBuilder>().addComponents(
+                new ButtonBuilder().setCustomId('settings:automod:home').setLabel('Retour à l’AutoMod').setEmoji('↩️').setStyle(ButtonStyle.Secondary)
+            )
+        ]
+    };
+}
+
+async function buildAutoModExemptions(guild: Guild) {
+    const settings = await getAutoModSettings(guild.id);
+    const channels = new ChannelSelectMenuBuilder()
+        .setCustomId('settings:automod:excluded-channels')
+        .setPlaceholder('Salons et catégories exemptés')
+        .addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement, ChannelType.GuildCategory)
+        .setMinValues(1)
+        .setMaxValues(25);
+    const validChannels = settings.excluded_channel_ids.filter(id => guild.channels.cache.has(id)).slice(0, 25);
+    if (validChannels.length) channels.setDefaultChannels(...validChannels);
+    const roles = new RoleSelectMenuBuilder()
+        .setCustomId('settings:automod:excluded-roles')
+        .setPlaceholder('Rôles exemptés')
+        .setMinValues(1)
+        .setMaxValues(25);
+    const validRoles = settings.excluded_role_ids.filter(id => guild.roles.cache.has(id)).slice(0, 25);
+    if (validRoles.length) roles.setDefaultRoles(...validRoles);
+    return {
+        content: '',
+        embeds: [
+            createKeplerEmbed('primary')
+                .setTitle('AutoMod · Exemptions')
+                .setDescription(
+                    `**Salons/catégories :** ${settings.excluded_channel_ids.map(id => `<#${id}>`).join(', ') || 'Aucun'}\n` +
+                    `**Rôles :** ${settings.excluded_role_ids.map(id => `<@&${id}>`).join(', ') || 'Aucun'}\n\n` +
+                    'Les administrateurs et les membres avec **Gérer les messages** restent toujours exemptés.'
+                )
+                .setFooter({ text: guild.name })
+        ],
+        components: [
+            new ActionRowBuilder<ChannelSelectMenuBuilder>().addComponents(channels),
+            new ActionRowBuilder<RoleSelectMenuBuilder>().addComponents(roles),
+            new ActionRowBuilder<ButtonBuilder>().addComponents(
+                new ButtonBuilder().setCustomId('settings:automod:clear-channels').setLabel('Vider les salons').setStyle(ButtonStyle.Secondary),
+                new ButtonBuilder().setCustomId('settings:automod:clear-roles').setLabel('Vider les rôles').setStyle(ButtonStyle.Secondary),
+                new ButtonBuilder().setCustomId('settings:automod:home').setLabel('Retour').setEmoji('↩️').setStyle(ButtonStyle.Secondary)
             )
         ]
     };
@@ -1175,6 +1417,148 @@ async function showTimezoneModal(component: ButtonInteraction, source: ChatInput
     await submission.deferUpdate();
     await updateServerTimezone(source.guildId!, value);
     await submission.editReply(await buildTimezoneSection(source.guild!));
+}
+
+async function showAutoModThresholdsModal(component: ButtonInteraction, source: ChatInputCommandInteraction) {
+    const settings = await getAutoModSettings(source.guildId!);
+    const modalId = `settings:automod:thresholds-modal:${source.id}`;
+    const modal = new ModalBuilder()
+        .setCustomId(modalId)
+        .setTitle('Seuils de l’AutoMod')
+        .addComponents(
+            settingsTextInput('spam', 'Rafale : messages / secondes', `${settings.spam_message_count}/${settings.spam_interval_seconds}`, '6/8'),
+            settingsTextInput('duplicate', 'Doublons : messages / secondes', `${settings.duplicate_message_count}/${settings.duplicate_interval_seconds}`, '3/30'),
+            settingsTextInput('caps', 'Majuscules : pourcentage / lettres min.', `${settings.caps_percentage}/${settings.caps_min_letters}`, '75/12'),
+            settingsTextInput('mentions', 'Mentions déclenchant le filtre', String(settings.mention_limit), '5')
+        );
+    await component.showModal(modal);
+    const submission = await awaitSettingsModal(component, source, modalId);
+    if (!submission) return;
+    const spam = parseNumberPair(submission.fields.getTextInputValue('spam'));
+    const duplicate = parseNumberPair(submission.fields.getTextInputValue('duplicate'));
+    const caps = parseNumberPair(submission.fields.getTextInputValue('caps'));
+    const mentions = Number(submission.fields.getTextInputValue('mentions'));
+    const valid = spam && duplicate && caps &&
+        Number.isInteger(mentions) &&
+        spam[0] >= 3 && spam[0] <= 20 && spam[1] >= 2 && spam[1] <= 60 &&
+        duplicate[0] >= 2 && duplicate[0] <= 10 && duplicate[1] >= 5 && duplicate[1] <= 300 &&
+        caps[0] >= 50 && caps[0] <= 100 && caps[1] >= 5 && caps[1] <= 100 &&
+        mentions >= 2 && mentions <= 50;
+    if (!valid) {
+        await submission.reply({
+            content: '❌ Seuils invalides. Rafale `3-20/2-60`, doublons `2-10/5-300`, majuscules `50-100/5-100`, mentions `2-50`.',
+            ephemeral: true
+        });
+        return;
+    }
+    await submission.deferUpdate();
+    await updateAutoModSettings(source.guildId!, {
+        spam_message_count: spam![0],
+        spam_interval_seconds: spam![1],
+        duplicate_message_count: duplicate![0],
+        duplicate_interval_seconds: duplicate![1],
+        caps_percentage: caps![0],
+        caps_min_letters: caps![1],
+        mention_limit: mentions
+    });
+    await submission.editReply(await buildAutoModHome(source.guild!));
+}
+
+async function showAutoModActionModal(component: ButtonInteraction, source: ChatInputCommandInteraction) {
+    const settings = await getAutoModSettings(source.guildId!);
+    const modalId = `settings:automod:action-modal:${source.id}`;
+    const modal = new ModalBuilder()
+        .setCustomId(modalId)
+        .setTitle('Sanctions de l’AutoMod')
+        .addComponents(
+            settingsTextInput('action', 'Action : delete, warn ou timeout', settings.action, 'timeout'),
+            settingsTextInput('strikes', 'Infractions / fenêtre en secondes', `${settings.strike_threshold}/${settings.strike_window_seconds}`, '3/3600'),
+            settingsTextInput('timeout', 'Durée du timeout en secondes', String(settings.timeout_seconds), '600'),
+            settingsTextInput('notify', 'Notifier dans le salon ? oui ou non', settings.notify_user ? 'oui' : 'non', 'oui')
+        );
+    await component.showModal(modal);
+    const submission = await awaitSettingsModal(component, source, modalId);
+    if (!submission) return;
+    const action = submission.fields.getTextInputValue('action').trim().toLowerCase();
+    const strikes = parseNumberPair(submission.fields.getTextInputValue('strikes'));
+    const timeout = Number(submission.fields.getTextInputValue('timeout'));
+    const notify = submission.fields.getTextInputValue('notify').trim().toLowerCase();
+    if (
+        !['delete', 'warn', 'timeout'].includes(action) ||
+        !strikes || strikes[0] < 1 || strikes[0] > 20 || strikes[1] < 60 || strikes[1] > 604800 ||
+        !Number.isInteger(timeout) || timeout < 10 || timeout > 2419200 ||
+        !['oui', 'non'].includes(notify)
+    ) {
+        await submission.reply({
+            content: '❌ Utilisez `delete`, `warn` ou `timeout`, une progression `1-20/60-604800`, un timeout de 10 à 2419200 secondes et `oui`/`non`.',
+            ephemeral: true
+        });
+        return;
+    }
+    await submission.deferUpdate();
+    await updateAutoModSettings(source.guildId!, {
+        action: action as 'delete' | 'warn' | 'timeout',
+        strike_threshold: strikes[0],
+        strike_window_seconds: strikes[1],
+        timeout_seconds: timeout,
+        notify_user: notify === 'oui'
+    });
+    await submission.editReply(await buildAutoModHome(source.guild!));
+}
+
+async function showAutoModDomainsModal(component: ButtonInteraction, source: ChatInputCommandInteraction) {
+    const settings = await getAutoModSettings(source.guildId!);
+    const modalId = `settings:automod:domains-modal:${source.id}`;
+    const modal = new ModalBuilder()
+        .setCustomId(modalId)
+        .setTitle('Domaines autorisés')
+        .addComponents(
+            new ActionRowBuilder<TextInputBuilder>().addComponents(
+                new TextInputBuilder()
+                    .setCustomId('domains')
+                    .setLabel('Domaines séparés par virgule ou ligne')
+                    .setPlaceholder('youtube.com, github.com')
+                    .setStyle(TextInputStyle.Paragraph)
+                    .setValue(settings.allowed_domains.join('\n').slice(0, 2000))
+                    .setMaxLength(2000)
+                    .setRequired(false)
+            )
+        );
+    await component.showModal(modal);
+    const submission = await awaitSettingsModal(component, source, modalId);
+    if (!submission) return;
+    const domains = [...new Set(submission.fields.getTextInputValue('domains')
+        .split(/[,\n]/)
+        .map(value => value.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0])
+        .filter(Boolean))];
+    if (domains.length > 50 || domains.some(domain => !/^(?:[a-z0-9-]+\.)+[a-z]{2,24}$/.test(domain))) {
+        await submission.reply({
+            content: '❌ Indiquez au maximum 50 domaines valides, sans chemin, par exemple `youtube.com`.',
+            ephemeral: true
+        });
+        return;
+    }
+    await submission.deferUpdate();
+    await updateAutoModSettings(source.guildId!, { allowed_domains: domains });
+    await submission.editReply(await buildAutoModHome(source.guild!));
+}
+
+function settingsTextInput(customId: string, label: string, value: string, placeholder: string) {
+    return new ActionRowBuilder<TextInputBuilder>().addComponents(
+        new TextInputBuilder()
+            .setCustomId(customId)
+            .setLabel(label)
+            .setStyle(TextInputStyle.Short)
+            .setValue(value)
+            .setPlaceholder(placeholder)
+            .setRequired(true)
+    );
+}
+
+function parseNumberPair(value: string): [number, number] | null {
+    const match = value.trim().match(/^(\d+)\s*\/\s*(\d+)$/);
+    if (!match) return null;
+    return [Number(match[1]), Number(match[2])];
 }
 
 async function showInviteMessageModal(component: ButtonInteraction, source: ChatInputCommandInteraction) {
@@ -1607,7 +1991,7 @@ async function createMuteRole(guild: Guild, userTag: string) {
 function sectionLabel(section: ConfigSection): string {
     return ({
         logs: 'Logs serveur',
-        moderation: 'Logs de modération',
+        moderation: 'Modération et AutoMod',
         birthdays: 'Annonces d’anniversaire',
         mute: 'Rôle de mute',
         reports: 'Signalements',
@@ -1621,7 +2005,7 @@ function sectionLabel(section: ConfigSection): string {
 function sectionDescription(section: ConfigSection): string {
     return ({
         logs: 'Choisissez le salon qui recevra les événements généraux du serveur.',
-        moderation: 'Choisissez le salon qui recevra les sanctions et actions de modération.',
+        moderation: 'Configurez les protections automatiques, leurs exemptions, sanctions et journaux.',
         birthdays: 'Choisissez le salon dans lequel les anniversaires seront annoncés.',
         mute: 'Sélectionnez un rôle existant, créez-en un automatiquement ou utilisez les timeouts Discord.',
         reports: 'Choisissez le salon qui recevra les signalements et, si nécessaire, le rôle de modération à mentionner.',
@@ -1645,6 +2029,13 @@ function formatRole(guild: Guild, roleId: string | null): string {
 function formatOptionalRole(guild: Guild, roleId: string | null): string {
     if (!roleId) return '⚪ Aucun rôle';
     return guild.roles.cache.has(roleId) ? `🟢 <@&${roleId}>` : '🟠 Rôle introuvable';
+}
+
+function formatSeconds(totalSeconds: number): string {
+    if (totalSeconds % 86400 === 0) return `${totalSeconds / 86400}j`;
+    if (totalSeconds % 3600 === 0) return `${totalSeconds / 3600}h`;
+    if (totalSeconds % 60 === 0) return `${totalSeconds / 60}min`;
+    return `${totalSeconds}s`;
 }
 
 function backButton(): ButtonBuilder {

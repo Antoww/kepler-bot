@@ -142,6 +142,7 @@ async function runChannelsAudit(interaction: CommandInteraction) {
     PermissionFlagsBits.ViewAuditLog,
     PermissionFlagsBits.ManageRoles,
     PermissionFlagsBits.ManageMessages,
+    PermissionFlagsBits.ModerateMembers,
     PermissionFlagsBits.ReadMessageHistory,
   ] as const;
   const globalMissing = globalNeeded.filter((p) => !me.permissions.has(p));

@@ -24,6 +24,7 @@ Kepler est un bot Discord polyvalent en **développement actif**, conçu pour en
 - **Système de mute hybride** : Timeout Discord (≤28j) ou rôles personnalisés (>28j)
 - **Configuration flexible** : panneau centralisé `/settings`
 - **Logs automatiques** : suivi complet configurable depuis `/settings`
+- **Auto-modération intelligente** : anti-liens, invitations, spam, doublons, majuscules et mentions massives
 - **Expirations automatiques** : Débannissement et démute automatiques
 - **Audit serveur** : `/audit` pour vérifier la configuration des canaux et rôles
 

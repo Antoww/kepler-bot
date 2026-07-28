@@ -58,6 +58,14 @@ export interface UserDataComplete {
             sanction_number?: number;
             created_at: string;
         }>;
+        autoMod: Array<{
+            guild_id: string;
+            channel_id: string;
+            rule: string;
+            action_taken: string;
+            excerpt?: string;
+            created_at: string;
+        }>;
         tempBans: Array<{
             guild_id: string;
             reason: string;
@@ -93,6 +101,7 @@ export interface UserDataSummary {
     // Modération
     warningCount: number;
     moderationHistoryCount: number;
+    autoModViolationCount: number;
     activeTempBans: number;
     activeTempMutes: number;
     // Participations
@@ -113,6 +122,7 @@ export interface DeletionResult {
     remindersDeleted: number;
     warningsDeleted: number;
     moderationHistoryDeleted: number;
+    autoModViolationsDeleted: number;
     tempBansDeleted: number;
     tempMutesDeleted: number;
     giveawayParticipationsDeleted: number;
@@ -134,6 +144,7 @@ export async function getCompleteUserDataSummary(userId: string): Promise<UserDa
         reminderData,
         warningData,
         moderationData,
+        autoModData,
         tempBanData,
         tempMuteData,
         giveawayData
@@ -147,6 +158,7 @@ export async function getCompleteUserDataSummary(userId: string): Promise<UserDa
         // Modération
         supabase.from('warnings').select('guild_id, created_at').eq('user_id', userId),
         supabase.from('moderation_history').select('guild_id, created_at').eq('user_id', userId).order('created_at', { ascending: true }),
+        supabase.from('guild_automod_violations').select('guild_id, created_at').eq('user_id', userId).order('created_at', { ascending: true }),
         supabase.from('temp_bans').select('guild_id').eq('user_id', userId),
         supabase.from('temp_mutes').select('guild_id').eq('user_id', userId),
         // Participations
@@ -160,6 +172,7 @@ export async function getCompleteUserDataSummary(userId: string): Promise<UserDa
     const reminderCount = reminderData.data?.length || 0;
     const warningCount = warningData.data?.length || 0;
     const moderationHistoryCount = moderationData.data?.length || 0;
+    const autoModViolationCount = autoModData.data?.length || 0;
     const activeTempBans = tempBanData.data?.length || 0;
     const activeTempMutes = tempMuteData.data?.length || 0;
     const giveawayParticipations = giveawayData.data?.length || 0;
@@ -171,6 +184,7 @@ export async function getCompleteUserDataSummary(userId: string): Promise<UserDa
     birthdayData.data?.forEach(row => guildsSet.add(row.guild_id));
     warningData.data?.forEach(row => guildsSet.add(row.guild_id));
     moderationData.data?.forEach(row => guildsSet.add(row.guild_id));
+    autoModData.data?.forEach(row => guildsSet.add(row.guild_id));
     tempBanData.data?.forEach(row => guildsSet.add(row.guild_id));
     tempMuteData.data?.forEach(row => guildsSet.add(row.guild_id));
 
@@ -191,6 +205,10 @@ export async function getCompleteUserDataSummary(userId: string): Promise<UserDa
         allDates.push(moderationData.data[0].created_at);
         allDates.push(moderationData.data[moderationData.data.length - 1].created_at);
     }
+    if (autoModData.data?.length) {
+        allDates.push(autoModData.data[0].created_at);
+        allDates.push(autoModData.data[autoModData.data.length - 1].created_at);
+    }
 
     if (allDates.length > 0) {
         allDates.sort();
@@ -205,6 +223,7 @@ export async function getCompleteUserDataSummary(userId: string): Promise<UserDa
         reminderCount,
         warningCount,
         moderationHistoryCount,
+        autoModViolationCount,
         activeTempBans,
         activeTempMutes,
         giveawayParticipations,
@@ -225,6 +244,7 @@ export async function exportCompleteUserData(userId: string): Promise<UserDataCo
         reminderData,
         warningData,
         moderationData,
+        autoModData,
         tempBanData,
         tempMuteData,
         giveawayData
@@ -238,6 +258,7 @@ export async function exportCompleteUserData(userId: string): Promise<UserDataCo
         // Modération (on inclut le moderator_id car c'est une information pertinente pour l'utilisateur)
         supabase.from('warnings').select('guild_id, moderator_id, reason, sanction_number, created_at').eq('user_id', userId),
         supabase.from('moderation_history').select('guild_id, action_type, reason, duration, sanction_number, created_at').eq('user_id', userId),
+        supabase.from('guild_automod_violations').select('guild_id, channel_id, rule, action_taken, excerpt, created_at').eq('user_id', userId),
         supabase.from('temp_bans').select('guild_id, reason, end_time, created_at').eq('user_id', userId),
         supabase.from('temp_mutes').select('guild_id, reason, end_time, created_at').eq('user_id', userId),
         // Participations
@@ -258,6 +279,7 @@ export async function exportCompleteUserData(userId: string): Promise<UserDataCo
         moderation: {
             warnings: warningData.data || [],
             history: moderationData.data || [],
+            autoMod: autoModData.data || [],
             tempBans: tempBanData.data || [],
             tempMutes: tempMuteData.data || []
         },
@@ -297,6 +319,7 @@ export async function deleteCompleteUserData(
         remindersDeleted: 0,
         warningsDeleted: 0,
         moderationHistoryDeleted: 0,
+        autoModViolationsDeleted: 0,
         tempBansDeleted: 0,
         tempMutesDeleted: 0,
         giveawayParticipationsDeleted: 0
@@ -324,14 +347,16 @@ export async function deleteCompleteUserData(
 
     // Supprimer les données de modération (optionnel - généralement non autorisé)
     if (options.moderation) {
-        const [warnings, history, bans, mutes] = await Promise.all([
+        const [warnings, history, autoMod, bans, mutes] = await Promise.all([
             supabase.from('warnings').delete().eq('user_id', userId).select('id'),
             supabase.from('moderation_history').delete().eq('user_id', userId).select('id'),
+            supabase.from('guild_automod_violations').delete().eq('user_id', userId).select('id'),
             supabase.from('temp_bans').delete().eq('user_id', userId).select('id'),
             supabase.from('temp_mutes').delete().eq('user_id', userId).select('id')
         ]);
         result.warningsDeleted = warnings.data?.length || 0;
         result.moderationHistoryDeleted = history.data?.length || 0;
+        result.autoModViolationsDeleted = autoMod.data?.length || 0;
         result.tempBansDeleted = bans.data?.length || 0;
         result.tempMutesDeleted = mutes.data?.length || 0;
     }
@@ -375,7 +400,7 @@ export async function deleteVoluntaryUserData(userId: string): Promise<DeletionR
 export async function purgeAllOldData(): Promise<{
     stats: { commands: number; messages: number; daily: number };
     personal: { reminders: number };
-    moderation: { history: number; tempBans: number; tempMutes: number };
+    moderation: { history: number; autoMod: number; tempBans: number; tempMutes: number };
 }> {
     const now = new Date();
     
@@ -406,8 +431,9 @@ export async function purgeAllOldData(): Promise<{
         .select('id');
 
     // Purge de l'historique de modération ancien (2 ans)
-    const [modHistory, tempBans, tempMutes] = await Promise.all([
+    const [modHistory, autoMod, tempBans, tempMutes] = await Promise.all([
         supabase.from('moderation_history').delete().lt('created_at', modDate).select('id'),
+        supabase.from('guild_automod_violations').delete().lt('created_at', modDate).select('id'),
         supabase.from('temp_bans').delete().lt('end_time', now.toISOString()).select('id'), // Bans expirés
         supabase.from('temp_mutes').delete().lt('end_time', now.toISOString()).select('id') // Mutes expirés
     ]);
@@ -423,6 +449,7 @@ export async function purgeAllOldData(): Promise<{
         },
         moderation: {
             history: modHistory.data?.length || 0,
+            autoMod: autoMod.data?.length || 0,
             tempBans: tempBans.data?.length || 0,
             tempMutes: tempMutes.data?.length || 0
         }
@@ -448,6 +475,7 @@ export async function hasUserData(userId: string): Promise<boolean> {
         summary.reminderCount > 0 ||
         summary.warningCount > 0 ||
         summary.moderationHistoryCount > 0 ||
+        summary.autoModViolationCount > 0 ||
         summary.giveawayParticipations > 0
     );
 }
@@ -475,6 +503,7 @@ export function generatePrivacyReport(summary: UserDataSummary): string {
     const modData: string[] = [];
     if (summary.warningCount > 0) modData.push(`• ${summary.warningCount} avertissement(s)`);
     if (summary.moderationHistoryCount > 0) modData.push(`• ${summary.moderationHistoryCount} entrée(s) dans l'historique de modération`);
+    if (summary.autoModViolationCount > 0) modData.push(`• ${summary.autoModViolationCount} détection(s) AutoMod`);
     if (summary.activeTempBans > 0) modData.push(`• ${summary.activeTempBans} ban(s) temporaire(s) actif(s)`);
     if (summary.activeTempMutes > 0) modData.push(`• ${summary.activeTempMutes} mute(s) temporaire(s) actif(s)`);
     if (modData.length > 0) {
