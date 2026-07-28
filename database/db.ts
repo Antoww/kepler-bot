@@ -531,10 +531,10 @@ export async function addModerationHistory(
     moderatorId: string,
     actionType: string,
     reason: string,
-    duration?: string
+    duration?: string,
+    existingSanctionNumber?: number
 ): Promise<number> {
-    // Obtenir le numéro de sanction
-    const sanctionNumber = await getNextSanctionNumber(guildId);
+    const sanctionNumber = existingSanctionNumber ?? await getNextSanctionNumber(guildId);
 
     const { error } = await supabase
         .from('moderation_history')

@@ -4,6 +4,7 @@ import { createReminder } from '../../database/supabase.ts';
 import { addGiveawayParticipant, removeGiveawayParticipant, isParticipant, getGiveaway, getGiveawayParticipantCount } from '../../database/db.ts';
 import { formatTimeRemaining, generateGiveawayEmbed } from './giveawayManager.ts';
 import { trackCommand } from '../../utils/statsTracker.ts';
+import { handleReportActionButton } from '../../utils/reportActions.ts';
 
 export const name = 'interactionCreate';
 
@@ -65,7 +66,9 @@ async function handleButtonInteraction(interaction: ButtonInteraction) {
     const customId = interaction.customId;
 
     try {
-        if (customId === 'giveaway_join') {
+        if (customId.startsWith('report:moderate:')) {
+            await handleReportActionButton(interaction);
+        } else if (customId === 'giveaway_join') {
             await handleGiveawayJoin(interaction);
         } else if (customId === 'giveaway_leave') {
             await handleGiveawayLeave(interaction);

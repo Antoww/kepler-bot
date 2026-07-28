@@ -52,7 +52,7 @@ export async function execute(interaction: CommandInteraction) {
         const sanctionNumber = await createWarning(interaction.guild.id, target.id, interaction.user.id, reason);
 
         // Ajouter à l'historique de modération
-        await addModerationHistory(interaction.guild.id, target.id, interaction.user.id, 'warn', reason);
+        await addModerationHistory(interaction.guild.id, target.id, interaction.user.id, 'warn', reason, undefined, sanctionNumber);
 
         // Créer l'embed de confirmation
         const embed = createKeplerEmbed()

@@ -1,5 +1,7 @@
 import {
     ActionRowBuilder,
+    ButtonBuilder,
+    ButtonStyle,
     type ChatInputCommandInteraction,
     type Message,
     type MessageContextMenuCommandInteraction,
@@ -109,6 +111,12 @@ async function sendReport(
     await channel.send({
         content: role ? `${role}` : undefined,
         embeds: [embed],
+        components: [new ActionRowBuilder<ButtonBuilder>().addComponents(
+            new ButtonBuilder().setCustomId(`report:moderate:warn:${target.id}`).setLabel('Warn').setEmoji('⚠️').setStyle(ButtonStyle.Secondary),
+            new ButtonBuilder().setCustomId(`report:moderate:timeout:${target.id}`).setLabel('Timeout').setEmoji('⏱️').setStyle(ButtonStyle.Primary),
+            new ButtonBuilder().setCustomId(`report:moderate:kick:${target.id}`).setLabel('Kick').setEmoji('👢').setStyle(ButtonStyle.Secondary),
+            new ButtonBuilder().setCustomId(`report:moderate:ban:${target.id}`).setLabel('Ban').setEmoji('🔨').setStyle(ButtonStyle.Danger)
+        )],
         allowedMentions: { roles: role ? [role.id] : [] }
     });
 }
