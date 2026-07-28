@@ -9,6 +9,20 @@ dans `/settings` et nécessite la permission Administrateur.
 
 ## Commandes de Sanction
 
+### `clear`
+Supprime des messages récents dans le salon courant.
+
+**Utilisation :**
+
+- `/clear nombre:25` : supprime les 25 derniers messages ;
+- `/clear nombre:25 utilisateur:@user` : recherche et supprime uniquement
+  jusqu’à 25 messages de cet utilisateur.
+
+La recherche ciblée parcourt au maximum les 1 000 messages les plus récents.
+Discord ne permet pas la suppression groupée des messages de plus de 14 jours.
+
+**Permissions requises :** Gérer les messages
+
 ### `ban`
 Bannit un utilisateur du serveur avec possibilité de ban temporaire.
 
