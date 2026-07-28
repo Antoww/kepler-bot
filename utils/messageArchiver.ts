@@ -1,17 +1,21 @@
 import { Message, Collection } from 'discord.js';
 import { logger } from './logger.ts';
+import { DEFAULT_TIMEZONE } from './timezone.ts';
 
 /**
  * Formate les messages supprimés en texte lisible
  */
-export function formatMessagesForArchive(messages: Collection<string, Message>): string {
+export function formatMessagesForArchive(
+    messages: Collection<string, Message>,
+    timezone = DEFAULT_TIMEZONE
+): string {
     const sortedMessages = Array.from(messages.values()).sort(
         (a, b) => a.createdTimestamp - b.createdTimestamp
     );
 
     let archive = `=== ARCHIVE DES MESSAGES SUPPRIMÉS ===\n`;
     archive += `Date de suppression: ${new Date().toLocaleString('fr-FR', { 
-        timeZone: 'Europe/Paris',
+        timeZone: timezone,
         dateStyle: 'full',
         timeStyle: 'long'
     })}\n`;
@@ -26,11 +30,13 @@ export function formatMessagesForArchive(messages: Collection<string, Message>):
         archive += `Auteur: ${author.tag} (${author.username})\n`;
         archive += `ID Auteur: ${author.id}\n`;
         archive += `Date: ${createdAt.toLocaleDateString('fr-FR', { 
+            timeZone: timezone,
             day: '2-digit', 
             month: '2-digit', 
             year: 'numeric' 
         })}\n`;
         archive += `Heure: ${createdAt.toLocaleTimeString('fr-FR', { 
+            timeZone: timezone,
             hour: '2-digit', 
             minute: '2-digit', 
             second: '2-digit' 

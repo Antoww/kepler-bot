@@ -92,7 +92,7 @@ function serverButton(action: ServerStatsAction, label: string, emoji: string) {
 
 function periodPicker(action: ServerStatsAction) {
     const select = new StringSelectMenuBuilder().setCustomId(`graph:period:${action}`).setPlaceholder('Choisir la période').addOptions(
-        { label: '7 jours', value: '7' }, { label: '30 jours', value: '30', default: true }, { label: '90 jours', value: '90' },
+        { label: '7 jours', value: '7' }, { label: '30 jours', value: '30' }, { label: '90 jours', value: '90' },
         { label: '180 jours', value: '180' }, { label: '360 jours', value: '360' }, { label: 'Depuis toujours', value: 'all' }
     );
     return { content: '', embeds: [createKeplerEmbed('primary').setTitle('📅 Période analysée').setDescription('Sélectionnez la période du graphique.')], attachments: [], components: [new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(select), new ActionRowBuilder<ButtonBuilder>().addComponents(serverBackButton())] };
@@ -100,7 +100,7 @@ function periodPicker(action: ServerStatsAction) {
 
 function limitPicker(action: 'channels' | 'users', period: string) {
     const options = [5, 10, 15, ...(action === 'users' ? [20] : [])]
-        .map(value => ({ label: `Top ${value}`, value: String(value), default: value === 10 }));
+        .map(value => ({ label: `Top ${value}`, value: String(value) }));
     const select = new StringSelectMenuBuilder()
         .setCustomId(`graph:limit:${action}:${period}`)
         .setPlaceholder('Choisir la taille du classement')

@@ -79,7 +79,7 @@ function globalButton(action: GlobalStatsAction, label: string, emoji: string) {
 
 function globalPeriodPicker(action: GlobalStatsAction) {
     const select = new StringSelectMenuBuilder().setCustomId(`globalstats:period:${action}`).setPlaceholder('Choisir la période').addOptions(
-        { label: '7 jours', value: '7' }, { label: '30 jours', value: '30', default: true }, { label: '90 jours', value: '90' },
+        { label: '7 jours', value: '7' }, { label: '30 jours', value: '30' }, { label: '90 jours', value: '90' },
         { label: '180 jours', value: '180' }, { label: '360 jours', value: '360' }, { label: 'Depuis toujours', value: 'all' }
     );
     return { content: '', embeds: [createKeplerEmbed('warning').setTitle('📅 Période globale').setDescription('Sélectionnez la période du graphique.')], attachments: [], components: [new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(select), new ActionRowBuilder<ButtonBuilder>().addComponents(globalBackButton())] };

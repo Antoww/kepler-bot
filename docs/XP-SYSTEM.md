@@ -31,7 +31,9 @@ Toute la configuration est centralisée dans `/settings`, section
 - **Général** : activation, cooldown en secondes et annonces de niveau.
   Un salon d'annonce peut être choisi ; sans configuration, l'annonce est
   envoyée dans le salon où le niveau est gagné.
-- **Boosts** : période temporaire avec dates et multiplicateur, boosts par rôle.
+- **Boosts** : période temporaire au format français `jj/mm/aaaa hh:mm`,
+  interprétée dans le fuseau configuré pour le serveur, avec multiplicateur et
+  boosts par rôle.
 - **Récompenses** : association entre niveaux et rôles automatiques.
 - **Exclusions** : salons et rôles qui ne peuvent pas gagner d'XP.
 

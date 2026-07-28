@@ -2,6 +2,7 @@ import { KEPLER_MESSAGES } from '../../utils/theme.ts';
 import { type CommandInteraction, SlashCommandBuilder, ChannelType, TextChannel, PermissionFlagsBits, Message } from "discord.js";
 import { formatMessagesForArchive, uploadToPastebin } from "../../utils/messageArchiver.ts";
 import { storeArchiveUrl } from "../../utils/archiveCache.ts";
+import { getServerTimezone } from '../../database/db.ts';
 
 export const data = new SlashCommandBuilder()
     .setName('clear')
@@ -26,6 +27,7 @@ export async function execute(interaction: CommandInteraction) {
 
     if (interaction.channel?.isTextBased() && interaction.channel.type === ChannelType.GuildText) {
         const textChannel = interaction.channel as TextChannel;
+        const timezone = await getServerTimezone(interaction.guild.id);
 
         await textChannel.bulkDelete(amount, true)
             .then(async (messages) => {
@@ -36,8 +38,8 @@ export async function execute(interaction: CommandInteraction) {
                 console.log(`[Clear] Début de l'archivage de ${messageCount} messages supprimés...`);
 
                 if (messages.size > 0) {
-                    const archiveContent = formatMessagesForArchive(messages as any);
-                    const title = `Messages supprimés - ${interaction.guild?.name} - ${new Date().toLocaleString('fr-FR')}`;
+                    const archiveContent = formatMessagesForArchive(messages as any, timezone);
+                    const title = `Messages supprimés - ${interaction.guild?.name} - ${new Date().toLocaleString('fr-FR', { timeZone: timezone })}`;
 
                     console.log(`[Clear] Tentative d'upload sur Pastebin...`);
                     const pastebinUrl = await uploadToPastebin(archiveContent, title);

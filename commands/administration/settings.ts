@@ -24,6 +24,7 @@ import {
     getMuteRole,
     getReportChannel,
     getReportRole,
+    getServerTimezone,
     getTicketConfig,
     updateBirthdayChannel,
     updateLogChannel,
@@ -31,6 +32,7 @@ import {
     updateMuteRole,
     updateReportChannel,
     updateReportRole,
+    updateServerTimezone,
     updateTicketConfig
 } from '../../database/db.ts';
 import { logger } from '../../utils/logger.ts';
@@ -45,8 +47,14 @@ import {
     setXpRoleBoost,
     updateXpSettings
 } from '../../utils/xpSystem.ts';
+import {
+    COMMON_TIMEZONES,
+    formatDateTimeInZone,
+    isValidTimezone,
+    parseDateTimeInZone
+} from '../../utils/timezone.ts';
 
-type ConfigSection = 'logs' | 'moderation' | 'birthdays' | 'mute' | 'reports' | 'tickets' | 'xp';
+type ConfigSection = 'logs' | 'moderation' | 'birthdays' | 'mute' | 'reports' | 'tickets' | 'xp' | 'timezone';
 
 const PANEL_COLOR = KEPLER_COLORS.primary;
 const PANEL_TIMEOUT = 5 * 60 * 1000;
@@ -187,6 +195,10 @@ async function handleComponent(component: MessageComponentInteraction, source: C
             await component.deferUpdate();
             await updateXpSettings(guild.id, { excluded_role_ids: [] });
             await component.editReply(await buildXpExclusions(guild));
+            return;
+        }
+        if (component.customId === 'settings:timezone:custom') {
+            await showTimezoneModal(component, source);
             return;
         }
         if (component.customId.startsWith('settings:disable:')) {
@@ -340,7 +352,10 @@ async function handleComponent(component: MessageComponentInteraction, source: C
 
     if (component.isStringSelectMenu()) {
         await component.deferUpdate();
-        if (component.customId === 'settings:xp:remove-boost') {
+        if (component.customId === 'settings:timezone:common') {
+            await updateServerTimezone(guild.id, component.values[0]);
+            await component.editReply(await buildTimezoneSection(guild));
+        } else if (component.customId === 'settings:xp:remove-boost') {
             await deleteXpRoleBoost(guild.id, component.values[0]);
             await component.editReply(await buildXpBoosts(guild));
         } else if (component.customId === 'settings:xp:remove-reward') {
@@ -352,7 +367,7 @@ async function handleComponent(component: MessageComponentInteraction, source: C
 
 async function buildOverview(interaction: ChatInputCommandInteraction, notice?: string) {
     const guild = interaction.guild!;
-    const [logs, moderation, birthdays, mute, reports, reportRole, tickets, xpSettings, xpRewards] = await Promise.all([
+    const [logs, moderation, birthdays, mute, reports, reportRole, tickets, xpSettings, xpRewards, timezone] = await Promise.all([
         getLogChannel(guild.id),
         getModerationChannel(guild.id),
         getBirthdayChannel(guild.id),
@@ -361,7 +376,8 @@ async function buildOverview(interaction: ChatInputCommandInteraction, notice?: 
         getReportRole(guild.id),
         getTicketConfig(guild.id),
         getXpSettings(guild.id),
-        getXpRewards(guild.id)
+        getXpRewards(guild.id),
+        getServerTimezone(guild.id)
     ]);
 
     const embed = createKeplerEmbed()
@@ -389,7 +405,8 @@ async function buildOverview(interaction: ChatInputCommandInteraction, notice?: 
                     ? `🟢 Actif · ${xpSettings.cooldown_seconds}s · ${xpRewards.length} récompense(s)`
                     : '⚪ Désactivé',
                 inline: true
-            }
+            },
+            { name: '🌍 Fuseau horaire', value: `\`${timezone}\``, inline: true }
         )
         .setFooter({ text: 'Panneau privé • expiration dans 5 minutes' })
         .setTimestamp();
@@ -404,6 +421,7 @@ async function buildOverview(interaction: ChatInputCommandInteraction, notice?: 
     const actions = new ActionRowBuilder<ButtonBuilder>().addComponents(
         new ButtonBuilder().setCustomId('settings:section:tickets').setLabel('Tickets').setEmoji('🎫').setStyle(ButtonStyle.Secondary),
         new ButtonBuilder().setCustomId('settings:section:xp').setLabel('Expérience').setEmoji('✨').setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder().setCustomId('settings:section:timezone').setLabel('Fuseau').setEmoji('🌍').setStyle(ButtonStyle.Secondary),
         new ButtonBuilder().setCustomId('settings:refresh').setEmoji('🔄').setStyle(ButtonStyle.Primary),
         new ButtonBuilder().setCustomId('settings:close').setEmoji('✖️').setStyle(ButtonStyle.Secondary)
     );
@@ -413,6 +431,7 @@ async function buildOverview(interaction: ChatInputCommandInteraction, notice?: 
 
 async function buildSection(section: ConfigSection, guild: Guild) {
     if (section === 'xp') return buildXpHome(guild);
+    if (section === 'timezone') return buildTimezoneSection(guild);
     const embed = createKeplerEmbed()
         .setColor(PANEL_COLOR)
         .setTitle(sectionLabel(section))
@@ -556,6 +575,43 @@ async function buildSection(section: ConfigSection, guild: Guild) {
             new ActionRowBuilder<ChannelSelectMenuBuilder>().addComponents(select),
             new ActionRowBuilder<ButtonBuilder>().addComponents(
                 new ButtonBuilder().setCustomId(`settings:disable:${section}`).setLabel('Désactiver').setStyle(ButtonStyle.Danger),
+                backButton()
+            )
+        ]
+    };
+}
+
+async function buildTimezoneSection(guild: Guild) {
+    const timezone = await getServerTimezone(guild.id);
+    const now = new Date();
+    const select = new StringSelectMenuBuilder()
+        .setCustomId('settings:timezone:common')
+        .setPlaceholder('Choisir un fuseau courant')
+        .addOptions(COMMON_TIMEZONES.map(value => ({
+            label: value,
+            value,
+            default: value === timezone
+        })));
+    return {
+        content: '',
+        embeds: [
+            createKeplerEmbed('primary')
+                .setTitle('Fuseau horaire du serveur')
+                .setDescription(
+                    `Fuseau actuel : **${timezone}**\n` +
+                    `Heure correspondante : **${formatDateTimeInZone(now, timezone)}**\n\n` +
+                    'Ce fuseau est utilisé pour interpréter les dates saisies dans les planifications.'
+                )
+                .setFooter({ text: guild.name })
+        ],
+        components: [
+            new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(select),
+            new ActionRowBuilder<ButtonBuilder>().addComponents(
+                new ButtonBuilder()
+                    .setCustomId('settings:timezone:custom')
+                    .setLabel('Fuseau personnalisé')
+                    .setEmoji('✏️')
+                    .setStyle(ButtonStyle.Primary),
                 backButton()
             )
         ]
@@ -823,6 +879,39 @@ async function disableSection(section: ConfigSection, guildId: string) {
     } else await updateMuteRole(guildId, '');
 }
 
+async function showTimezoneModal(component: ButtonInteraction, source: ChatInputCommandInteraction) {
+    const timezone = await getServerTimezone(source.guildId!);
+    const modalId = `settings:timezone:modal:${source.id}`;
+    const modal = new ModalBuilder()
+        .setCustomId(modalId)
+        .setTitle('Fuseau horaire personnalisé')
+        .addComponents(
+            new ActionRowBuilder<TextInputBuilder>().addComponents(
+                new TextInputBuilder()
+                    .setCustomId('timezone')
+                    .setLabel('Identifiant IANA')
+                    .setPlaceholder('America/Martinique')
+                    .setStyle(TextInputStyle.Short)
+                    .setValue(timezone)
+                    .setRequired(true)
+            )
+        );
+    await component.showModal(modal);
+    const submission = await awaitSettingsModal(component, source, modalId);
+    if (!submission) return;
+    const value = submission.fields.getTextInputValue('timezone').trim();
+    if (!isValidTimezone(value)) {
+        await submission.reply({
+            content: '❌ Fuseau invalide. Utilisez un identifiant IANA comme `Europe/Paris` ou `America/Montreal`.',
+            ephemeral: true
+        });
+        return;
+    }
+    await submission.deferUpdate();
+    await updateServerTimezone(source.guildId!, value);
+    await submission.editReply(await buildTimezoneSection(source.guild!));
+}
+
 async function showXpGeneralModal(component: ButtonInteraction, source: ChatInputCommandInteraction) {
     const settings = await getXpSettings(source.guildId!);
     const modalId = `settings:xp:general-modal:${source.id}`;
@@ -869,22 +958,25 @@ async function showXpGeneralModal(component: ButtonInteraction, source: ChatInpu
 }
 
 async function showXpBoostPeriodModal(component: ButtonInteraction, source: ChatInputCommandInteraction) {
-    const settings = await getXpSettings(source.guildId!);
+    const [settings, timezone] = await Promise.all([
+        getXpSettings(source.guildId!),
+        getServerTimezone(source.guildId!)
+    ]);
     const modalId = `settings:xp:period-modal:${source.id}`;
     const start = new TextInputBuilder()
         .setCustomId('start')
-        .setLabel('Début (date ISO avec fuseau horaire)')
-        .setPlaceholder('2026-08-01T18:00:00+02:00')
+        .setLabel('Début (jj/mm/aaaa hh:mm)')
+        .setPlaceholder('01/08/2026 18:00')
         .setStyle(TextInputStyle.Short)
         .setRequired(true);
     const end = new TextInputBuilder()
         .setCustomId('end')
-        .setLabel('Fin (date ISO avec fuseau horaire)')
-        .setPlaceholder('2026-08-03T23:59:00+02:00')
+        .setLabel('Fin (jj/mm/aaaa hh:mm)')
+        .setPlaceholder('03/08/2026 23:59')
         .setStyle(TextInputStyle.Short)
         .setRequired(true);
-    if (settings.boost_starts_at) start.setValue(settings.boost_starts_at);
-    if (settings.boost_ends_at) end.setValue(settings.boost_ends_at);
+    if (settings.boost_starts_at) start.setValue(formatDateTimeInZone(settings.boost_starts_at, timezone));
+    if (settings.boost_ends_at) end.setValue(formatDateTimeInZone(settings.boost_ends_at, timezone));
     const modal = new ModalBuilder()
         .setCustomId(modalId)
         .setTitle('Période de boost XP')
@@ -906,19 +998,19 @@ async function showXpBoostPeriodModal(component: ButtonInteraction, source: Chat
 
     const startValue = submission.fields.getTextInputValue('start').trim();
     const endValue = submission.fields.getTextInputValue('end').trim();
-    const startAt = new Date(startValue);
-    const endAt = new Date(endValue);
+    const startAt = parseDateTimeInZone(startValue, timezone);
+    const endAt = parseDateTimeInZone(endValue, timezone);
     const multiplier = Number(submission.fields.getTextInputValue('multiplier').replace(',', '.'));
     if (
-        Number.isNaN(startAt.getTime()) ||
-        Number.isNaN(endAt.getTime()) ||
+        !startAt ||
+        !endAt ||
         endAt <= startAt ||
         !Number.isFinite(multiplier) ||
         multiplier <= 1 ||
         multiplier > 100
     ) {
         await submission.reply({
-            content: '❌ Vérifiez les dates ISO, l’ordre début/fin et le multiplicateur entre 1.01 et 100.',
+            content: `❌ Utilisez le format \`jj/mm/aaaa hh:mm\` dans le fuseau \`${timezone}\`, avec une fin postérieure au début et un multiplicateur entre 1.01 et 100.`,
             ephemeral: true
         });
         return;
@@ -1227,7 +1319,8 @@ function sectionLabel(section: ConfigSection): string {
         mute: 'Rôle de mute',
         reports: 'Signalements',
         tickets: 'Tickets',
-        xp: 'Expérience et niveaux'
+        xp: 'Expérience et niveaux',
+        timezone: 'Fuseau horaire'
     })[section];
 }
 
@@ -1239,7 +1332,8 @@ function sectionDescription(section: ConfigSection): string {
         mute: 'Sélectionnez un rôle existant, créez-en un automatiquement ou utilisez les timeouts Discord.',
         reports: 'Choisissez le salon qui recevra les signalements et, si nécessaire, le rôle de modération à mentionner.',
         tickets: 'Choisissez où publier le panneau, le rôle support, puis personnalisez son message et son bouton.',
-        xp: 'Configurez la progression, les boosts, les récompenses et les exclusions du serveur.'
+        xp: 'Configurez la progression, les boosts, les récompenses et les exclusions du serveur.',
+        timezone: 'Choisissez le fuseau utilisé pour les dates et planifications du serveur.'
     })[section];
 }
 

@@ -1,6 +1,8 @@
 import { supabase } from './supabase.ts';
 import { withNetworkRetry } from '../utils/retryHelper.ts';
 
+const timezoneCache = new Map<string, { value: string; expiresAt: number }>();
+
 // Initialiser la connexion à la base de données avec retry
 export async function initDatabase(): Promise<void> {
     // Pour l'instant, on utilise Supabase, donc pas besoin d'initialiser MySQL
@@ -262,6 +264,36 @@ export async function getLogChannel(guildId: string): Promise<string | null> {
     }
 
     return data?.log_channel_id || null;
+}
+
+export async function getServerTimezone(guildId: string): Promise<string> {
+    const cached = timezoneCache.get(guildId);
+    if (cached && cached.expiresAt > Date.now()) return cached.value;
+
+    const { data, error } = await supabase
+        .from('server_configs')
+        .select('timezone')
+        .eq('guild_id', guildId)
+        .maybeSingle();
+    if (error) throw error;
+    const timezone = data?.timezone || 'Europe/Paris';
+    timezoneCache.set(guildId, { value: timezone, expiresAt: Date.now() + 5 * 60 * 1000 });
+    return timezone;
+}
+
+export async function updateServerTimezone(guildId: string, timezone: string): Promise<void> {
+    const { error } = await supabase
+        .from('server_configs')
+        .upsert(
+            {
+                guild_id: guildId,
+                timezone,
+                updated_at: new Date().toISOString()
+            },
+            { onConflict: 'guild_id' }
+        );
+    if (error) throw error;
+    timezoneCache.set(guildId, { value: timezone, expiresAt: Date.now() + 5 * 60 * 1000 });
 }
 
 // Récupérer le canal d'anniversaires d'un serveur

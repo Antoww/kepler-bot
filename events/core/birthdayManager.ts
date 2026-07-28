@@ -1,11 +1,13 @@
 import { createKeplerEmbed, KEPLER_COLORS } from '../../utils/theme.ts';
 import { Client, TextChannel } from 'discord.js';
-import { getBirthdaysForDate, getBirthdayChannel } from '../../database/db.ts';
+import { getBirthdaysForDate, getBirthdayChannel, getServerTimezone } from '../../database/db.ts';
 import { isNetworkError } from '../../utils/retryHelper.ts';
+import { getDatePartsInZone } from '../../utils/timezone.ts';
 
 export class BirthdayManager {
     private client: Client;
     private checkInterval: NodeJS.Timeout | null = null;
+    private processedDates = new Map<string, string>();
 
     constructor(client: Client) {
         this.client = client;
@@ -13,22 +15,12 @@ export class BirthdayManager {
 
     // Démarrer la vérification automatique des anniversaires
     public startBirthdayCheck(): void {
-        // Vérifier tous les jours à 00:00
-        const now = new Date();
-        const tomorrow = new Date(now);
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        tomorrow.setHours(0, 0, 0, 0);
-
-        const timeUntilMidnight = tomorrow.getTime() - now.getTime();
-
-        // Première vérification au prochain minuit
-        setTimeout(() => {
-            this.checkBirthdays();
-            // Puis vérifier toutes les 24 heures
-            this.checkInterval = setInterval(() => {
-                this.checkBirthdays();
-            }, 24 * 60 * 60 * 1000); // 24 heures
-        }, timeUntilMidnight);
+        void this.checkBirthdays();
+        // Un passage régulier permet de respecter le minuit local de chaque
+        // serveur, y compris lors des changements d'heure.
+        this.checkInterval = setInterval(() => {
+            void this.checkBirthdays();
+        }, 15 * 60 * 1000);
     }
 
     // Arrêter la vérification automatique
@@ -42,17 +34,17 @@ export class BirthdayManager {
     // Vérifier les anniversaires du jour
     private async checkBirthdays(): Promise<void> {
         try {
-            const today = new Date();
-            const day = today.getDate();
-            const month = today.getMonth() + 1; // getMonth() retourne 0-11
-
-            console.log(`🎂 Vérification des anniversaires pour le ${day}/${month}`);
-
             // Récupérer tous les serveurs du bot
             for (const guild of this.client.guilds.cache.values()) {
                 try {
+                    const timezone = await getServerTimezone(guild.id);
+                    const localDate = getDatePartsInZone(new Date(), timezone);
+                    const dateKey = `${localDate.year}-${localDate.month}-${localDate.day}`;
+                    if (this.processedDates.get(guild.id) === dateKey) continue;
+
                     // Récupérer les anniversaires pour cette date dans ce serveur
-                    const birthdays = await getBirthdaysForDate(guild.id, day, month);
+                    const birthdays = await getBirthdaysForDate(guild.id, localDate.day, localDate.month);
+                    this.processedDates.set(guild.id, dateKey);
 
                     if (birthdays.length === 0) continue;
 
@@ -74,7 +66,7 @@ export class BirthdayManager {
                     for (const birthday of birthdays) {
                         try {
                             const user = await this.client.users.fetch(birthday.user_id);
-                            await this.sendBirthdayMessage(channel as TextChannel, user, birthday);
+                            await this.sendBirthdayMessage(channel as TextChannel, user, birthday, localDate.year);
                         } catch (error) {
                             console.error(`Erreur lors de l'envoi de l'anniversaire pour l'utilisateur ${birthday.user_id}:`, error);
                         }
@@ -99,12 +91,11 @@ export class BirthdayManager {
     }
 
     // Envoyer un message d'anniversaire
-    private async sendBirthdayMessage(channel: TextChannel, user: any, birthday: any): Promise<void> {
+    private async sendBirthdayMessage(channel: TextChannel, user: any, birthday: any, currentYear: number): Promise<void> {
         // Calculer l'âge si l'année de naissance est fournie
         let ageText = '';
         if (birthday.birth_year) {
-            const today = new Date();
-            const age = today.getFullYear() - birthday.birth_year;
+            const age = currentYear - birthday.birth_year;
             ageText = ` Il/elle fête ses ${age} ans ! 🎂`;
         }
 

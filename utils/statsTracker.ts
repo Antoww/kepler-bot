@@ -1,5 +1,7 @@
 import { supabase } from '../database/supabase.ts';
 import { logger } from './logger.ts';
+import { getServerTimezone } from '../database/db.ts';
+import { dateKeyInZone } from './timezone.ts';
 
 // ============================================
 // Module de tracking des statistiques du bot
@@ -44,6 +46,8 @@ export interface UserActivity {
  */
 export async function trackCommand(stat: CommandStat): Promise<void> {
     try {
+        const timezone = await getServerTimezone(stat.guild_id);
+        const localDate = dateKeyInZone(new Date(), timezone);
         // Enregistrer la commande
         await supabase.from('command_stats').insert({
             command_name: stat.command_name,
@@ -53,7 +57,7 @@ export async function trackCommand(stat: CommandStat): Promise<void> {
         });
 
         // Mettre à jour les stats journalières par guild
-        await updateDailyStats(stat.guild_id, 'command');
+        await updateDailyStats(stat.guild_id, 'command', localDate);
         
         // Mettre à jour les stats globales
         await updateGlobalDailyStats('command', stat.guild_id);
@@ -67,7 +71,8 @@ export async function trackCommand(stat: CommandStat): Promise<void> {
  */
 export async function trackMessage(stat: MessageStat): Promise<void> {
     try {
-        const today = new Date().toISOString().split('T')[0];
+        const timezone = await getServerTimezone(stat.guild_id);
+        const today = dateKeyInZone(new Date(), timezone);
         
         // Upsert pour incrémenter le compteur de messages
         const { error } = await supabase.rpc('increment_message_count', {
@@ -106,7 +111,7 @@ export async function trackMessage(stat: MessageStat): Promise<void> {
         }
 
         // Mettre à jour les stats journalières
-        await updateDailyStats(stat.guild_id, 'message');
+        await updateDailyStats(stat.guild_id, 'message', today);
         await updateGlobalDailyStats('message', stat.guild_id);
     } catch (error) {
         logger.error('Erreur tracking message', error, 'StatsTracker');
@@ -116,9 +121,7 @@ export async function trackMessage(stat: MessageStat): Promise<void> {
 /**
  * Met à jour les statistiques journalières par guild
  */
-async function updateDailyStats(guildId: string, type: 'command' | 'message'): Promise<void> {
-    const today = new Date().toISOString().split('T')[0];
-    
+async function updateDailyStats(guildId: string, type: 'command' | 'message', today: string): Promise<void> {
     const { data: existing } = await supabase
         .from('daily_stats')
         .select('*')
