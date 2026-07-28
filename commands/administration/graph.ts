@@ -2,6 +2,7 @@ import {
     type ChatInputCommandInteraction, 
     SlashCommandBuilder, 
     EmbedBuilder,
+    AttachmentBuilder,
     PermissionFlagsBits
 } from 'discord.js';
 import {
@@ -10,10 +11,9 @@ import {
     getTopUsers,
     getTopChannels,
     getTotalStats,
-    generateBarChart,
-    generateSparkline,
-    generateTrendChart
+    generateSparkline
 } from '../../utils/statsTracker.ts';
+import { renderBarChart, renderLineChart } from '../../utils/statsChart.ts';
 
 export const data = new SlashCommandBuilder()
     .setName('graph')
@@ -162,6 +162,17 @@ async function handleOverview(interaction: ChatInputCommandInteraction) {
     const cmdSparkline = generateSparkline(dailyStats.slice(-14).map(d => d.commands));
     const msgSparkline = generateSparkline(dailyStats.slice(-14).map(d => d.messages));
 
+    const overviewBuffer = await renderLineChart(
+        `Activité de ${interaction.guild!.name}`,
+        `${days} derniers jours`,
+        dailyStats.map(d => formatChartDate(d.date)),
+        [
+            { label: 'Messages', color: '#2ecc71', values: dailyStats.map(d => d.messages) },
+            { label: 'Commandes', color: '#3498db', values: dailyStats.map(d => d.commands) }
+        ]
+    );
+    const overviewAttachment = new AttachmentBuilder(overviewBuffer, { name: 'server-overview.webp' });
+
     // Top commandes
     const topCmdList = topCommands
         .map((c, i) => `${i + 1}. \`/${c.command_name}\` (${c.count.toLocaleString()})`)
@@ -221,10 +232,11 @@ async function handleOverview(interaction: ChatInputCommandInteraction) {
                 inline: false
             }
         )
+        .setImage('attachment://server-overview.webp')
         .setFooter({ text: `Demandé par ${interaction.user.username}` })
         .setTimestamp();
 
-    await interaction.editReply({ embeds: [embed] });
+    await interaction.editReply({ embeds: [embed], files: [overviewAttachment] });
 }
 
 async function handleActivity(interaction: ChatInputCommandInteraction) {
@@ -244,8 +256,17 @@ async function handleActivity(interaction: ChatInputCommandInteraction) {
         ? dailyStats.reduce((max, d) => d.messages > max.messages ? d : max)
         : null;
 
-    // Graphique de tendance
-    const trendChart = generateTrendChart(dailyStats, 'messages');
+    const activityBuffer = await renderLineChart(
+        'Activité du serveur',
+        `${days} derniers jours`,
+        dailyStats.map(d => formatChartDate(d.date)),
+        [
+            { label: 'Messages', color: '#2ecc71', values: dailyStats.map(d => d.messages) },
+            { label: 'Commandes', color: '#3498db', values: dailyStats.map(d => d.commands) }
+        ]
+    );
+    const activityAttachment = new AttachmentBuilder(activityBuffer, { name: 'server-activity.webp' });
+
 
     const embed = new EmbedBuilder()
         .setColor('#2ecc71')
@@ -272,14 +293,15 @@ async function handleActivity(interaction: ChatInputCommandInteraction) {
             { name: '\u200b', value: '\u200b', inline: true },
             {
                 name: '📊 Tendance des messages',
-                value: `\`\`\`\n${trendChart}\n\`\`\``,
+                value: 'Graphique détaillé ci-dessous.',
                 inline: false
             }
         )
+        .setImage('attachment://server-activity.webp')
         .setFooter({ text: `Demandé par ${interaction.user.username}` })
         .setTimestamp();
 
-    await interaction.editReply({ embeds: [embed] });
+    await interaction.editReply({ embeds: [embed], files: [activityAttachment] });
 }
 
 async function handleMembers(interaction: ChatInputCommandInteraction) {
@@ -298,6 +320,18 @@ async function handleMembers(interaction: ChatInputCommandInteraction) {
     // Boosts
     const boostLevel = guild.premiumTier;
     const boostCount = guild.premiumSubscriptionCount || 0;
+    const membersBuffer = await renderBarChart(
+        'Composition des membres',
+        guild.name,
+        [
+            { label: 'Humains', value: humans },
+            { label: 'Bots', value: bots },
+            { label: 'En ligne', value: onlineMembers }
+        ],
+        '#9b59b6'
+    );
+    const membersAttachment = new AttachmentBuilder(membersBuffer, { name: 'server-members.webp' });
+
 
     const embed = new EmbedBuilder()
         .setColor('#9b59b6')
@@ -340,10 +374,11 @@ async function handleMembers(interaction: ChatInputCommandInteraction) {
                 inline: false
             }
         )
+        .setImage('attachment://server-members.webp')
         .setFooter({ text: `Demandé par ${interaction.user.username}` })
         .setTimestamp();
 
-    await interaction.editReply({ embeds: [embed] });
+    await interaction.editReply({ embeds: [embed], files: [membersAttachment] });
 }
 
 async function handleChannels(interaction: ChatInputCommandInteraction) {
@@ -369,7 +404,8 @@ async function handleChannels(interaction: ChatInputCommandInteraction) {
         });
     }
 
-    const chart = generateBarChart(chartData, 20);
+    const channelsBuffer = await renderBarChart('Canaux les plus actifs', `${days} derniers jours`, chartData, '#3498db');
+    const channelsAttachment = new AttachmentBuilder(channelsBuffer, { name: 'server-channels.webp' });
 
     const embed = new EmbedBuilder()
         .setColor('#3498db')
@@ -377,13 +413,14 @@ async function handleChannels(interaction: ChatInputCommandInteraction) {
         .setDescription(`Période: **${days} derniers jours**`)
         .addFields({
             name: '📊 Classement',
-            value: `\`\`\`\n${chart}\n\`\`\``,
+            value: 'Graphique détaillé ci-dessous.',
             inline: false
         })
+        .setImage('attachment://server-channels.webp')
         .setFooter({ text: `Demandé par ${interaction.user.username}` })
         .setTimestamp();
 
-    await interaction.editReply({ embeds: [embed] });
+    await interaction.editReply({ embeds: [embed], files: [channelsAttachment] });
 }
 
 async function handleUsers(interaction: ChatInputCommandInteraction) {
@@ -397,32 +434,39 @@ async function handleUsers(interaction: ChatInputCommandInteraction) {
         return interaction.editReply('📊 Aucune donnée disponible pour cette période.');
     }
 
-    // Résoudre les noms d'utilisateurs
-    const userLines: string[] = [];
-    for (let i = 0; i < topUsers.length; i++) {
-        const user = topUsers[i];
-        let username = user.user_id;
-        
+    // Résoudre les membres manquants en parallèle pour limiter la latence Discord.
+    const resolvedUsers = await Promise.all(topUsers.map(async user => {
+        const cachedMember = interaction.guild!.members.cache.get(user.user_id);
+        if (cachedMember) return { ...user, username: cachedMember.displayName };
         try {
             const member = await interaction.guild!.members.fetch(user.user_id);
-            username = member.displayName;
+            return { ...user, username: member.displayName };
         } catch {
-            // Garder l'ID si l'utilisateur n'est plus sur le serveur
-            username = 'Utilisateur parti';
+            return { ...user, username: 'Utilisateur parti' };
         }
+    }));
 
-        const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`;
-        userLines.push(`${medal} **${username}** - ${user.message_count.toLocaleString()} messages`);
-    }
+    const userLines = resolvedUsers.map((user, index) => {
+        const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}.`;
+        return `${medal} **${user.username}** - ${user.message_count.toLocaleString()} messages`;
+    });
+    const chartData = resolvedUsers.map(user => ({
+        label: user.username.slice(0, 24),
+        value: user.message_count
+    }));
+
+    const usersBuffer = await renderBarChart('Utilisateurs les plus actifs', `${days} derniers jours`, chartData, '#e67e22');
+    const usersAttachment = new AttachmentBuilder(usersBuffer, { name: 'server-users.webp' });
 
     const embed = new EmbedBuilder()
         .setColor('#e67e22')
         .setTitle('👑 Utilisateurs les plus actifs')
         .setDescription(`Période: **${days} derniers jours**\n\n${userLines.join('\n')}`)
+        .setImage('attachment://server-users.webp')
         .setFooter({ text: `Demandé par ${interaction.user.username}` })
         .setTimestamp();
 
-    await interaction.editReply({ embeds: [embed] });
+    await interaction.editReply({ embeds: [embed], files: [usersAttachment] });
 }
 
 async function handleCommands(interaction: ChatInputCommandInteraction) {
@@ -447,7 +491,8 @@ async function handleCommands(interaction: ChatInputCommandInteraction) {
         label: `/${c.command_name}`,
         value: c.count
     }));
-    const chart = generateBarChart(chartData, 20);
+    const commandsBuffer = await renderBarChart('Commandes les plus utilisées', `${days} derniers jours`, chartData, '#f39c12');
+    const commandsAttachment = new AttachmentBuilder(commandsBuffer, { name: 'server-commands.webp' });
 
     // Sparkline
     const sparkline = generateSparkline(dailyStats.slice(-14).map(d => d.commands));
@@ -467,7 +512,7 @@ async function handleCommands(interaction: ChatInputCommandInteraction) {
             },
             {
                 name: '🏆 Top 10',
-                value: `\`\`\`\n${chart}\n\`\`\``,
+                value: 'Graphique détaillé ci-dessous.',
                 inline: false
             },
             {
@@ -476,8 +521,13 @@ async function handleCommands(interaction: ChatInputCommandInteraction) {
                 inline: false
             }
         )
+        .setImage('attachment://server-commands.webp')
         .setFooter({ text: `Demandé par ${interaction.user.username}` })
         .setTimestamp();
 
-    await interaction.editReply({ embeds: [embed] });
+    await interaction.editReply({ embeds: [embed], files: [commandsAttachment] });
+}
+
+function formatChartDate(date: string): string {
+    return new Date(date).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
 }

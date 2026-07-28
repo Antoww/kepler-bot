@@ -1,17 +1,17 @@
 import { 
     type ChatInputCommandInteraction, 
     SlashCommandBuilder, 
-    EmbedBuilder
+    EmbedBuilder,
+    AttachmentBuilder
 } from 'discord.js';
 import config from '../../config.json' with { type: 'json' };
 import {
     getDailyStats,
     getTopCommands,
     getTotalStats,
-    generateBarChart,
-    generateSparkline,
-    generateTrendChart
+    generateSparkline
 } from '../../utils/statsTracker.ts';
+import { renderBarChart, renderLineChart } from '../../utils/statsChart.ts';
 
 export const data = new SlashCommandBuilder()
     .setName('globalstats')
@@ -128,6 +128,17 @@ async function handleOverview(interaction: ChatInputCommandInteraction) {
     const cmdSparkline = generateSparkline(dailyStats30.slice(-14).map(d => d.commands));
     const msgSparkline = generateSparkline(dailyStats30.slice(-14).map(d => d.messages));
 
+    const overviewBuffer = await renderLineChart(
+        'Activité globale',
+        'Commandes et messages sur les 30 derniers jours',
+        dailyStats30.map(d => formatChartDate(d.date)),
+        [
+            { label: 'Messages', color: '#2ecc71', values: dailyStats30.map(d => d.messages) },
+            { label: 'Commandes', color: '#3498db', values: dailyStats30.map(d => d.commands) }
+        ]
+    );
+    const overviewAttachment = new AttachmentBuilder(overviewBuffer, { name: 'global-overview.webp' });
+
     // Top commandes
     const topCmdList = topCommands
         .map((c, i) => `${i + 1}. \`/${c.command_name}\` (${c.count.toLocaleString()})`)
@@ -179,10 +190,11 @@ async function handleOverview(interaction: ChatInputCommandInteraction) {
                 inline: false
             }
         )
+        .setImage('attachment://global-overview.webp')
         .setFooter({ text: `Demandé par ${interaction.user.username}` })
         .setTimestamp();
 
-    await interaction.editReply({ embeds: [embed] });
+    await interaction.editReply({ embeds: [embed], files: [overviewAttachment] });
 }
 
 async function handleCommandsStats(interaction: ChatInputCommandInteraction) {
@@ -204,7 +216,8 @@ async function handleCommandsStats(interaction: ChatInputCommandInteraction) {
         value: c.count
     }));
 
-    const chart = generateBarChart(chartData, 20);
+    const chartBuffer = await renderBarChart('Top des commandes', `${days} derniers jours`, chartData, '#3498db');
+    const chartAttachment = new AttachmentBuilder(chartBuffer, { name: 'global-commands.webp' });
 
     // Sparkline des derniers jours
     const recentValues = dailyStats.slice(-14).map(d => d.commands);
@@ -226,7 +239,7 @@ async function handleCommandsStats(interaction: ChatInputCommandInteraction) {
             },
             {
                 name: '🏆 Top 10 des commandes',
-                value: `\`\`\`\n${chart}\n\`\`\``,
+                value: 'Graphique détaillé ci-dessous.',
                 inline: false
             },
             {
@@ -235,10 +248,11 @@ async function handleCommandsStats(interaction: ChatInputCommandInteraction) {
                 inline: false
             }
         )
+        .setImage('attachment://global-commands.webp')
         .setFooter({ text: `Demandé par ${interaction.user.username}` })
         .setTimestamp();
 
-    await interaction.editReply({ embeds: [embed] });
+    await interaction.editReply({ embeds: [embed], files: [chartAttachment] });
 }
 
 async function handleMessagesStats(interaction: ChatInputCommandInteraction) {
@@ -265,13 +279,16 @@ async function handleMessagesStats(interaction: ChatInputCommandInteraction) {
         .sort((a, b) => b.messages - a.messages)
         .slice(0, 5);
 
-    const topDaysChart = generateBarChart(
+    const topDaysBuffer = await renderBarChart(
+        'Jours les plus actifs',
+        `${days} derniers jours`,
         topDays.map(d => ({
-            label: new Date(d.date).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }),
+            label: formatChartDate(d.date),
             value: d.messages
         })),
-        20
+        '#2ecc71'
     );
+    const topDaysAttachment = new AttachmentBuilder(topDaysBuffer, { name: 'global-messages.webp' });
 
     const embed = new EmbedBuilder()
         .setColor('#2ecc71')
@@ -290,7 +307,7 @@ async function handleMessagesStats(interaction: ChatInputCommandInteraction) {
             },
             {
                 name: '🏆 Top 5 jours les plus actifs',
-                value: `\`\`\`\n${topDaysChart}\n\`\`\``,
+                value: 'Graphique détaillé ci-dessous.',
                 inline: false
             },
             {
@@ -299,10 +316,11 @@ async function handleMessagesStats(interaction: ChatInputCommandInteraction) {
                 inline: false
             }
         )
+        .setImage('attachment://global-messages.webp')
         .setFooter({ text: `Demandé par ${interaction.user.username}` })
         .setTimestamp();
 
-    await interaction.editReply({ embeds: [embed] });
+    await interaction.editReply({ embeds: [embed], files: [topDaysAttachment] });
 }
 
 async function handleTrendStats(interaction: ChatInputCommandInteraction) {
@@ -311,8 +329,7 @@ async function handleTrendStats(interaction: ChatInputCommandInteraction) {
 
     const dailyStats = await getDailyStats(days);
 
-    // Générer le graphique de tendance
-    const trendChart = generateTrendChart(dailyStats, type);
+    const metricLabel = type === 'commands' ? 'Commandes' : 'Messages';
 
     // Calculer des stats supplémentaires
     const values = dailyStats.map(d => type === 'commands' ? d.commands : d.messages);
@@ -323,6 +340,14 @@ async function handleTrendStats(interaction: ChatInputCommandInteraction) {
 
     const title = type === 'commands' ? '📊 Tendance Globale - Commandes' : '💬 Tendance Globale - Messages';
     const color = type === 'commands' ? '#3498db' : '#2ecc71';
+    const trendBuffer = await renderLineChart(
+        metricLabel,
+        `${days} derniers jours`,
+        dailyStats.map(d => formatChartDate(d.date)),
+        [{ label: metricLabel, color, values }]
+    );
+    const trendAttachment = new AttachmentBuilder(trendBuffer, { name: 'global-trend.webp' });
+
 
     const embed = new EmbedBuilder()
         .setColor(color)
@@ -331,7 +356,7 @@ async function handleTrendStats(interaction: ChatInputCommandInteraction) {
         .addFields(
             {
                 name: '📈 Graphique',
-                value: `\`\`\`\n${trendChart}\n\`\`\``,
+                value: 'Graphique détaillé ci-dessous.',
                 inline: false
             },
             {
@@ -345,8 +370,13 @@ async function handleTrendStats(interaction: ChatInputCommandInteraction) {
                 inline: false
             }
         )
+        .setImage('attachment://global-trend.webp')
         .setFooter({ text: `Demandé par ${interaction.user.username}` })
         .setTimestamp();
 
-    await interaction.editReply({ embeds: [embed] });
+    await interaction.editReply({ embeds: [embed], files: [trendAttachment] });
+}
+
+function formatChartDate(date: string): string {
+    return new Date(date).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
 }
