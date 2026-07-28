@@ -15,6 +15,10 @@ Chaque version a son propre fichier markdown avec :
 ## 🗂️ Index des versions
 
 ### Beta
+- [v0.1.5](v0.1.5.md) - 28 juillet 2026 - **Beta 1.5** ✅ Actuelle
+  - Système complet de tickets
+  - Archives et logs d’état
+  - Sécurité et panneaux `/settings` renforcés
 - [v0.1.3](v0.1.3.md) - 5 janvier 2026 - **Beta 1.3** ✅ Actuelle
   - Statistiques avancées (`/graph`)
   - RGPD complet (`/mesdonnees`)

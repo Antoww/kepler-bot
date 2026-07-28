@@ -7,6 +7,38 @@ et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 
 ---
 
+## [0.1.5] - 2026-07-28 (Beta 1.5)
+
+### 🎯 Points clés
+- **Système de tickets complet** : panneau personnalisable, salons privés et rôle support
+- **Cycle de vie des tickets** : fermeture utilisateur, réouverture, archivage et clôture définitive
+- **Logs et archives** : suivi des états et export texte des conversations
+- **Sécurité renforcée** : contrôles de permissions à l’exécution et opérations liées à leur propriétaire
+- **Settings amélioré** : valeurs existantes présélectionnées et confirmations sans retour à l’accueil
+
+👉 [Voir les patch notes détaillées](changelogs/v0.1.5.md)
+
+### ✨ Ajouté
+- Configuration des tickets depuis `/settings`
+- Personnalisation du message, du bouton et de sa couleur
+- Choix du salon du panneau, de la catégorie, du rôle support et du salon de logs
+- Boutons de fermeture, réouverture et archivage
+- Archives `.txt` comprenant messages, embeds et liens des pièces jointes
+
+### 🔒 Sécurité
+- Vérification centrale des permissions Discord avant l’exécution des commandes
+- Révalidation des permissions et de la hiérarchie avant les sanctions
+- Suppression des rappels liée atomiquement à leur propriétaire
+- Validation du serveur, salon et message pour les interactions de giveaways
+
+### 🐛 Corrigé
+- Correction des confirmations de fermeture de ticket
+- Priorité correcte aux droits administrateur et support
+- Prévention des tickets multiples pour un même utilisateur
+- Maintien de la section active après une modification dans `/settings`
+
+---
+
 ## [0.1.3] - 2026-01-05 (Beta 1.3)
 
 ### 🎯 Points clés
