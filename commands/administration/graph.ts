@@ -163,8 +163,8 @@ async function handleOverview(interaction: ChatInputCommandInteraction) {
         `${days} derniers jours`,
         dailyStats.map(d => formatChartDate(d.date)),
         [
-            { label: 'Messages', color: '#2ecc71', values: dailyStats.map(d => d.messages) },
-            { label: 'Commandes', color: '#3498db', values: dailyStats.map(d => d.commands) }
+            { label: 'Messages', color: '#45d7ff', values: dailyStats.map(d => d.messages) },
+            { label: 'Commandes', color: '#ff6b6b', values: dailyStats.map(d => d.commands) }
         ]
     );
     const overviewAttachment = new AttachmentBuilder(overviewBuffer, { name: 'server-overview.webp' });
@@ -183,7 +183,7 @@ async function handleOverview(interaction: ChatInputCommandInteraction) {
     ].join('\n');
 
     const embed = new EmbedBuilder()
-        .setColor('#5865f2')
+        .setColor('#45d7ff')
         .setTitle(`📊 Vue d'ensemble - ${guild.name}`)
         .setThumbnail(guild.iconURL() || null)
         .setDescription(`Statistiques sur **${days} jours**`)
@@ -246,15 +246,15 @@ async function handleActivity(interaction: ChatInputCommandInteraction) {
         `${days} derniers jours`,
         dailyStats.map(d => formatChartDate(d.date)),
         [
-            { label: 'Messages', color: '#2ecc71', values: dailyStats.map(d => d.messages) },
-            { label: 'Commandes', color: '#3498db', values: dailyStats.map(d => d.commands) }
+            { label: 'Messages', color: '#45d7ff', values: dailyStats.map(d => d.messages) },
+            { label: 'Commandes', color: '#ff6b6b', values: dailyStats.map(d => d.commands) }
         ]
     );
     const activityAttachment = new AttachmentBuilder(activityBuffer, { name: 'server-activity.webp' });
 
 
     const embed = new EmbedBuilder()
-        .setColor('#2ecc71')
+        .setColor('#45d7ff')
         .setTitle(`📈 Activité du serveur`)
         .setDescription(`Période: **${days} derniers jours**`)
         .addFields(
@@ -313,13 +313,13 @@ async function handleMembers(interaction: ChatInputCommandInteraction) {
             { label: 'Bots', value: bots },
             { label: 'En ligne', value: onlineMembers }
         ],
-        '#9b59b6'
+        '#9d8cff'
     );
     const membersAttachment = new AttachmentBuilder(membersBuffer, { name: 'server-members.webp' });
 
 
     const embed = new EmbedBuilder()
-        .setColor('#9b59b6')
+        .setColor('#9d8cff')
         .setTitle(`👥 Statistiques des membres`)
         .setThumbnail(guild.iconURL() || null)
         .addFields(
@@ -389,11 +389,11 @@ async function handleChannels(interaction: ChatInputCommandInteraction) {
         });
     }
 
-    const channelsBuffer = await renderBarChart('Canaux les plus actifs', `${days} derniers jours`, chartData, '#3498db');
+    const channelsBuffer = await renderBarChart('Canaux les plus actifs', `${days} derniers jours`, chartData, '#ff6b6b');
     const channelsAttachment = new AttachmentBuilder(channelsBuffer, { name: 'server-channels.webp' });
 
     const embed = new EmbedBuilder()
-        .setColor('#3498db')
+        .setColor('#ff6b6b')
         .setTitle('📺 Canaux les plus actifs')
         .setDescription(`Période: **${days} derniers jours**`)
         .addFields({
@@ -440,11 +440,11 @@ async function handleUsers(interaction: ChatInputCommandInteraction) {
         value: user.message_count
     }));
 
-    const usersBuffer = await renderBarChart('Utilisateurs les plus actifs', `${days} derniers jours`, chartData, '#e67e22');
+    const usersBuffer = await renderBarChart('Utilisateurs les plus actifs', `${days} derniers jours`, chartData, '#ff8a5c');
     const usersAttachment = new AttachmentBuilder(usersBuffer, { name: 'server-users.webp' });
 
     const embed = new EmbedBuilder()
-        .setColor('#e67e22')
+        .setColor('#ff8a5c')
         .setTitle('👑 Utilisateurs les plus actifs')
         .setDescription(`Période: **${days} derniers jours**\n\n${userLines.join('\n')}`)
         .setImage('attachment://server-users.webp')
@@ -476,12 +476,12 @@ async function handleCommands(interaction: ChatInputCommandInteraction) {
         label: `/${c.command_name}`,
         value: c.count
     }));
-    const commandsBuffer = await renderBarChart('Commandes les plus utilisées', `${days} derniers jours`, chartData, '#f39c12');
+    const commandsBuffer = await renderBarChart('Commandes les plus utilisées', `${days} derniers jours`, chartData, '#f8c15c');
     const commandsAttachment = new AttachmentBuilder(commandsBuffer, { name: 'server-commands.webp' });
 
 
     const embed = new EmbedBuilder()
-        .setColor('#f39c12')
+        .setColor('#f8c15c')
         .setTitle('⚡ Commandes les plus utilisées')
         .setDescription(`Période: **${days} derniers jours**`)
         .addFields(

@@ -1,5 +1,6 @@
 import sharp from 'sharp';
 import { Buffer } from 'node:buffer';
+import { logger } from './logger.ts';
 
 export interface ChartDatum {
     label: string;
@@ -41,20 +42,52 @@ function formatNumber(value: number): string {
 
 function baseSvg(title: string, subtitle: string, content: string): string {
     return `<svg width="${WIDTH}" height="${HEIGHT}" viewBox="0 0 ${WIDTH} ${HEIGHT}" xmlns="http://www.w3.org/2000/svg">
-        <rect width="${WIDTH}" height="${HEIGHT}" fill="#111318"/>
-        <rect x="24" y="24" width="1152" height="627" rx="16" fill="#181b22" stroke="#2b303b"/>
-        <text x="64" y="78" fill="#f5f7fb" font-family="DejaVu Sans, sans-serif" font-size="32" font-weight="700">${escapeXml(title)}</text>
-        <text x="64" y="110" fill="#9da6b7" font-family="DejaVu Sans, sans-serif" font-size="17">${escapeXml(subtitle)}</text>
+        <defs>
+            <linearGradient id="kepler-bg" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stop-color="#070a12"/>
+                <stop offset="1" stop-color="#101827"/>
+            </linearGradient>
+            <linearGradient id="kepler-panel" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="#151d2c"/>
+                <stop offset="1" stop-color="#0d131f"/>
+            </linearGradient>
+        </defs>
+        <rect width="${WIDTH}" height="${HEIGHT}" fill="url(#kepler-bg)"/>
+        <circle cx="1055" cy="-10" r="170" fill="none" stroke="#253552" stroke-width="1" opacity="0.7"/>
+        <ellipse cx="1055" cy="-10" rx="245" ry="92" fill="none" stroke="#3a5279" stroke-width="1" opacity="0.55" transform="rotate(-18 1055 -10)"/>
+        <circle cx="1120" cy="67" r="6" fill="#ff6b6b"/>
+        <circle cx="76" cy="38" r="2" fill="#63e6ff" opacity="0.8"/>
+        <circle cx="420" cy="52" r="1.5" fill="#ffffff" opacity="0.35"/>
+        <circle cx="780" cy="32" r="2" fill="#63e6ff" opacity="0.45"/>
+        <rect x="24" y="24" width="1152" height="627" rx="14" fill="url(#kepler-panel)" stroke="#26344d"/>
+        <rect x="24" y="24" width="5" height="627" rx="2" fill="#45d7ff"/>
+        <text x="64" y="57" fill="#63e6ff" font-family="DejaVu Sans, sans-serif" font-size="13" font-weight="700" letter-spacing="2">KEPLER // ANALYTICS</text>
+        <text x="64" y="91" fill="#f7f9fc" font-family="DejaVu Sans, sans-serif" font-size="30" font-weight="700">${escapeXml(title)}</text>
+        <text x="64" y="119" fill="#91a0b8" font-family="DejaVu Sans, sans-serif" font-size="16">${escapeXml(subtitle)}</text>
+        <g transform="translate(1100 74)">
+            <circle r="23" fill="none" stroke="#3a5279" stroke-width="1.5"/>
+            <ellipse rx="34" ry="12" fill="none" stroke="#63e6ff" stroke-width="1.5" transform="rotate(-20)"/>
+            <circle cx="29" cy="-8" r="4" fill="#ff6b6b"/>
+            <circle r="5" fill="#f7f9fc"/>
+        </g>
         ${content}
     </svg>`;
 }
 
-async function renderCached(cacheKey: string, svg: string): Promise<Buffer> {
+async function renderCached(cacheKey: string, svg: string, chartName: string): Promise<Buffer> {
+    const startedAt = performance.now();
     const cached = chartCache.get(cacheKey);
-    if (cached && cached.expiresAt > Date.now()) return cached.buffer;
+    if (cached && cached.expiresAt > Date.now()) {
+        logger.info(`Graphique "${chartName}" servi depuis le cache en ${(performance.now() - startedAt).toFixed(1)} ms`, undefined, 'StatsChart');
+        return cached.buffer;
+    }
 
     const pending = pendingRenders.get(cacheKey);
-    if (pending) return pending;
+    if (pending) {
+        const buffer = await pending;
+        logger.info(`Graphique "${chartName}" partagé après ${(performance.now() - startedAt).toFixed(1)} ms`, undefined, 'StatsChart');
+        return buffer;
+    }
 
     const rendering = sharp(Buffer.from(svg))
         .webp({ quality: 88, effort: 3 })
@@ -69,6 +102,11 @@ async function renderCached(cacheKey: string, svg: string): Promise<Buffer> {
             if (!oldestKey) break;
             chartCache.delete(oldestKey);
         }
+        logger.info(
+            `Graphique "${chartName}" généré en ${(performance.now() - startedAt).toFixed(1)} ms (${(buffer.length / 1024).toFixed(1)} Ko)`,
+            undefined,
+            'StatsChart'
+        );
         return buffer;
     } finally {
         pendingRenders.delete(cacheKey);
@@ -85,7 +123,7 @@ export async function renderBarChart(
     const maxValue = Math.max(...items.map(item => item.value), 1);
     const chartX = 300;
     const chartWidth = 750;
-    const chartTop = 145;
+    const chartTop = 158;
     const rowHeight = Math.min(48, 450 / Math.max(items.length, 1));
     const barHeight = Math.max(14, rowHeight - 14);
 
@@ -93,17 +131,19 @@ export async function renderBarChart(
         const y = chartTop + index * rowHeight;
         const width = Math.max(item.value > 0 ? 4 : 0, (item.value / maxValue) * chartWidth);
         return `
-            <text x="275" y="${y + barHeight - 2}" text-anchor="end" fill="#d9deea" font-family="DejaVu Sans, sans-serif" font-size="16">${escapeXml(item.label.slice(0, 24))}</text>
-            <rect x="${chartX}" y="${y}" width="${chartWidth}" height="${barHeight}" rx="5" fill="#242936"/>
-            <rect x="${chartX}" y="${y}" width="${width}" height="${barHeight}" rx="5" fill="${color}"/>
-            <text x="1125" y="${y + barHeight - 2}" text-anchor="end" fill="#f5f7fb" font-family="DejaVu Sans, sans-serif" font-size="15" font-weight="700">${escapeXml(formatNumber(item.value))}</text>`;
+            <text x="66" y="${y + barHeight - 2}" fill="#52627c" font-family="DejaVu Sans, sans-serif" font-size="13" font-weight="700">${String(index + 1).padStart(2, '0')}</text>
+            <text x="275" y="${y + barHeight - 2}" text-anchor="end" fill="#dce5f3" font-family="DejaVu Sans, sans-serif" font-size="16" font-weight="600">${escapeXml(item.label.slice(0, 24))}</text>
+            <rect x="${chartX}" y="${y}" width="${chartWidth}" height="${barHeight}" rx="6" fill="#1a2435"/>
+            <rect x="${chartX}" y="${y}" width="${width}" height="${barHeight}" rx="6" fill="${color}"/>
+            <circle cx="${chartX + width}" cy="${y + barHeight / 2}" r="4" fill="#f7f9fc"/>
+            <text x="1125" y="${y + barHeight - 2}" text-anchor="end" fill="#f7f9fc" font-family="DejaVu Sans, sans-serif" font-size="15" font-weight="700">${escapeXml(formatNumber(item.value))}</text>`;
     }).join('');
 
     const empty = items.length === 0
         ? '<text x="600" y="340" text-anchor="middle" fill="#9da6b7" font-family="DejaVu Sans, sans-serif" font-size="22">Aucune donnée disponible</text>'
         : '';
     const svg = baseSvg(title, subtitle, rows + empty);
-    return renderCached(JSON.stringify(['bar', title, subtitle, items, color]), svg);
+    return renderCached(JSON.stringify(['bar', title, subtitle, items, color]), svg, title);
 }
 
 export async function renderLineChart(
@@ -112,7 +152,7 @@ export async function renderLineChart(
     labels: string[],
     series: ChartSeries[]
 ): Promise<Buffer> {
-    const plot = { x: 95, y: 155, width: 1040, height: 410 };
+    const plot = { x: 95, y: 160, width: 1040, height: 390 };
     const allValues = series.flatMap(item => item.values);
     const maxValue = Math.max(...allValues, 1);
     const pointCount = Math.max(labels.length, ...series.map(item => item.values.length), 1);
@@ -123,14 +163,16 @@ export async function renderLineChart(
         const ratio = index / 4;
         const y = plot.y + ratio * plot.height;
         const value = Math.round(maxValue * (1 - ratio));
-        return `<line x1="${plot.x}" y1="${y}" x2="${plot.x + plot.width}" y2="${y}" stroke="#303642" stroke-width="1"/>
+        return `<line x1="${plot.x}" y1="${y}" x2="${plot.x + plot.width}" y2="${y}" stroke="#26344d" stroke-dasharray="4 8" stroke-width="1"/>
             <text x="80" y="${y + 5}" text-anchor="end" fill="#8d96a7" font-family="DejaVu Sans, sans-serif" font-size="14">${escapeXml(formatNumber(value))}</text>`;
     }).join('');
 
     const lines = series.map(item => {
         const points = item.values.map((value, index) => `${xFor(index)},${yFor(value)}`).join(' ');
-        const dots = item.values.map((value, index) => `<circle cx="${xFor(index)}" cy="${yFor(value)}" r="3" fill="${item.color}"/>`).join('');
-        return `<polyline points="${points}" fill="none" stroke="${item.color}" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>${dots}`;
+        const areaPoints = `${plot.x},${plot.y + plot.height} ${points} ${xFor(Math.max(item.values.length - 1, 0))},${plot.y + plot.height}`;
+        const dots = item.values.map((value, index) => `<circle cx="${xFor(index)}" cy="${yFor(value)}" r="4" fill="#0d131f" stroke="${item.color}" stroke-width="3"/>`).join('');
+        return `<polygon points="${areaPoints}" fill="${item.color}" opacity="0.08"/>
+            <polyline points="${points}" fill="none" stroke="${item.color}" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>${dots}`;
     }).join('');
 
     const labelStep = Math.max(1, Math.ceil(labels.length / 8));
@@ -141,5 +183,5 @@ export async function renderLineChart(
         <text x="${122 + index * 210}" y="627" fill="#cbd1dc" font-family="DejaVu Sans, sans-serif" font-size="15">${escapeXml(item.label)}</text>`).join('');
 
     const svg = baseSvg(title, subtitle, grid + lines + xLabels + legend);
-    return renderCached(JSON.stringify(['line', title, subtitle, labels, series]), svg);
+    return renderCached(JSON.stringify(['line', title, subtitle, labels, series]), svg, title);
 }

@@ -129,8 +129,8 @@ async function handleOverview(interaction: ChatInputCommandInteraction) {
         'Commandes et messages sur les 30 derniers jours',
         dailyStats30.map(d => formatChartDate(d.date)),
         [
-            { label: 'Messages', color: '#2ecc71', values: dailyStats30.map(d => d.messages) },
-            { label: 'Commandes', color: '#3498db', values: dailyStats30.map(d => d.commands) }
+            { label: 'Messages', color: '#45d7ff', values: dailyStats30.map(d => d.messages) },
+            { label: 'Commandes', color: '#ff6b6b', values: dailyStats30.map(d => d.commands) }
         ]
     );
     const overviewAttachment = new AttachmentBuilder(overviewBuffer, { name: 'global-overview.webp' });
@@ -141,7 +141,7 @@ async function handleOverview(interaction: ChatInputCommandInteraction) {
         .join('\n') || 'Aucune donnée';
 
     const embed = new EmbedBuilder()
-        .setColor('#f39c12')
+        .setColor('#f8c15c')
         .setTitle('📋 Statistiques Globales - Vue d\'ensemble')
         .addFields(
             {
@@ -201,12 +201,12 @@ async function handleCommandsStats(interaction: ChatInputCommandInteraction) {
         value: c.count
     }));
 
-    const chartBuffer = await renderBarChart('Top des commandes', `${days} derniers jours`, chartData, '#3498db');
+    const chartBuffer = await renderBarChart('Top des commandes', `${days} derniers jours`, chartData, '#ff6b6b');
     const chartAttachment = new AttachmentBuilder(chartBuffer, { name: 'global-commands.webp' });
 
 
     const embed = new EmbedBuilder()
-        .setColor('#3498db')
+        .setColor('#ff6b6b')
         .setTitle('📊 Statistiques Globales - Commandes')
         .setDescription(`Période analysée: **${days} jours**`)
         .addFields(
@@ -260,12 +260,12 @@ async function handleMessagesStats(interaction: ChatInputCommandInteraction) {
             label: formatChartDate(d.date),
             value: d.messages
         })),
-        '#2ecc71'
+        '#45d7ff'
     );
     const topDaysAttachment = new AttachmentBuilder(topDaysBuffer, { name: 'global-messages.webp' });
 
     const embed = new EmbedBuilder()
-        .setColor('#2ecc71')
+        .setColor('#45d7ff')
         .setTitle('💬 Statistiques Globales - Messages')
         .setDescription(`Période analysée: **${days} jours**`)
         .addFields(
@@ -308,7 +308,7 @@ async function handleTrendStats(interaction: ChatInputCommandInteraction) {
     const min = Math.min(...values, 0);
 
     const title = type === 'commands' ? '📊 Tendance Globale - Commandes' : '💬 Tendance Globale - Messages';
-    const color = type === 'commands' ? '#3498db' : '#2ecc71';
+    const color = type === 'commands' ? '#ff6b6b' : '#45d7ff';
     const trendBuffer = await renderLineChart(
         metricLabel,
         `${days} derniers jours`,
