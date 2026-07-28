@@ -68,7 +68,7 @@ export async function getAutoModSettings(guildId: string): Promise<AutoModSettin
         .maybeSingle();
     if (error) throw new Error(`Lecture de l’auto-modération impossible : ${error.message}`);
     const settings = { guild_id: guildId, ...DEFAULTS, ...(data ?? {}) };
-    cache.set(guildId, { settings, expiresAt: Date.now() + 30_000 });
+    cache.set(guildId, { settings, expiresAt: Date.now() + 30 * 60_000 });
     return settings;
 }
 

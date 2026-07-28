@@ -37,7 +37,7 @@ export async function execute(client: Client<true>) {
     // Initialiser le gestionnaire de modération
     const moderationManager = new ModerationManager(client);
     client.moderationManager = moderationManager;
-    moderationManager.start();
+    await moderationManager.start();
     logger.success('Gestionnaire de modération démarré', undefined, 'MANAGER');
 
     // Initialiser le gestionnaire RGPD (purge automatique des données anciennes)

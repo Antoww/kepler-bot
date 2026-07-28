@@ -4,6 +4,7 @@ import { logModeration } from '../utils/moderation/logger.ts';
 import { isNetworkError, isMaintenanceError, dbCircuitBreaker } from '../utils/retryHelper.ts';
 import { logger } from '../utils/logger.ts';
 import { AutoModeration } from '../utils/moderation/automod.ts';
+import { getAutoModSettings } from '../utils/moderation/automodService.ts';
 
 export class ModerationManager {
     private client: Client;
@@ -20,8 +21,13 @@ export class ModerationManager {
         return this.autoModeration.handleMessage(message);
     }
 
-    start() {
+    async start(): Promise<void> {
         logger.manager('ModerationManager', 'démarré');
+        await Promise.all(this.client.guilds.cache.map(guild =>
+            getAutoModSettings(guild.id).catch(error => {
+                logger.warn(`Préchargement AutoMod impossible pour ${guild.id}`, error, 'AUTOMOD');
+            })
+        ));
         // Vérifier toutes les minutes
         this.checkInterval = setInterval(() => {
             this.checkExpiredSanctions();

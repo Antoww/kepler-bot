@@ -42,3 +42,9 @@ Chaque détection est conservée dans `guild_automod_violations` et envoyée dan
 le salon de modération configuré. Si le bot ne peut pas appliquer un timeout,
 le message reste supprimé et l’échec n’empêche pas le traitement des messages
 suivants.
+
+Lorsque les notifications sont activées, Kepler avertit l’utilisateur avec un
+embed en message privé. Aucun avertissement public n’est envoyé dans le salon ;
+si les messages privés sont fermés, seule l’équipe voit le log de modération.
+Les MP sont limités à un toutes les 15 secondes par utilisateur afin qu’une
+rafale ne soit pas remplacée par une rafale de notifications du bot.

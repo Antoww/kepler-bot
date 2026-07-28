@@ -6,6 +6,7 @@ import {
 } from 'discord.js';
 import { addModerationHistory, createWarning } from '../../database/db.ts';
 import { logger } from '../logger.ts';
+import { createKeplerEmbed } from '../theme.ts';
 import { logModeration } from './logger.ts';
 import {
     getAutoModSettings,
@@ -35,7 +36,9 @@ const URL_PATTERN = /(?:https?:\/\/|www\.)[^\s<>()]+|\b[a-z0-9](?:[a-z0-9-]{0,62
 export class AutoModeration {
     private readonly recentMessages = new Map<string, RecentMessage[]>();
     private readonly queues = new Map<string, Promise<boolean>>();
+    private readonly enforcementQueues = new Map<string, Promise<void>>();
     private readonly cleanupTimers = new Map<string, ReturnType<typeof setTimeout>>();
+    private readonly lastNotificationAt = new Map<string, number>();
 
     constructor(private readonly client: Client) {}
 
@@ -61,14 +64,26 @@ export class AutoModeration {
         if (!rule) return false;
 
         await message.delete().catch(() => undefined);
+        void this.enqueueEnforcement(message, rule, settings);
+        return true;
+    }
+
+    private async enforceViolation(
+        message: Message,
+        rule: AutoModRule,
+        settings: AutoModSettings
+    ): Promise<void> {
+        const member = message.member;
+        if (!message.guild || !member) return;
         const strikes = await getAutoModStrikeCount(message.guild.id, message.author.id) + 1;
-        let action = await this.applyAction(message.member, rule, settings);
+        let action = await this.applyAction(member, rule, settings);
         if (settings.action === 'timeout' && strikes >= settings.strike_threshold) {
-            action = await this.timeoutMember(message.member, rule, settings, strikes).catch(error => {
+            action = await this.timeoutMember(member, rule, settings, strikes).catch(error => {
                 logger.warn(`Timeout AutoMod impossible pour ${message.author.id}`, error, 'AUTOMOD');
                 return 'delete';
             });
         }
+        void this.notifyUser(message, rule, action, settings);
         await recordAutoModViolation(
             message.guild.id,
             message.author.id,
@@ -79,9 +94,29 @@ export class AutoModeration {
             message.content
         );
 
-        await this.sendLog(message, rule, action, strikes);
-        await this.notifyInChannel(message, rule, action, settings);
-        return true;
+        void this.sendLog(message, rule, action, strikes).catch(error => {
+            logger.warn(`Log AutoMod non envoyé pour ${message.id}`, error, 'AUTOMOD');
+        });
+    }
+
+    private async enqueueEnforcement(
+        message: Message,
+        rule: AutoModRule,
+        settings: AutoModSettings
+    ): Promise<void> {
+        const key = `${message.guildId}:${message.author.id}`;
+        const previous = this.enforcementQueues.get(key) ?? Promise.resolve();
+        const next = previous
+            .catch(() => undefined)
+            .then(() => this.enforceViolation(message, rule, settings));
+        this.enforcementQueues.set(key, next);
+        try {
+            await next;
+        } catch (error) {
+            logger.error(`Sanction AutoMod incomplète pour ${message.author.id}`, error, 'AUTOMOD');
+        } finally {
+            if (this.enforcementQueues.get(key) === next) this.enforcementQueues.delete(key);
+        }
     }
 
     private isExempt(message: Message, settings: AutoModSettings): boolean {
@@ -235,18 +270,40 @@ export class AutoModeration {
         return `timeout ${settings.timeout_seconds}s · sanction #${sanctionNumber}`;
     }
 
-    private async notifyInChannel(
+    private async notifyUser(
         message: Message,
         rule: AutoModRule,
         action: string,
         settings: AutoModSettings
     ) {
-        if (!settings.notify_user || !message.channel.isSendable()) return;
-        const response = await message.channel.send({
-            content: `<@${message.author.id}>, message retiré : **${RULE_LABELS[rule]}** (${action}).`,
-            allowedMentions: { users: [message.author.id] }
-        }).catch(() => null);
-        if (response) setTimeout(() => void response.delete().catch(() => undefined), 8_000);
+        if (!settings.notify_user) return;
+        const notificationKey = `${message.guildId}:${message.author.id}`;
+        const lastNotification = this.lastNotificationAt.get(notificationKey) ?? 0;
+        if (Date.now() - lastNotification < 15_000) return;
+        const notificationAt = Date.now();
+        this.lastNotificationAt.set(notificationKey, notificationAt);
+        setTimeout(() => {
+            if (this.lastNotificationAt.get(notificationKey) === notificationAt) {
+                this.lastNotificationAt.delete(notificationKey);
+            }
+        }, 15_000);
+        const actionLabel = action.startsWith('timeout')
+            ? `Timeout · ${action.replace(/^timeout\s*/, '')}`
+            : action.startsWith('warn')
+                ? `Avertissement · ${action.replace(/^warn\s*/, '')}`
+                : 'Message supprimé';
+        const embed = createKeplerEmbed('warning')
+            .setTitle('Message modéré')
+            .setDescription(`Un de vos messages a été retiré sur **${message.guild!.name}**.`)
+            .addFields(
+                { name: 'Règle déclenchée', value: RULE_LABELS[rule], inline: true },
+                { name: 'Action', value: actionLabel, inline: true },
+                { name: 'Salon', value: `<#${message.channel.id}>`, inline: true }
+            )
+            .setFooter({ text: 'Cette notification est privée et visible uniquement par vous.' });
+        await message.author.send({ embeds: [embed] }).catch(() => {
+            logger.debug(`Notification AutoMod impossible en MP pour ${message.author.id}`, undefined, 'AUTOMOD');
+        });
     }
 
     private async sendLog(message: Message, rule: AutoModRule, action: string, strikes: number) {

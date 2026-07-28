@@ -1474,7 +1474,7 @@ async function showAutoModActionModal(component: ButtonInteraction, source: Chat
             settingsTextInput('action', 'Action : delete, warn ou timeout', settings.action, 'timeout'),
             settingsTextInput('strikes', 'Infractions / fenêtre en secondes', `${settings.strike_threshold}/${settings.strike_window_seconds}`, '3/3600'),
             settingsTextInput('timeout', 'Durée du timeout en secondes', String(settings.timeout_seconds), '600'),
-            settingsTextInput('notify', 'Notifier dans le salon ? oui ou non', settings.notify_user ? 'oui' : 'non', 'oui')
+            settingsTextInput('notify', 'Notifier l’utilisateur en MP ? oui/non', settings.notify_user ? 'oui' : 'non', 'oui')
         );
     await component.showModal(modal);
     const submission = await awaitSettingsModal(component, source, modalId);
