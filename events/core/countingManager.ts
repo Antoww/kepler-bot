@@ -1,4 +1,5 @@
-import { type Message, EmbedBuilder } from 'discord.js';
+import { createKeplerEmbed, KEPLER_COLORS } from '../../utils/theme.ts';
+import { type Message } from 'discord.js';
 import { supabase } from '../../database/supabase.ts';
 
 export class CountingManager {
@@ -22,7 +23,7 @@ export class CountingManager {
 
             // Extraire le nombre au début du message
             const match = message.content.trim().match(/^(\d+)/);
-            
+
             if (!match) {
                 // Le message ne commence pas par un nombre, le supprimer
                 try {
@@ -32,7 +33,7 @@ export class CountingManager {
                 }
                 return;
             }
-            
+
             const number = parseInt(match[1]);
 
             // Vérifier que le nombre est le suivant attendu
@@ -47,8 +48,8 @@ export class CountingManager {
                 }
 
                 // Envoyer un message d'erreur ephemeral
-                const errorEmbed = new EmbedBuilder()
-                    .setColor('#ff0000')
+                const errorEmbed = createKeplerEmbed()
+                    .setColor(KEPLER_COLORS.danger)
                     .setDescription(`❌ ${message.author.toString()} Le nombre attendu était **${expectedNumber}**, pas ${number}!`)
                     .setTimestamp();
 
@@ -72,8 +73,8 @@ export class CountingManager {
                 }
 
                 // Envoyer un message d'erreur ephemeral
-                const errorEmbed = new EmbedBuilder()
-                    .setColor('#ff0000')
+                const errorEmbed = createKeplerEmbed()
+                    .setColor(KEPLER_COLORS.danger)
                     .setDescription(`❌ ${message.author.toString()} Vous avez déjà compté! Attendez que quelqu'un d'autre compte.`)
                     .setTimestamp();
 
@@ -107,8 +108,8 @@ export class CountingManager {
 
             // Envoyer un message de jalons si c'est un nombre rond ou important
             if (number % 10 === 0) {
-                const milestoneEmbed = new EmbedBuilder()
-                    .setColor('#FFD700')
+                const milestoneEmbed = createKeplerEmbed()
+                    .setColor(KEPLER_COLORS.warning)
                     .setDescription(`🎉 Jalons! Nous avons atteint **${number}**! Bravo ${message.author.toString()}!`)
                     .setTimestamp();
 

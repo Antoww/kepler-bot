@@ -1,4 +1,5 @@
-import { type CommandInteraction, SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits, ChannelType } from 'discord.js';
+import { createKeplerEmbed, KEPLER_COLORS, KEPLER_MESSAGES } from '../../utils/theme.ts';
+import { type CommandInteraction, SlashCommandBuilder, PermissionFlagsBits, ChannelType } from 'discord.js';
 import { updateLogChannel } from '../../database/db.ts';
 
 export const data = new SlashCommandBuilder()
@@ -12,14 +13,14 @@ export const data = new SlashCommandBuilder()
 
 export async function execute(interaction: CommandInteraction) {
     if (!interaction.guild) {
-        await interaction.reply('❌ Cette commande ne peut être utilisée que sur un serveur.');
+        await interaction.reply(KEPLER_MESSAGES.guildOnly);
         return;
     }
 
     const channel = interaction.options.getChannel('canal');
-    
+
     if (!channel) {
-        await interaction.reply('Canal invalide.');
+        await interaction.reply(KEPLER_MESSAGES.invalidChannel);
         return;
     }
 
@@ -27,12 +28,12 @@ export async function execute(interaction: CommandInteraction) {
         // Sauvegarder la configuration dans la base de données
         await updateLogChannel(interaction.guild.id, channel.id);
 
-        const embed = new EmbedBuilder()
-            .setAuthor({ 
-                name: interaction.client.user?.username, 
-                iconURL: interaction.client.user?.displayAvatarURL({ forceStatic: false }) 
+        const embed = createKeplerEmbed()
+            .setAuthor({
+                name: interaction.client.user?.username,
+                iconURL: interaction.client.user?.displayAvatarURL({ forceStatic: false })
             })
-            .setColor('#00ff00')
+            .setColor(KEPLER_COLORS.success)
             .setTitle('✅ Configuration des logs mise à jour')
             .setDescription(`Les logs seront maintenant envoyés dans ${channel}`)
             .setFooter({
@@ -46,4 +47,4 @@ export async function execute(interaction: CommandInteraction) {
         console.error('Erreur lors de la configuration du canal de logs:', error);
         await interaction.reply('❌ Une erreur est survenue lors de la configuration du canal de logs.');
     }
-} 
+}

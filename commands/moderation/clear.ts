@@ -1,3 +1,4 @@
+import { KEPLER_MESSAGES } from '../../utils/theme.ts';
 import { type CommandInteraction, SlashCommandBuilder, ChannelType, TextChannel, PermissionFlagsBits, Message } from "discord.js";
 import { formatMessagesForArchive, uploadToPastebin } from "../../utils/messageArchiver.ts";
 import { storeArchiveUrl } from "../../utils/archiveCache.ts";
@@ -13,13 +14,13 @@ export const data = new SlashCommandBuilder()
 export async function execute(interaction: CommandInteraction) {
 
     if (!interaction.guild) {
-        interaction.reply('Erreur : Vous devez être sur un serveur Discord.')
+        await interaction.reply(KEPLER_MESSAGES.guildOnly);
         return;
     }
 
     const amount = interaction.options.get('nombre')?.value as number;
     if (amount < 1 || amount > 100) {
-        interaction.reply('Erreur : Vous devez entrer un nombre entre 1 et 100.');
+        interaction.reply(`❌ Le nombre de messages doit être compris entre 1 et 100.`);
         return;
     }
 
@@ -30,17 +31,17 @@ export async function execute(interaction: CommandInteraction) {
             .then(async (messages) => {
                 const messageCount = messages.size;
                 const messageText = messageCount === 1 ? 'message' : 'messages';
-                
+
                 // Archiver uniquement les messages qui ont été effectivement supprimés
                 console.log(`[Clear] Début de l'archivage de ${messageCount} messages supprimés...`);
-                
+
                 if (messages.size > 0) {
                     const archiveContent = formatMessagesForArchive(messages as any);
                     const title = `Messages supprimés - ${interaction.guild?.name} - ${new Date().toLocaleString('fr-FR')}`;
-                    
+
                     console.log(`[Clear] Tentative d'upload sur Pastebin...`);
                     const pastebinUrl = await uploadToPastebin(archiveContent, title);
-                    
+
                     if (pastebinUrl) {
                         console.log(`[Clear] ✅ Archive créée avec succès: ${pastebinUrl}`);
                         // Stocker l'URL dans le cache pour l'événement MessageBulkDelete
@@ -51,7 +52,7 @@ export async function execute(interaction: CommandInteraction) {
                         console.error('[Clear] Vérifiez les logs ci-dessus pour plus de détails');
                     }
                 }
-                
+
                 // Répondre et supprimer le message après 10 secondes
                 interaction.reply(`🗑️ Suppression de **${messageCount} ${messageText}**.`)
                     .then(reply => {
@@ -65,10 +66,10 @@ export async function execute(interaction: CommandInteraction) {
             })
             .catch(error => {
                 console.error('Erreur lors de la suppression des messages :', error);
-                interaction.reply('Erreur lors de la suppression des messages.');
+                interaction.reply(`❌ Impossible de supprimer les messages. Vérifiez leur ancienneté et mes permissions.`);
             });
     } else {
-        interaction.reply('Erreur : Impossible de trouver le canal ou le canal n\'est pas un canal de texte.');
+        await interaction.reply('❌ Cette commande doit être utilisée dans un salon textuel.');
     }
 
-} 
+}

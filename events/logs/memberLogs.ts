@@ -1,6 +1,7 @@
-import { 
-    EmbedBuilder, 
-    AuditLogEvent, 
+import { createKeplerEmbed, KEPLER_COLORS } from '../../utils/theme.ts';
+import {
+    EmbedBuilder,
+    AuditLogEvent,
     TextChannel,
     GuildMember,
     User,
@@ -30,7 +31,7 @@ async function getAuditLog(guild: any, targetId: string, actionType: AuditLogEve
             type: actionType,
             limit: 1,
         });
-        
+
         const entry = auditLogs.entries.first();
         return entry;
     } catch (error) {
@@ -43,7 +44,7 @@ async function getAuditLog(guild: any, targetId: string, actionType: AuditLogEve
 export async function logMemberBan(ban: GuildBan) {
     const auditEntry = await getAuditLog(ban.guild, ban.user.id, AuditLogEvent.MemberBanAdd);
     const client = ban.client;
-    
+
     const fields: any[] = [
         { name: '👤 Utilisateur', value: `${ban.user.tag}\n\`${ban.user.id}\``, inline: true },
         { name: '📅 Date', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: true }
@@ -63,17 +64,17 @@ export async function logMemberBan(ban: GuildBan) {
         });
     }
 
-    const embed = new EmbedBuilder()
-        .setAuthor({ 
+    const embed = createKeplerEmbed()
+        .setAuthor({
             name: 'Kepler Bot - Système de Logs',
             iconURL: client.user?.displayAvatarURL({ forceStatic: false })
         })
-        .setColor('#ED4245')
+        .setColor(KEPLER_COLORS.danger)
         .setTitle('🔨 Membre Banni')
         .setDescription(`### ${ban.user.tag}\n> Un membre a été banni du serveur.`)
         .addFields(fields)
         .setThumbnail(ban.user.displayAvatarURL({ forceStatic: false }))
-        .setFooter({ 
+        .setFooter({
             text: `Logs Modération`,
             iconURL: ban.guild.iconURL({ forceStatic: false }) || undefined
         })
@@ -86,7 +87,7 @@ export async function logMemberBan(ban: GuildBan) {
 export async function logMemberUnban(ban: GuildBan) {
     const auditEntry = await getAuditLog(ban.guild, ban.user.id, AuditLogEvent.MemberBanRemove);
     const client = ban.client;
-    
+
     const fields: any[] = [
         { name: '👤 Utilisateur', value: `${ban.user.tag}\n\`${ban.user.id}\``, inline: true },
         { name: '📅 Date', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: true }
@@ -105,17 +106,17 @@ export async function logMemberUnban(ban: GuildBan) {
         });
     }
 
-    const embed = new EmbedBuilder()
-        .setAuthor({ 
+    const embed = createKeplerEmbed()
+        .setAuthor({
             name: 'Kepler Bot - Système de Logs',
             iconURL: client.user?.displayAvatarURL({ forceStatic: false })
         })
-        .setColor('#57F287')
+        .setColor(KEPLER_COLORS.success)
         .setTitle('✅ Membre Débanni')
         .setDescription(`### ${ban.user.tag}\n> Un membre a été débanni et peut rejoindre le serveur.`)
         .addFields(fields)
         .setThumbnail(ban.user.displayAvatarURL({ forceStatic: false }))
-        .setFooter({ 
+        .setFooter({
             text: `Logs Modération`,
             iconURL: ban.guild.iconURL({ forceStatic: false }) || undefined
         })
@@ -127,9 +128,9 @@ export async function logMemberUnban(ban: GuildBan) {
 // Log de kick (via audit logs)
 export async function logMemberKick(member: GuildMember) {
     const auditEntry = await getAuditLog(member.guild, member.id, AuditLogEvent.MemberKick);
-    
+
     if (!auditEntry) return; // Pas de kick détecté dans les audit logs
-    
+
     const client = member.client;
     const fields: any[] = [
         { name: '👤 Utilisateur', value: `${member.user.tag}\n\`${member.user.id}\``, inline: true },
@@ -149,17 +150,17 @@ export async function logMemberKick(member: GuildMember) {
         });
     }
 
-    const embed = new EmbedBuilder()
-        .setAuthor({ 
+    const embed = createKeplerEmbed()
+        .setAuthor({
             name: 'Kepler Bot - Système de Logs',
             iconURL: client.user?.displayAvatarURL({ forceStatic: false })
         })
-        .setColor('#F26522')
+        .setColor(KEPLER_COLORS.warning)
         .setTitle('👢 Membre Exclu (Kick)')
         .setDescription(`### ${member.user.tag}\n> Un membre a été exclu du serveur.`)
         .addFields(fields)
         .setThumbnail(member.user.displayAvatarURL({ forceStatic: false }))
-        .setFooter({ 
+        .setFooter({
             text: `Logs Modération`,
             iconURL: member.guild.iconURL({ forceStatic: false }) || undefined
         })
@@ -192,17 +193,17 @@ export async function logMemberJoin(member: GuildMember) {
         });
     }
 
-    const embed = new EmbedBuilder()
-        .setAuthor({ 
+    const embed = createKeplerEmbed()
+        .setAuthor({
             name: 'Kepler Bot - Système de Logs',
             iconURL: client.user?.displayAvatarURL({ forceStatic: false })
         })
-        .setColor(isNewAccount ? '#FEE75C' : '#57F287')
+        .setColor(isNewAccount ? KEPLER_COLORS.warning : KEPLER_COLORS.success)
         .setTitle('📥 Membre Rejoint')
         .setDescription(`### ${member.user.tag}\n> Un nouveau membre a rejoint le serveur !`)
         .addFields(fields)
         .setThumbnail(member.user.displayAvatarURL({ forceStatic: false }))
-        .setFooter({ 
+        .setFooter({
             text: `Logs Membres • Membre #${member.guild.memberCount}`,
             iconURL: member.guild.iconURL({ forceStatic: false }) || undefined
         })
@@ -216,7 +217,7 @@ export async function logMemberLeave(member: GuildMember) {
     // Vérifier d'abord si c'est un kick
     setTimeout(async () => {
         const auditEntry = await getAuditLog(member.guild, member.id, AuditLogEvent.MemberKick);
-        
+
         // Si c'est un kick récent (moins de 5 secondes), on utilisera logMemberKick
         if (auditEntry && (Date.now() - auditEntry.createdTimestamp) < 5000) {
             await logMemberKick(member);
@@ -251,7 +252,7 @@ export async function logMemberLeave(member: GuildMember) {
                 .map(role => `\`${role.name}\``)
                 .slice(0, 10)
                 .join(', ');
-            
+
             if (roles.length > 0) {
                 const more = member.roles.cache.size - 1 > 10 ? ` (+${member.roles.cache.size - 11})` : '';
                 fields.push({
@@ -262,17 +263,17 @@ export async function logMemberLeave(member: GuildMember) {
             }
         }
 
-        const embed = new EmbedBuilder()
-            .setAuthor({ 
+        const embed = createKeplerEmbed()
+            .setAuthor({
                 name: 'Kepler Bot - Système de Logs',
                 iconURL: client.user?.displayAvatarURL({ forceStatic: false })
             })
-            .setColor('#ED4245')
+            .setColor(KEPLER_COLORS.danger)
             .setTitle('📤 Membre Parti')
             .setDescription(`### ${member.user.tag}\n> Un membre a quitté le serveur.`)
             .addFields(fields)
             .setThumbnail(member.user.displayAvatarURL({ forceStatic: false }))
-            .setFooter({ 
+            .setFooter({
                 text: `Logs Membres`,
                 iconURL: member.guild.iconURL({ forceStatic: false }) || undefined
             })

@@ -1,13 +1,14 @@
-import { SlashCommandBuilder, EmbedBuilder, type ChatInputCommandInteraction } from 'discord.js';
+import { createKeplerEmbed, KEPLER_COLORS } from '../../utils/theme.ts';
+import { SlashCommandBuilder, type ChatInputCommandInteraction } from 'discord.js';
 
 async function searchLyrics(artist: string, title: string) {
     // API gratuite : lyrics.ovh
     const response = await fetch(`https://api.lyrics.ovh/v1/${encodeURIComponent(artist)}/${encodeURIComponent(title)}`);
-    
+
     if (!response.ok) {
         return null;
     }
-    
+
     const data = await response.json();
     return data.lyrics;
 }
@@ -31,24 +32,24 @@ export const data = new SlashCommandBuilder()
 export async function execute(interaction: ChatInputCommandInteraction) {
     const artiste = interaction.options.getString('artiste', true);
     const titre = interaction.options.getString('titre', true);
-    
+
     await interaction.deferReply();
 
     try {
         const lyrics = await searchLyrics(artiste, titre);
-        
+
         if (!lyrics) {
             return interaction.editReply(`Paroles non trouvées pour "${titre}" de ${artiste}.`);
         }
 
         // Découper les paroles si trop longues
         const maxLength = 4096;
-        const truncatedLyrics = lyrics.length > maxLength 
+        const truncatedLyrics = lyrics.length > maxLength
             ? lyrics.substring(0, maxLength - 50) + '\n\n...\n[Paroles tronquées]'
             : lyrics;
 
-        const embed = new EmbedBuilder()
-            .setColor('#FF1744')
+        const embed = createKeplerEmbed()
+            .setColor(KEPLER_COLORS.danger)
             .setTitle(`${titre} - ${artiste}`)
             .setDescription(truncatedLyrics)
             .setFooter({

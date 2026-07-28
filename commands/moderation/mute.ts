@@ -1,4 +1,5 @@
-import { type CommandInteraction, SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits, GuildMember, Role } from 'discord.js';
+import { createKeplerEmbed, KEPLER_COLORS, KEPLER_MESSAGES } from '../../utils/theme.ts';
+import { type CommandInteraction, SlashCommandBuilder, PermissionFlagsBits, GuildMember, Role } from 'discord.js';
 import { logModeration } from '../../utils/moderationLogger.ts';
 import { createTempMute, addModerationHistory, getMuteRole } from '../../database/db.ts';
 
@@ -18,7 +19,7 @@ export const data = new SlashCommandBuilder()
 
 export async function execute(interaction: CommandInteraction) {
     if (!interaction.guild) {
-        await interaction.reply('Cette commande ne peut être utilisée que sur un serveur.');
+        await interaction.reply(KEPLER_MESSAGES.guildOnly);
         return;
     }
 
@@ -124,8 +125,8 @@ export async function execute(interaction: CommandInteraction) {
         const sanctionNumber = await addModerationHistory(interaction.guild.id, target.id, interaction.user.id, 'mute', reason, duration);
 
         // Créer l'embed de confirmation
-        const embed = new EmbedBuilder()
-            .setColor('#ffff00')
+        const embed = createKeplerEmbed()
+            .setColor(KEPLER_COLORS.warning)
             .setTitle('🔇 Utilisateur rendu muet')
             .addFields(
                 { name: '📋 Sanction N°', value: `#${sanctionNumber}`, inline: true },
@@ -153,14 +154,14 @@ export async function execute(interaction: CommandInteraction) {
 function parseDuration(duration: string): Date | null {
     const regex = /^(\d+)([smhdw])$/;
     const match = duration.toLowerCase().match(regex);
-    
+
     if (!match) return null;
-    
+
     const value = parseInt(match[1]);
     const unit = match[2];
-    
+
     const now = new Date();
-    
+
     switch (unit) {
         case 's': // secondes
             return new Date(now.getTime() + value * 1000);

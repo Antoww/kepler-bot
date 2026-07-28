@@ -1,4 +1,5 @@
-import { type CommandInteraction, SlashCommandBuilder, EmbedBuilder } from 'discord.js';
+import { createKeplerEmbed, KEPLER_COLORS } from '../../utils/theme.ts';
+import { type CommandInteraction, SlashCommandBuilder } from 'discord.js';
 
 export const data = new SlashCommandBuilder()
     .setName('8ball')
@@ -9,7 +10,7 @@ export const data = new SlashCommandBuilder()
 
 export async function execute(interaction: CommandInteraction) {
     const question = interaction.options.getString('question')!;
-    
+
     const responses = [
         'C\'est certain.',
         'C\'est décidément ainsi.',
@@ -36,8 +37,8 @@ export async function execute(interaction: CommandInteraction) {
 
     const randomResponse = responses[Math.floor(Math.random() * responses.length)];
 
-    const embed = new EmbedBuilder()
-        .setColor('#9B59B6')
+    const embed = createKeplerEmbed()
+        .setColor(KEPLER_COLORS.accent)
         .setTitle('🔮 Boule Magique')
         .addFields(
             { name: '❓ Question', value: question, inline: false },
@@ -50,4 +51,4 @@ export async function execute(interaction: CommandInteraction) {
         .setTimestamp();
 
     await interaction.reply({ embeds: [embed] });
-} 
+}

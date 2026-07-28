@@ -15,6 +15,12 @@ export async function execute(interaction) {
             console.log(`❌ [RAPPEL RÉPÉTÉ] ID: ${reminderId} | Erreur: Rappel introuvable en base de données`);
             return interaction.reply({ content: 'Rappel introuvable.', ephemeral: true });
         }
+        if (reminder.user_id !== interaction.user.id) {
+            return interaction.reply({
+                content: 'Vous ne pouvez pas répéter le rappel d’un autre utilisateur.',
+                ephemeral: true
+            });
+        }
 
         const { user_id: userId, message, duration_ms: duration } = reminder;
         

@@ -1,4 +1,5 @@
-import { type CommandInteraction, SlashCommandBuilder, EmbedBuilder } from 'discord.js';
+import { createKeplerEmbed } from '../../utils/theme.ts';
+import { type CommandInteraction, SlashCommandBuilder } from 'discord.js';
 
 export const data = new SlashCommandBuilder()
     .setName('coinflip')
@@ -11,7 +12,7 @@ export async function execute(interaction: CommandInteraction) {
     const resultEmoji = result ? '🪙' : '💿';
     const resultColor = result ? '#FFD700' : '#C0C0C0'; // Or pour Pile, Argent pour Face
 
-    const embed = new EmbedBuilder()
+    const embed = createKeplerEmbed()
         .setColor(resultColor)
         .setTitle(`${resultEmoji} Résultat du lancé de pièce`)
         .setDescription(`**${resultText}** !`)
@@ -25,4 +26,4 @@ export async function execute(interaction: CommandInteraction) {
         .setTimestamp();
 
     await interaction.reply({ embeds: [embed] });
-} 
+}

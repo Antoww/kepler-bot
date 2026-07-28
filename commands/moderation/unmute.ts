@@ -1,4 +1,5 @@
-import { type CommandInteraction, SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits, GuildMember } from 'discord.js';
+import { createKeplerEmbed, KEPLER_COLORS, KEPLER_MESSAGES } from '../../utils/theme.ts';
+import { type CommandInteraction, SlashCommandBuilder, PermissionFlagsBits, GuildMember } from 'discord.js';
 import { logModeration } from '../../utils/moderationLogger.ts';
 import { addModerationHistory } from '../../database/db.ts';
 
@@ -15,7 +16,7 @@ export const data = new SlashCommandBuilder()
 
 export async function execute(interaction: CommandInteraction) {
     if (!interaction.guild) {
-        await interaction.reply('Cette commande ne peut être utilisée que sur un serveur.');
+        await interaction.reply(KEPLER_MESSAGES.guildOnly);
         return;
     }
 
@@ -23,7 +24,7 @@ export async function execute(interaction: CommandInteraction) {
     const reason = interaction.options.getString('raison') || 'Aucune raison fournie';
 
     if (!target) {
-        await interaction.reply('Utilisateur invalide.');
+        await interaction.reply(KEPLER_MESSAGES.invalidUser);
         return;
     }
 
@@ -59,8 +60,8 @@ export async function execute(interaction: CommandInteraction) {
         await addModerationHistory(interaction.guild.id, target.id, interaction.user.id, 'unmute', reason);
 
         // Créer l'embed de confirmation
-        const embed = new EmbedBuilder()
-            .setColor('#00ff00')
+        const embed = createKeplerEmbed()
+            .setColor(KEPLER_COLORS.success)
             .setTitle('🔊 Utilisateur démuté')
             .addFields(
                 { name: '👤 Utilisateur', value: `${target.tag} (${target.id})`, inline: true },

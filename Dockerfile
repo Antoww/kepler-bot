@@ -3,8 +3,16 @@ FROM denoland/deno:2.1.7
 # Build argument for version
 ARG VERSION=dev
 ENV BOT_VERSION=$VERSION
+ENV FONTCONFIG_FILE=/etc/fonts/fonts.conf
+ENV FONTCONFIG_PATH=/etc/fonts
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends fontconfig fonts-dejavu-core \
+    && rm -rf /var/lib/apt/lists/* \
+    && fc-cache -f
 
 WORKDIR /app
+
 
 # Copy dependency files
 COPY deno.json package.json ./

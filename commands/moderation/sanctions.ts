@@ -1,17 +1,18 @@
-import { 
-    type CommandInteraction, 
-    SlashCommandBuilder, 
-    EmbedBuilder, 
-    PermissionFlagsBits, 
-    ActionRowBuilder, 
-    ButtonBuilder, 
+import { createKeplerEmbed, KEPLER_COLORS, KEPLER_MESSAGES } from '../../utils/theme.ts';
+import {
+    type CommandInteraction,
+    SlashCommandBuilder,
+    EmbedBuilder,
+    PermissionFlagsBits,
+    ActionRowBuilder,
+    ButtonBuilder,
     ButtonStyle,
     ComponentType
 } from 'discord.js';
-import { 
-    getModerationHistory, 
-    getUserWarnings, 
-    removeWarningBySanctionNumber, 
+import {
+    getModerationHistory,
+    getUserWarnings,
+    removeWarningBySanctionNumber,
     addModerationHistory,
     getActiveTempBan,
     getActiveTempMute
@@ -44,7 +45,7 @@ export const data = new SlashCommandBuilder()
 
 export async function execute(interaction: CommandInteraction) {
     if (!interaction.guild) {
-        await interaction.reply('Cette commande ne peut être utilisée que sur un serveur.');
+        await interaction.reply(KEPLER_MESSAGES.guildOnly);
         return;
     }
 
@@ -59,9 +60,9 @@ export async function execute(interaction: CommandInteraction) {
 
 async function handleViewSanctions(interaction: CommandInteraction) {
     const target = interaction.options.getUser('utilisateur');
-    
+
     if (!target) {
-        await interaction.reply('Utilisateur invalide.');
+        await interaction.reply(KEPLER_MESSAGES.invalidUser);
         return;
     }
 
@@ -97,12 +98,12 @@ async function handleViewSanctions(interaction: CommandInteraction) {
         ].join(' • ');
 
         // Créer l'embed de base
-        const baseEmbed = new EmbedBuilder()
-            .setAuthor({ 
-                name: `Sanctions - ${target.username}`, 
-                iconURL: target.displayAvatarURL({ forceStatic: false }) 
+        const baseEmbed = createKeplerEmbed()
+            .setAuthor({
+                name: `Sanctions - ${target.username}`,
+                iconURL: target.displayAvatarURL({ forceStatic: false })
             })
-            .setColor('#0099ff')
+            .setColor(KEPLER_COLORS.primary)
             .setThumbnail(target.displayAvatarURL({ forceStatic: false }))
             .setTimestamp();
 
@@ -150,14 +151,14 @@ async function handleViewSanctions(interaction: CommandInteraction) {
                 const duration = entry.duration ? ` (${entry.duration})` : '';
                 const sanctionNum = entry.sanction_number ? `#${entry.sanction_number}` : '';
                 const emoji = getActionEmoji(entry.action_type);
-                
+
                 return `**${sanctionNum}** ${emoji} **${entry.action_type.toUpperCase()}**${duration}\n📝 ${entry.reason}\n🕐 <t:${timestamp}:R> | 🛡️ <@${entry.moderator_id}>`;
             }).join('\n\n');
 
-            embed.addFields({ 
-                name: `📜 Historique (Page ${page + 1}/${totalPages})`, 
-                value: sanctionsText, 
-                inline: false 
+            embed.addFields({
+                name: `📜 Historique (Page ${page + 1}/${totalPages})`,
+                value: sanctionsText,
+                inline: false
             });
 
             return embed;
@@ -192,10 +193,10 @@ async function handleViewSanctions(interaction: CommandInteraction) {
         const embed = generateEmbed(currentPage);
         const components = totalPages > 1 ? [generateButtons(currentPage)] : [];
 
-        const response = await interaction.reply({ 
-            embeds: [embed], 
+        const response = await interaction.reply({
+            embeds: [embed],
             components,
-            fetchReply: true 
+            fetchReply: true
         });
 
         if (totalPages > 1) {
@@ -206,7 +207,7 @@ async function handleViewSanctions(interaction: CommandInteraction) {
 
             collector.on('collect', async i => {
                 if (i.user.id !== interaction.user.id) {
-                    await i.reply({ content: 'Vous ne pouvez pas utiliser ces boutons.', ephemeral: true });
+                    await i.reply({ content: KEPLER_MESSAGES.unauthorizedComponent, ephemeral: true });
                     return;
                 }
 
@@ -225,9 +226,9 @@ async function handleViewSanctions(interaction: CommandInteraction) {
                         break;
                 }
 
-                await i.update({ 
-                    embeds: [generateEmbed(currentPage)], 
-                    components: [generateButtons(currentPage)] 
+                await i.update({
+                    embeds: [generateEmbed(currentPage)],
+                    components: [generateButtons(currentPage)]
                 });
             });
 
@@ -265,8 +266,8 @@ async function handleRemoveSanction(interaction: CommandInteraction) {
         }
 
         // Créer l'embed de confirmation
-        const embed = new EmbedBuilder()
-            .setColor('#00ff00')
+        const embed = createKeplerEmbed()
+            .setColor(KEPLER_COLORS.success)
             .setTitle('✅ Sanction supprimée')
             .addFields(
                 { name: '📋 Sanction N°', value: `#${sanctionNumber}`, inline: true },
@@ -279,10 +280,10 @@ async function handleRemoveSanction(interaction: CommandInteraction) {
 
         // Logger l'action
         await logModeration(
-            interaction.guild!, 
-            'Unwarn', 
+            interaction.guild!,
+            'Unwarn',
             interaction.user, // On ne peut pas récupérer l'utilisateur original facilement
-            interaction.user, 
+            interaction.user,
             reason,
             `Sanction #${sanctionNumber} supprimée`
         );

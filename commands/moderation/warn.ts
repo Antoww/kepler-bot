@@ -1,4 +1,5 @@
-import { type CommandInteraction, SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits, GuildMember } from 'discord.js';
+import { createKeplerEmbed, KEPLER_COLORS, KEPLER_MESSAGES } from '../../utils/theme.ts';
+import { type CommandInteraction, SlashCommandBuilder, PermissionFlagsBits, GuildMember } from 'discord.js';
 import { logModeration } from '../../utils/moderationLogger.ts';
 import { createWarning, addModerationHistory } from '../../database/db.ts';
 
@@ -15,7 +16,7 @@ export const data = new SlashCommandBuilder()
 
 export async function execute(interaction: CommandInteraction) {
     if (!interaction.guild) {
-        await interaction.reply('Cette commande ne peut être utilisée que sur un serveur.');
+        await interaction.reply(KEPLER_MESSAGES.guildOnly);
         return;
     }
 
@@ -51,11 +52,11 @@ export async function execute(interaction: CommandInteraction) {
         const sanctionNumber = await createWarning(interaction.guild.id, target.id, interaction.user.id, reason);
 
         // Ajouter à l'historique de modération
-        await addModerationHistory(interaction.guild.id, target.id, interaction.user.id, 'warn', reason);
+        await addModerationHistory(interaction.guild.id, target.id, interaction.user.id, 'warn', reason, undefined, sanctionNumber);
 
         // Créer l'embed de confirmation
-        const embed = new EmbedBuilder()
-            .setColor('#ffaa00')
+        const embed = createKeplerEmbed()
+            .setColor(KEPLER_COLORS.warning)
             .setTitle('⚠️ Utilisateur averti')
             .addFields(
                 { name: '📋 Sanction N°', value: `#${sanctionNumber}`, inline: true },
@@ -70,8 +71,8 @@ export async function execute(interaction: CommandInteraction) {
 
         // Envoyer un message privé à l'utilisateur averti
         try {
-            const dmEmbed = new EmbedBuilder()
-                .setColor('#ffaa00')
+            const dmEmbed = createKeplerEmbed()
+                .setColor(KEPLER_COLORS.warning)
                 .setTitle('⚠️ Vous avez reçu un avertissement')
                 .addFields(
                     { name: '📋 Sanction N°', value: `#${sanctionNumber}`, inline: true },

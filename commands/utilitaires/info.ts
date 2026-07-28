@@ -1,4 +1,5 @@
-import { type CommandInteraction, SlashCommandBuilder, EmbedBuilder, ChannelType } from 'discord.js';
+import { createKeplerEmbed, KEPLER_COLORS, KEPLER_MESSAGES } from '../../utils/theme.ts';
+import { type CommandInteraction, SlashCommandBuilder, ChannelType } from 'discord.js';
 
 export const data = new SlashCommandBuilder()
     .setName('info')
@@ -62,7 +63,7 @@ export async function execute(interaction: CommandInteraction) {
 
 async function executeServerInfo(interaction: CommandInteraction) {
     if (!interaction.guild) {
-        await interaction.reply('Cette commande ne peut être utilisée que sur un serveur.');
+        await interaction.reply(KEPLER_MESSAGES.guildOnly);
         return;
     }
 
@@ -75,12 +76,12 @@ async function executeServerInfo(interaction: CommandInteraction) {
     const boostLevel = guild.premiumTier;
     const boostCount = guild.premiumSubscriptionCount || 0;
 
-    const embed = new EmbedBuilder()
-        .setAuthor({ 
-            name: interaction.client.user?.username || 'Bot', 
-            iconURL: interaction.client.user?.displayAvatarURL({ forceStatic: false }) 
+    const embed = createKeplerEmbed()
+        .setAuthor({
+            name: interaction.client.user?.username || 'Bot',
+            iconURL: interaction.client.user?.displayAvatarURL({ forceStatic: false })
         })
-        .setColor('#0099ff')
+        .setColor(KEPLER_COLORS.primary)
         .setTitle(`Informations sur ${guild.name}`)
         .setThumbnail(guild.iconURL({ forceStatic: false }))
         .addFields(
@@ -105,16 +106,16 @@ async function executeServerInfo(interaction: CommandInteraction) {
 
 async function executeUserInfo(interaction: CommandInteraction) {
     if (!interaction.isChatInputCommand()) return;
-    
+
     const targetUser = interaction.options.getUser('utilisateur') || interaction.user;
     const member = interaction.guild?.members.cache.get(targetUser.id);
 
-    const embed = new EmbedBuilder()
-        .setAuthor({ 
-            name: interaction.client.user?.username || 'Bot', 
-            iconURL: interaction.client.user?.displayAvatarURL({ forceStatic: false }) 
+    const embed = createKeplerEmbed()
+        .setAuthor({
+            name: interaction.client.user?.username || 'Bot',
+            iconURL: interaction.client.user?.displayAvatarURL({ forceStatic: false })
         })
-        .setColor('#0099ff')
+        .setColor(KEPLER_COLORS.primary)
         .setTitle(`Informations sur ${targetUser.username}`)
         .setThumbnail(targetUser.displayAvatarURL({ forceStatic: false }))
         .addFields(
@@ -136,7 +137,7 @@ async function executeUserInfo(interaction: CommandInteraction) {
 
 async function executeChannelInfo(interaction: CommandInteraction) {
     if (!interaction.isChatInputCommand()) return;
-    
+
     const targetChannel = interaction.options.getChannel('canal') || interaction.channel;
 
     if (!targetChannel) {
@@ -144,12 +145,12 @@ async function executeChannelInfo(interaction: CommandInteraction) {
         return;
     }
 
-    const embed = new EmbedBuilder()
-        .setAuthor({ 
-            name: interaction.client.user?.username || 'Bot', 
-            iconURL: interaction.client.user?.displayAvatarURL({ forceStatic: false }) 
+    const embed = createKeplerEmbed()
+        .setAuthor({
+            name: interaction.client.user?.username || 'Bot',
+            iconURL: interaction.client.user?.displayAvatarURL({ forceStatic: false })
         })
-        .setColor('#0099ff')
+        .setColor(KEPLER_COLORS.primary)
         .setTitle(`Informations sur ${targetChannel.name}`)
         .addFields(
             { name: '📺 Nom', value: targetChannel.name, inline: true },
@@ -169,7 +170,7 @@ async function executeChannelInfo(interaction: CommandInteraction) {
 
 async function executeRoleInfo(interaction: CommandInteraction) {
     if (!interaction.isChatInputCommand()) return;
-    
+
     const targetRole = interaction.options.getRole('role');
 
     if (!targetRole) {
@@ -177,12 +178,12 @@ async function executeRoleInfo(interaction: CommandInteraction) {
         return;
     }
 
-    const embed = new EmbedBuilder()
-        .setAuthor({ 
-            name: interaction.client.user?.username || 'Bot', 
-            iconURL: interaction.client.user?.displayAvatarURL({ forceStatic: false }) 
+    const embed = createKeplerEmbed()
+        .setAuthor({
+            name: interaction.client.user?.username || 'Bot',
+            iconURL: interaction.client.user?.displayAvatarURL({ forceStatic: false })
         })
-        .setColor(targetRole.color || '#0099ff')
+        .setColor(targetRole.color || KEPLER_COLORS.primary)
         .setTitle(`Informations sur ${targetRole.name}`)
         .addFields(
             { name: '🎭 Nom', value: targetRole.name, inline: true },
@@ -205,17 +206,17 @@ async function executeRoleInfo(interaction: CommandInteraction) {
 
 async function executeEmojiInfo(interaction: CommandInteraction) {
     if (!interaction.isChatInputCommand()) return;
-    
+
     const emojiInput = interaction.options.getString('emoji', true);
-    
+
     // Regex pour extraire l'ID d'un emoji custom Discord (<:name:id> ou <a:name:id>)
     const customEmojiRegex = /<a?:(\w+):(\d+)>/;
     const match = emojiInput.match(customEmojiRegex);
 
     if (!match) {
-        await interaction.reply({ 
-            content: 'Veuillez fournir un emoji personnalisé du serveur (ex: <:nom:123456789>).', 
-            ephemeral: true 
+        await interaction.reply({
+            content: 'Veuillez fournir un emoji personnalisé du serveur (ex: <:nom:123456789>).',
+            ephemeral: true
         });
         return;
     }
@@ -229,12 +230,12 @@ async function executeEmojiInfo(interaction: CommandInteraction) {
 
     if (!emoji) {
         // L'emoji n'est pas sur ce serveur, on affiche les infos disponibles
-        const embed = new EmbedBuilder()
-            .setAuthor({ 
-                name: interaction.client.user?.username || 'Bot', 
-                iconURL: interaction.client.user?.displayAvatarURL({ forceStatic: false }) 
+        const embed = createKeplerEmbed()
+            .setAuthor({
+                name: interaction.client.user?.username || 'Bot',
+                iconURL: interaction.client.user?.displayAvatarURL({ forceStatic: false })
             })
-            .setColor('#0099ff')
+            .setColor(KEPLER_COLORS.primary)
             .setTitle(`Informations sur :${emojiName}:`)
             .setThumbnail(`https://cdn.discordapp.com/emojis/${emojiId}.${isAnimated ? 'gif' : 'png'}`)
             .addFields(
@@ -255,12 +256,12 @@ async function executeEmojiInfo(interaction: CommandInteraction) {
     }
 
     // Emoji trouvé sur le serveur
-    const embed = new EmbedBuilder()
-        .setAuthor({ 
-            name: interaction.client.user?.username || 'Bot', 
-            iconURL: interaction.client.user?.displayAvatarURL({ forceStatic: false }) 
+    const embed = createKeplerEmbed()
+        .setAuthor({
+            name: interaction.client.user?.username || 'Bot',
+            iconURL: interaction.client.user?.displayAvatarURL({ forceStatic: false })
         })
-        .setColor('#0099ff')
+        .setColor(KEPLER_COLORS.primary)
         .setTitle(`Informations sur :${emoji.name}:`)
         .setThumbnail(emoji.url)
         .addFields(

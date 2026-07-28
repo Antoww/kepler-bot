@@ -71,6 +71,18 @@ Fonctions métier pour toutes les tables du bot.
 
 ---
 
+## 🧱 Migrations
+
+Avant d’activer le système de tickets, exécuter dans l’éditeur SQL Supabase :
+
+```text
+database/migrations/20260728_add_ticket_settings.sql
+```
+
+Cette migration ajoute à `server_configs` le salon du panneau, le rôle support et la personnalisation du message/bouton.
+
+---
+
 ## 🔧 Configuration
 
 Variables d'environnement requises :

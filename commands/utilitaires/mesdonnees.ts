@@ -1,8 +1,8 @@
+import { createKeplerEmbed, KEPLER_COLORS } from '../../utils/theme.ts';
 import { Buffer } from 'node:buffer';
-import { 
-    type ChatInputCommandInteraction, 
-    SlashCommandBuilder, 
-    EmbedBuilder,
+import {
+    type ChatInputCommandInteraction,
+    SlashCommandBuilder,
     ActionRowBuilder,
     ButtonBuilder,
     ButtonStyle,
@@ -65,21 +65,21 @@ async function handleViewData(interaction: ChatInputCommandInteraction) {
         const summary = await getCompleteUserDataSummary(interaction.user.id);
         const report = generatePrivacyReport(summary);
 
-        const embed = new EmbedBuilder()
-            .setColor('#3498db')
+        const embed = createKeplerEmbed()
+            .setColor(KEPLER_COLORS.primary)
             .setTitle('🔐 Vos données personnelles')
             .setDescription(report)
             .addFields(
                 {
                     name: '📅 Période d\'activité',
-                    value: summary.firstActivity 
+                    value: summary.firstActivity
                         ? `Du **${new Date(summary.firstActivity).toLocaleDateString('fr-FR')}** au **${new Date(summary.lastActivity!).toLocaleDateString('fr-FR')}**`
                         : 'Aucune activité enregistrée',
                     inline: true
                 },
                 {
                     name: '🏠 Serveurs',
-                    value: summary.guilds.length > 0 
+                    value: summary.guilds.length > 0
                         ? `Données sur **${summary.guilds.length}** serveur(s)`
                         : 'Aucun serveur',
                     inline: true
@@ -112,7 +112,7 @@ async function handleExportData(interaction: ChatInputCommandInteraction) {
         const jsonString = JSON.stringify(exportData, null, 2);
 
         // Calculer les totaux
-        const totalItems = 
+        const totalItems =
             exportData.stats.commands.length +
             exportData.stats.messages.length +
             exportData.personal.birthdays.length +
@@ -122,8 +122,8 @@ async function handleExportData(interaction: ChatInputCommandInteraction) {
             exportData.participations.giveaways.length;
 
         if (totalItems === 0) {
-            const embed = new EmbedBuilder()
-                .setColor('#f39c12')
+            const embed = createKeplerEmbed()
+                .setColor(KEPLER_COLORS.warning)
                 .setTitle('📦 Export de vos données')
                 .setDescription('✨ Aucune donnée à exporter. Nous n\'avons pas de données vous concernant.')
                 .setTimestamp();
@@ -132,25 +132,25 @@ async function handleExportData(interaction: ChatInputCommandInteraction) {
             return;
         }
 
-        const embed = new EmbedBuilder()
-            .setColor('#2ecc71')
+        const embed = createKeplerEmbed()
+            .setColor(KEPLER_COLORS.success)
             .setTitle('📦 Export de vos données')
             .setDescription('Voici l\'export complet de vos données au format JSON.')
             .addFields(
-                { 
-                    name: '📊 Statistiques', 
-                    value: `${exportData.stats.commands.length} commandes\n${exportData.stats.messages.length} entrées messages`, 
-                    inline: true 
+                {
+                    name: '📊 Statistiques',
+                    value: `${exportData.stats.commands.length} commandes\n${exportData.stats.messages.length} entrées messages`,
+                    inline: true
                 },
-                { 
-                    name: '🎂 Personnel', 
-                    value: `${exportData.personal.birthdays.length} anniversaires\n${exportData.personal.reminders.length} rappels`, 
-                    inline: true 
+                {
+                    name: '🎂 Personnel',
+                    value: `${exportData.personal.birthdays.length} anniversaires\n${exportData.personal.reminders.length} rappels`,
+                    inline: true
                 },
-                { 
-                    name: '⚖️ Modération', 
-                    value: `${exportData.moderation.warnings.length} warnings\n${exportData.moderation.history.length} entrées historique`, 
-                    inline: true 
+                {
+                    name: '⚖️ Modération',
+                    value: `${exportData.moderation.warnings.length} warnings\n${exportData.moderation.history.length} entrées historique`,
+                    inline: true
                 },
                 { name: '📅 Date d\'export', value: new Date().toLocaleDateString('fr-FR'), inline: true }
             )
@@ -158,7 +158,7 @@ async function handleExportData(interaction: ChatInputCommandInteraction) {
             .setTimestamp();
 
         const buffer = Buffer.from(jsonString, 'utf-8');
-        
+
         await interaction.editReply({
             embeds: [embed],
             files: [{
@@ -204,8 +204,8 @@ async function handleDeleteData(interaction: ChatInputCommandInteraction) {
     if (summary.activeTempBans > 0) kept.push(`• ${summary.activeTempBans} ban(s) temporaire(s)`);
     if (summary.activeTempMutes > 0) kept.push(`• ${summary.activeTempMutes} mute(s) temporaire(s)`);
 
-    const embed = new EmbedBuilder()
-        .setColor('#e74c3c')
+    const embed = createKeplerEmbed()
+        .setColor(KEPLER_COLORS.danger)
         .setTitle('⚠️ Suppression de vos données')
         .setDescription([
             '**Êtes-vous sûr de vouloir supprimer vos données ?**',
@@ -218,8 +218,8 @@ async function handleDeleteData(interaction: ChatInputCommandInteraction) {
         .setTimestamp();
 
     if (toDelete.length === 0) {
-        embed.setColor('#95a5a6');
-        embed.setDescription('✨ Vous n\'avez aucune donnée supprimable.\n\n' + 
+        embed.setColor(KEPLER_COLORS.neutral);
+        embed.setDescription('✨ Vous n\'avez aucune donnée supprimable.\n\n' +
             (kept.length > 0 ? `**Données de modération conservées :**\n${kept.join('\n')}` : ''));
         await interaction.reply({ embeds: [embed], ephemeral: true });
         return;
@@ -243,15 +243,15 @@ async function handleDeleteData(interaction: ChatInputCommandInteraction) {
 
             const result = await deleteVoluntaryUserData(interaction.user.id);
 
-            const totalDeleted = 
-                result.commandsDeleted + 
-                result.messagesDeleted + 
-                result.birthdaysDeleted + 
+            const totalDeleted =
+                result.commandsDeleted +
+                result.messagesDeleted +
+                result.birthdaysDeleted +
                 result.remindersDeleted +
                 result.giveawayParticipationsDeleted;
 
-            const successEmbed = new EmbedBuilder()
-                .setColor('#2ecc71')
+            const successEmbed = createKeplerEmbed()
+                .setColor(KEPLER_COLORS.success)
                 .setTitle('✅ Données supprimées')
                 .setDescription([
                     `**${totalDeleted} entrée(s) supprimée(s) avec succès.**`,
@@ -268,8 +268,8 @@ async function handleDeleteData(interaction: ChatInputCommandInteraction) {
 
             await confirmation.editReply({ embeds: [successEmbed], components: [] });
         } else {
-            const cancelEmbed = new EmbedBuilder()
-                .setColor('#95a5a6')
+            const cancelEmbed = createKeplerEmbed()
+                .setColor(KEPLER_COLORS.neutral)
                 .setTitle('❌ Suppression annulée')
                 .setDescription('Vos données n\'ont pas été modifiées.')
                 .setTimestamp();
@@ -277,8 +277,8 @@ async function handleDeleteData(interaction: ChatInputCommandInteraction) {
             await confirmation.update({ embeds: [cancelEmbed], components: [] });
         }
     } catch {
-        const timeoutEmbed = new EmbedBuilder()
-            .setColor('#95a5a6')
+        const timeoutEmbed = createKeplerEmbed()
+            .setColor(KEPLER_COLORS.neutral)
             .setTitle('⏰ Temps écoulé')
             .setDescription('La demande de suppression a expiré. Vos données n\'ont pas été modifiées.')
             .setTimestamp();
@@ -288,8 +288,8 @@ async function handleDeleteData(interaction: ChatInputCommandInteraction) {
 }
 
 async function handleInfo(interaction: ChatInputCommandInteraction) {
-    const embed = new EmbedBuilder()
-        .setColor('#9b59b6')
+    const embed = createKeplerEmbed()
+        .setColor(KEPLER_COLORS.accent)
         .setTitle('🔐 Politique de confidentialité')
         .setDescription('Informations sur la collecte et le traitement de vos données conformément au RGPD.')
         .addFields(

@@ -1,102 +1,113 @@
-import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
+import { createKeplerEmbed, KEPLER_COLORS, KEPLER_MESSAGES } from '../../utils/theme.ts';
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle, type ChatInputCommandInteraction, ModalBuilder, SlashCommandBuilder, TextInputBuilder, TextInputStyle, type User } from 'discord.js';
 import axios from 'axios';
 import { config } from 'dotenv';
+import { logger } from '../../utils/logger.ts';
 
 config();
 
-export const data = new SlashCommandBuilder()
-	.setName('gamestats')
-	.setDescription('Affiche les statistiques de jeux vidéo')
-	.addSubcommand(subcommand =>
-		subcommand
-			.setName('chess')
-			.setDescription('Affiche les stats Chess.com d\'un joueur')
-			.addStringOption(option =>
-				option
-					.setName('username')
-					.setDescription('Nom d\'utilisateur Chess.com')
-					.setRequired(true)
-			)
-	)
-	.addSubcommand(subcommand =>
-		subcommand
-			.setName('lichess')
-			.setDescription('Affiche les stats Lichess d\'un joueur')
-			.addStringOption(option =>
-				option
-					.setName('username')
-					.setDescription('Nom d\'utilisateur Lichess')
-					.setRequired(true)
-			)
-	)
-	.addSubcommand(subcommand =>
-		subcommand
-			.setName('minecraft')
-			.setDescription('Affiche les infos d\'un joueur Minecraft')
-			.addStringOption(option =>
-				option
-					.setName('username')
-					.setDescription('Pseudo Minecraft')
-					.setRequired(true)
-			)
-	)
-	.addSubcommand(subcommand =>
-		subcommand
-			.setName('dota2')
-			.setDescription('Affiche les stats Dota 2 d\'un joueur')
-			.addStringOption(option =>
-				option
-					.setName('joueur')
-					.setDescription('ID numérique ou pseudo du joueur Dota 2')
-					.setRequired(true)
-			)
-	)
-	.addSubcommand(subcommand =>
-		subcommand
-			.setName('osu')
-			.setDescription('Affiche les stats Osu! d\'un joueur')
-			.addStringOption(option =>
-				option
-					.setName('username')
-					.setDescription('Pseudo Osu!')
-					.setRequired(true)
-			)
-			.addStringOption(option =>
-				option
-					.setName('mode')
-					.setDescription('Mode de jeu')
-					.setRequired(false)
-					.addChoices(
-						{ name: 'osu! (standard)', value: '0' },
-						{ name: 'Taiko', value: '1' },
-						{ name: 'Catch', value: '2' },
-						{ name: 'Mania', value: '3' }
-					)
-			)
-	);
+type GameKey = 'chess' | 'lichess' | 'minecraft' | 'dota2' | 'osu';
+const PANEL_TIMEOUT = 5 * 60 * 1000;
+const GAME_LABELS: Record<GameKey, string> = { chess: 'Chess.com', lichess: 'Lichess', minecraft: 'Minecraft', dota2: 'Dota 2', osu: 'osu!' };
 
-export async function execute(interaction: any) {
-	const subcommand = interaction.options.getSubcommand();
+export const data = new SlashCommandBuilder().setName('gamestats').setDescription('Ouvre le panneau de statistiques de jeux');
 
-	try {
-		if (subcommand === 'chess') {
-			return await getChessStats(interaction);
-		} else if (subcommand === 'lichess') {
-			return await getLichessStats(interaction);
-		} else if (subcommand === 'minecraft') {
-			return await getMinecraftStats(interaction);
-		} else if (subcommand === 'dota2') {
-			return await getDota2Stats(interaction);
-		} else if (subcommand === 'osu') {
-			return await getOsuStats(interaction);
+export async function execute(interaction: ChatInputCommandInteraction) {
+	const response = await interaction.reply({ ...buildHome(interaction.user), ephemeral: true, fetchReply: true });
+	const collector = response.createMessageComponentCollector({ time: PANEL_TIMEOUT });
+	collector.on('collect', async component => {
+		if (component.user.id !== interaction.user.id) {
+			await component.reply({ content: KEPLER_MESSAGES.unauthorizedComponent, ephemeral: true });
+			return;
 		}
-	} catch (error) {
-		console.error('[STATS] Erreur:', error);
-		return interaction.reply({
-			content: '❌ Une erreur est survenue lors de la récupération des stats.',
-			ephemeral: true
-		});
+		if (component.customId === 'gamestats:home') {
+			await component.update(buildHome(interaction.user));
+			return;
+		}
+		if (component.customId === 'gamestats:close') {
+			await component.update({ content: 'Panneau des statistiques fermé.', embeds: [], components: [] });
+			return;
+		}
+		if (!component.isButton() || !component.customId.startsWith('gamestats:game:')) return;
+		const game = component.customId.split(':')[2] as GameKey;
+		try {
+			await component.showModal(buildLookupModal(game));
+			const modal = await component.awaitModalSubmit({
+				filter: submission => submission.user.id === interaction.user.id && submission.customId === `gamestats:lookup:${game}`,
+				time: 2 * 60 * 1000
+			});
+			await modal.deferUpdate();
+			const query = modal.fields.getTextInputValue('player').trim();
+			const mode = game === 'osu' ? normalizeOsuMode(modal.fields.getTextInputValue('mode')) : undefined;
+			await modal.editReply({
+				content: '',
+				embeds: [createKeplerEmbed('neutral')
+					.setTitle(`Recherche ${GAME_LABELS[game]}`)
+					.setDescription(`⏳ Récupération des statistiques de **${query}**…`)],
+				components: []
+			});
+			await runLookup(game, query, mode, interaction.user, payload => modal.editReply(resultPayload(payload)));
+		} catch (error: any) {
+			if (error?.code === 'InteractionCollectorError') return;
+			logger.error(`Erreur gamestats ${game}`, error, 'GameStatsPanel');
+			await interaction.editReply(resultPayload({ content: KEPLER_MESSAGES.unexpectedError }));
+		}
+	});
+	collector.on('end', async () => {
+		try { await interaction.editReply({ components: [] }); } catch { /* Le panneau peut déjà être fermé. */ }
+	});
+}
+
+function buildHome(user: User) {
+	const embed = createKeplerEmbed('accent').setTitle('🎮 Statistiques de jeux')
+		.setDescription('Choisissez un jeu, puis saisissez le nom du joueur à rechercher.')
+		.addFields({ name: '♟️ Échecs', value: 'Chess.com et Lichess', inline: true }, { name: '🕹️ Jeux', value: 'Minecraft, Dota 2 et osu!', inline: true })
+		.setFooter({ text: `Panneau privé • ${user.username} • expiration dans 5 minutes` });
+	const games = new ActionRowBuilder<ButtonBuilder>().addComponents(
+		gameButton('chess', '♟️'), gameButton('lichess', '♟️'), gameButton('minecraft', '⛏️'), gameButton('dota2', '🛡️'), gameButton('osu', '🎵')
+	);
+	const controls = new ActionRowBuilder<ButtonBuilder>().addComponents(
+		new ButtonBuilder().setCustomId('gamestats:home').setEmoji('🔄').setStyle(ButtonStyle.Secondary),
+		new ButtonBuilder().setCustomId('gamestats:close').setEmoji('✖️').setStyle(ButtonStyle.Secondary)
+	);
+	return { content: '', embeds: [embed], components: [games, controls] };
+}
+
+function gameButton(game: GameKey, emoji: string): ButtonBuilder {
+	return new ButtonBuilder().setCustomId(`gamestats:game:${game}`).setLabel(GAME_LABELS[game]).setEmoji(emoji).setStyle(ButtonStyle.Secondary);
+}
+
+function buildLookupModal(game: GameKey): ModalBuilder {
+	const player = new TextInputBuilder().setCustomId('player').setStyle(TextInputStyle.Short)
+		.setLabel(game === 'dota2' ? 'Pseudo ou ID numérique' : 'Nom du joueur')
+		.setPlaceholder(`Joueur ${GAME_LABELS[game]}`).setRequired(true).setMaxLength(100);
+	const modal = new ModalBuilder().setCustomId(`gamestats:lookup:${game}`).setTitle(`Recherche ${GAME_LABELS[game]}`)
+		.addComponents(new ActionRowBuilder<TextInputBuilder>().addComponents(player));
+	if (game === 'osu') {
+		const mode = new TextInputBuilder().setCustomId('mode').setStyle(TextInputStyle.Short).setLabel('Mode de jeu')
+			.setPlaceholder('standard, taiko, catch ou mania').setRequired(false).setMaxLength(10);
+		modal.addComponents(new ActionRowBuilder<TextInputBuilder>().addComponents(mode));
 	}
+	return modal;
+}
+
+async function runLookup(game: GameKey, query: string, mode: string | undefined, user: User, editReply: (payload: any) => Promise<unknown>) {
+	const adapter = { user, options: { getString: (name: string) => name === 'mode' ? mode : query }, deferReply: async () => undefined, editReply };
+	if (game === 'chess') return getChessStats(adapter);
+	if (game === 'lichess') return getLichessStats(adapter);
+	if (game === 'minecraft') return getMinecraftStats(adapter);
+	if (game === 'dota2') return getDota2Stats(adapter);
+	return getOsuStats(adapter);
+}
+
+function resultPayload(payload: any) {
+	return { content: payload.content ?? '', embeds: payload.embeds ?? [], components: [new ActionRowBuilder<ButtonBuilder>().addComponents(
+		new ButtonBuilder().setCustomId('gamestats:home').setLabel('Retour').setEmoji('↩️').setStyle(ButtonStyle.Secondary)
+	)] };
+}
+
+function normalizeOsuMode(input: string): string {
+	return ({ '': '0', '0': '0', standard: '0', osu: '0', '1': '1', taiko: '1', '2': '2', catch: '2', '3': '3', mania: '3' } as Record<string, string>)[input.trim().toLowerCase()] ?? '0';
 }
 
 async function getChessStats(interaction: any) {
@@ -119,8 +130,8 @@ async function getChessStats(interaction: any) {
 
 		const stats = statsResponse.data;
 
-		const embed = new EmbedBuilder()
-			.setColor('#8b4513')
+		const embed = createKeplerEmbed()
+			.setColor(KEPLER_COLORS.neutral)
 			.setTitle(`♟️ Stats Chess.com - ${player.username}`)
 			.setThumbnail(player.avatar || null)
 			.addFields(
@@ -186,8 +197,8 @@ async function getLichessStats(interaction: any) {
 
 		const player = response.data;
 
-		const embed = new EmbedBuilder()
-			.setColor('#3a7c4f')
+		const embed = createKeplerEmbed()
+			.setColor(KEPLER_COLORS.success)
 			.setTitle(`♟️ Stats Lichess - ${player.username}`)
 			.setThumbnail(player.title ? `https://lichess.org/assets/${player.title}.png` : null)
 			.addFields(
@@ -264,8 +275,8 @@ async function getFortniteStats(interaction: any) {
 
 		const stats = response.data.result;
 
-		const embed = new EmbedBuilder()
-			.setColor('#7c3aff')
+		const embed = createKeplerEmbed()
+			.setColor(KEPLER_COLORS.accent)
 			.setTitle(`🎮 Stats Fortnite - ${username}`)
 			.setThumbnail(stats.battlePass?.level ? 'https://fortnite-api.com/images/cosmetics/br/v1/avatar.png' : null)
 			.addFields(
@@ -332,8 +343,8 @@ async function getCoCStats(interaction: any) {
 
 		const clan = response.data;
 
-		const embed = new EmbedBuilder()
-			.setColor('#c65d00')
+		const embed = createKeplerEmbed()
+			.setColor(KEPLER_COLORS.warning)
 			.setTitle(`🛡️ Stats Clash of Clans - ${clan.name}`)
 			.setThumbnail(clan.badgeUrls?.large || null)
 			.addFields(
@@ -391,8 +402,8 @@ async function getMinecraftStats(interaction: any) {
 		const profile = profileResponse.data;
 		const skinUrl = `https://visage.surgeplay.com/face/256/${uuid}`;
 
-		const embed = new EmbedBuilder()
-			.setColor('#00aa00')
+		const embed = createKeplerEmbed()
+			.setColor(KEPLER_COLORS.success)
 			.setTitle(`⛏️ Profil Minecraft - ${profile.name}`)
 			.setThumbnail(skinUrl)
 			.addFields(
@@ -485,8 +496,8 @@ async function getDota2Stats(interaction: any) {
 		const totalGames = (winLoss.win || 0) + (winLoss.lose || 0);
 		const winRate = totalGames > 0 ? ((winLoss.win / totalGames) * 100).toFixed(1) : '0';
 
-		const embed = new EmbedBuilder()
-			.setColor('#b5302b')
+		const embed = createKeplerEmbed()
+			.setColor(KEPLER_COLORS.danger)
 			.setTitle(`🎮 Stats Dota 2 - ${player.personaname || 'Anonyme'}`)
 			.setThumbnail(player.avatarfull || null)
 			.addFields(
@@ -511,13 +522,13 @@ async function getDota2Stats(interaction: any) {
 		return interaction.editReply({ embeds: [embed] });
 	} catch (error: any) {
 		console.error(`[STATS] Erreur Dota 2:`, error.message);
-		
+
 		if (error.response?.status === 404) {
 			return interaction.editReply({
 				content: `❌ Joueur \`${input}\` introuvable sur Dota 2`
 			});
 		}
-		
+
 		return interaction.editReply({
 			content: `❌ Erreur lors de la récupération des stats Dota 2`
 		});
@@ -553,8 +564,8 @@ async function getOsuStats(interaction: any) {
 
 		const user = response.data;
 
-		const embed = new EmbedBuilder()
-			.setColor('#ff66aa')
+		const embed = createKeplerEmbed()
+			.setColor(KEPLER_COLORS.highlight)
 			.setTitle(`🎵 Stats Osu! - ${user.username} (${modeNames[mode]})`)
 			.setThumbnail(user.avatar_url || null)
 			.addFields(

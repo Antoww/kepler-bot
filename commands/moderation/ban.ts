@@ -1,4 +1,5 @@
-import { type CommandInteraction, SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits, GuildMember, User } from 'discord.js';
+import { createKeplerEmbed, KEPLER_COLORS, KEPLER_MESSAGES } from '../../utils/theme.ts';
+import { type CommandInteraction, SlashCommandBuilder, PermissionFlagsBits, GuildMember, User } from 'discord.js';
 import { logModeration } from '../../utils/moderationLogger.ts';
 import { createTempBan, addModerationHistory } from '../../database/db.ts';
 
@@ -23,7 +24,7 @@ export const data = new SlashCommandBuilder()
 
 export async function execute(interaction: CommandInteraction) {
     if (!interaction.guild) {
-        await interaction.reply('Cette commande ne peut être utilisée que sur un serveur.');
+        await interaction.reply(KEPLER_MESSAGES.guildOnly);
         return;
     }
 
@@ -33,7 +34,7 @@ export async function execute(interaction: CommandInteraction) {
     const deleteMessageDays = interaction.options.getInteger('suppression_messages') || 0;
 
     if (!target) {
-        await interaction.reply('Utilisateur invalide.');
+        await interaction.reply(KEPLER_MESSAGES.invalidUser);
         return;
     }
 
@@ -80,8 +81,8 @@ export async function execute(interaction: CommandInteraction) {
         // Essayer d'envoyer un MP à l'utilisateur
         let dmSent = false;
         try {
-            const dmEmbed = new EmbedBuilder()
-                .setColor('#ff0000')
+            const dmEmbed = createKeplerEmbed()
+                .setColor(KEPLER_COLORS.danger)
                 .setTitle('🔨 Vous avez été banni')
                 .setDescription(`Vous avez été banni du serveur **${interaction.guild.name}**`)
                 .addFields(
@@ -105,17 +106,17 @@ export async function execute(interaction: CommandInteraction) {
 
         // Ajouter à l'historique de modération
         const sanctionNumber = await addModerationHistory(
-            interaction.guild.id, 
-            target.id, 
-            interaction.user.id, 
-            banDuration ? 'tempban' : 'ban', 
-            reason, 
+            interaction.guild.id,
+            target.id,
+            interaction.user.id,
+            banDuration ? 'tempban' : 'ban',
+            reason,
             durationText === 'Permanent' ? undefined : durationText
         );
 
         // Créer l'embed de confirmation
-        const embed = new EmbedBuilder()
-            .setColor('#ff0000')
+        const embed = createKeplerEmbed()
+            .setColor(KEPLER_COLORS.danger)
             .setTitle('🔨 Utilisateur banni')
             .addFields(
                 { name: '📋 Sanction N°', value: `#${sanctionNumber}`, inline: true },
@@ -132,10 +133,10 @@ export async function execute(interaction: CommandInteraction) {
         }
 
         // Indiquer si le MP a été envoyé
-        embed.addFields({ 
-            name: '💬 Message privé', 
-            value: dmSent ? '✅ Envoyé' : '❌ Non envoyé', 
-            inline: true 
+        embed.addFields({
+            name: '💬 Message privé',
+            value: dmSent ? '✅ Envoyé' : '❌ Non envoyé',
+            inline: true
         });
 
         await interaction.reply({ embeds: [embed] });
@@ -152,14 +153,14 @@ export async function execute(interaction: CommandInteraction) {
 function parseDuration(duration: string): Date | null {
     const regex = /^(\d+)([smhdw])$/;
     const match = duration.toLowerCase().match(regex);
-    
+
     if (!match) return null;
-    
+
     const value = parseInt(match[1]);
     const unit = match[2];
-    
+
     const now = new Date();
-    
+
     switch (unit) {
         case 's': // secondes
             return new Date(now.getTime() + value * 1000);

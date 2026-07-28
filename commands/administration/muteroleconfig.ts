@@ -1,4 +1,5 @@
-import { CommandInteraction, SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits, Role } from 'discord.js';
+import { createKeplerEmbed, KEPLER_COLORS, KEPLER_MESSAGES } from '../../utils/theme.ts';
+import { CommandInteraction, SlashCommandBuilder, PermissionFlagsBits, Role } from 'discord.js';
 import { updateMuteRole } from '../../database/db.ts';
 
 export const data = new SlashCommandBuilder()
@@ -26,7 +27,7 @@ export const data = new SlashCommandBuilder()
 
 export async function execute(interaction: CommandInteraction) {
     if (!interaction.guild) {
-        await interaction.reply('Cette commande ne peut être utilisée que sur un serveur.');
+        await interaction.reply(KEPLER_MESSAGES.guildOnly);
         return;
     }
 
@@ -36,11 +37,11 @@ export async function execute(interaction: CommandInteraction) {
         switch (subcommand) {
             case 'set': {
                 await interaction.deferReply();
-                
+
                 const role = interaction.options.getRole('role') as Role;
-                
+
                 if (!role) {
-                    await interaction.editReply('Rôle invalide.');
+                    await interaction.editReply(KEPLER_MESSAGES.invalidRole);
                     return;
                 }
 
@@ -60,12 +61,12 @@ export async function execute(interaction: CommandInteraction) {
                 // Sauvegarder la configuration
                 await updateMuteRole(interaction.guild.id, role.id);
 
-                const embed = new EmbedBuilder()
-                    .setAuthor({ 
-                        name: interaction.client.user?.username, 
-                        iconURL: interaction.client.user?.displayAvatarURL({ forceStatic: false }) 
+                const embed = createKeplerEmbed()
+                    .setAuthor({
+                        name: interaction.client.user?.username,
+                        iconURL: interaction.client.user?.displayAvatarURL({ forceStatic: false })
                     })
-                    .setColor('#ff9900')
+                    .setColor(KEPLER_COLORS.warning)
                     .setTitle('🔇 Rôle de mute configuré')
                     .setDescription(`Le rôle ${role} sera maintenant utilisé pour les mutes`)
                     .addFields(
@@ -85,7 +86,7 @@ export async function execute(interaction: CommandInteraction) {
 
             case 'create': {
                 await interaction.deferReply();
-                
+
                 const roleName = interaction.options.getString('nom') || 'Muted';
 
                 // Créer le rôle de mute
@@ -125,12 +126,12 @@ export async function execute(interaction: CommandInteraction) {
                 // Sauvegarder la configuration
                 await updateMuteRole(interaction.guild.id, muteRole.id);
 
-                const embed = new EmbedBuilder()
-                    .setAuthor({ 
-                        name: interaction.client.user?.username, 
-                        iconURL: interaction.client.user?.displayAvatarURL({ forceStatic: false }) 
+                const embed = createKeplerEmbed()
+                    .setAuthor({
+                        name: interaction.client.user?.username,
+                        iconURL: interaction.client.user?.displayAvatarURL({ forceStatic: false })
                     })
-                    .setColor('#00ff00')
+                    .setColor(KEPLER_COLORS.success)
                     .setTitle('✅ Rôle de mute créé et configuré')
                     .setDescription(`Le rôle ${muteRole} a été créé et configuré pour tous les canaux`)
                     .addFields(
@@ -158,16 +159,16 @@ export async function execute(interaction: CommandInteraction) {
 
             case 'disable': {
                 await interaction.deferReply();
-                
+
                 // Supprimer la configuration du rôle de mute
                 await updateMuteRole(interaction.guild.id, '');
 
-                const embed = new EmbedBuilder()
-                    .setAuthor({ 
-                        name: interaction.client.user?.username, 
-                        iconURL: interaction.client.user?.displayAvatarURL({ forceStatic: false }) 
+                const embed = createKeplerEmbed()
+                    .setAuthor({
+                        name: interaction.client.user?.username,
+                        iconURL: interaction.client.user?.displayAvatarURL({ forceStatic: false })
                     })
-                    .setColor('#ffaa00')
+                    .setColor(KEPLER_COLORS.warning)
                     .setTitle('🔄 Rôle de mute désactivé')
                     .setDescription('Le système utilisera maintenant le timeout Discord natif pour les mutes')
                     .addFields({
@@ -187,7 +188,7 @@ export async function execute(interaction: CommandInteraction) {
         }
     } catch (error) {
         console.error('Erreur lors de la configuration du rôle de mute:', error);
-        
+
         // Vérifier si on peut encore répondre
         if (interaction.deferred || interaction.replied) {
             await interaction.editReply('❌ Une erreur est survenue lors de la configuration du rôle de mute.');

@@ -1,4 +1,5 @@
-import { EmbedBuilder, Guild, User, TextChannel } from 'discord.js';
+import { createKeplerEmbed, KEPLER_COLORS } from './theme.ts';
+import { Guild, User, TextChannel } from 'discord.js';
 import { getModerationChannel } from '../database/db.ts';
 import { logger } from './logger.ts';
 
@@ -12,21 +13,21 @@ export async function logModeration(
 ) {
     try {
         const moderationChannelId = await getModerationChannel(guild.id);
-        
+
         if (!moderationChannelId) {
             return;
         }
 
         const channel = guild.channels.cache.get(moderationChannelId) as TextChannel;
-        
+
         if (!channel) {
             return;
         }
 
-        const embed = new EmbedBuilder()
-            .setAuthor({ 
-                name: `Action de modération: ${action}`, 
-                iconURL: guild.iconURL() || undefined 
+        const embed = createKeplerEmbed()
+            .setAuthor({
+                name: `Action de modération: ${action}`,
+                iconURL: guild.iconURL() || undefined
             })
             .setColor(getActionColor(action))
             .addFields(
@@ -51,16 +52,16 @@ function getActionColor(action: string): number {
     switch (action.toLowerCase()) {
         case 'ban':
         case 'tempban':
-            return 0xff0000; // Rouge
+            return KEPLER_COLORS.danger;
         case 'kick':
-            return 0xff9900; // Orange
+            return KEPLER_COLORS.warning;
         case 'mute':
         case 'tempmute':
-            return 0xffff00; // Jaune
+            return KEPLER_COLORS.warning;
         case 'unban':
         case 'unmute':
-            return 0x00ff00; // Vert
+            return KEPLER_COLORS.success;
         default:
-            return 0x0099ff; // Bleu
+            return KEPLER_COLORS.primary;
     }
 }

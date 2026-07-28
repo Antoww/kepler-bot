@@ -1,4 +1,5 @@
-import { type CommandInteraction, SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits, GuildMember } from 'discord.js';
+import { createKeplerEmbed, KEPLER_COLORS, KEPLER_MESSAGES } from '../../utils/theme.ts';
+import { type CommandInteraction, SlashCommandBuilder, PermissionFlagsBits, GuildMember } from 'discord.js';
 import { logModeration } from '../../utils/moderationLogger.ts';
 import { addModerationHistory } from '../../database/db.ts';
 
@@ -18,7 +19,7 @@ export const data = new SlashCommandBuilder()
 
 export async function execute(interaction: CommandInteraction) {
     if (!interaction.guild) {
-        await interaction.reply('Cette commande ne peut être utilisée que sur un serveur.');
+        await interaction.reply(KEPLER_MESSAGES.guildOnly);
         return;
     }
 
@@ -97,8 +98,8 @@ export async function execute(interaction: CommandInteraction) {
         // Essayer d'envoyer un MP à l'utilisateur
         let dmSent = false;
         try {
-            const dmEmbed = new EmbedBuilder()
-                .setColor('#FFA500')
+            const dmEmbed = createKeplerEmbed()
+                .setColor(KEPLER_COLORS.warning)
                 .setTitle('⏱️ Vous avez été placé en timeout')
                 .setDescription(`Vous avez été placé en timeout sur le serveur **${interaction.guild.name}**`)
                 .addFields(
@@ -119,17 +120,17 @@ export async function execute(interaction: CommandInteraction) {
 
         // Ajouter à l'historique de modération
         const sanctionNumber = await addModerationHistory(
-            interaction.guild.id, 
-            target.id, 
-            interaction.user.id, 
-            'timeout', 
-            reason, 
+            interaction.guild.id,
+            target.id,
+            interaction.user.id,
+            'timeout',
+            reason,
             duration
         );
 
         // Créer l'embed de confirmation
-        const embed = new EmbedBuilder()
-            .setColor('#FFA500')
+        const embed = createKeplerEmbed()
+            .setColor(KEPLER_COLORS.warning)
             .setTitle('⏱️ Utilisateur placé en timeout')
             .addFields(
                 { name: '📋 Sanction N°', value: `#${sanctionNumber}`, inline: true },
@@ -148,11 +149,11 @@ export async function execute(interaction: CommandInteraction) {
 
         // Logger l'action
         await logModeration(
-            interaction.guild, 
-            'Timeout', 
-            target, 
-            interaction.user, 
-            reason, 
+            interaction.guild,
+            'Timeout',
+            target,
+            interaction.user,
+            reason,
             `Sanction #${sanctionNumber} - ${duration}`
         );
 
@@ -165,14 +166,14 @@ export async function execute(interaction: CommandInteraction) {
 function parseDuration(duration: string): Date | null {
     const regex = /^(\d+)([smhdw])$/;
     const match = duration.toLowerCase().match(regex);
-    
+
     if (!match) return null;
-    
+
     const value = parseInt(match[1]);
     const unit = match[2];
-    
+
     const now = new Date();
-    
+
     switch (unit) {
         case 's': // secondes
             return new Date(now.getTime() + value * 1000);

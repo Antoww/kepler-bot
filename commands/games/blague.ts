@@ -1,4 +1,5 @@
-import { type CommandInteraction, SlashCommandBuilder, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder, ComponentType } from 'discord.js';
+import { createKeplerEmbed, KEPLER_COLORS, KEPLER_MESSAGES } from '../../utils/theme.ts';
+import { type CommandInteraction, SlashCommandBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder, ComponentType } from 'discord.js';
 
 const categories = [
     { name: 'Global', value: 'global', description: 'Blagues de tout type' },
@@ -12,14 +13,14 @@ const categories = [
 async function fetchJoke(type: string): Promise<{ joke: string; answer: string }> {
     // @ts-ignore - Deno global in Deno runtime
     const token = globalThis.Deno?.env?.get('BLAGUES_API_TOKEN');
-    
+
     if (!token) {
         console.error('BLAGUES_API_TOKEN environment variable is not set');
         throw new Error('BLAGUES_API_TOKEN environment variable is not set');
     }
 
     console.log(`Fetching joke from category: ${type}`);
-    
+
     try {
         const response = await fetch(`https://www.blagues-api.fr/api/type/${type}/random`, {
             headers: {
@@ -29,7 +30,7 @@ async function fetchJoke(type: string): Promise<{ joke: string; answer: string }
         });
 
         console.log(`Response status: ${response.status}`);
-        
+
         if (!response.ok) {
             let errorText = '';
             try {
@@ -67,14 +68,14 @@ export async function execute(interaction: CommandInteraction) {
         const category = interaction.options.getString("categorie") || "global";
         const joke = await fetchJoke(category);
 
-        const embed = new EmbedBuilder()
-            .setColor("#FFD700")
+        const embed = createKeplerEmbed()
+            .setColor(KEPLER_COLORS.warning)
             .setTitle("😄 Blague du jour")
             .addFields(
                 { name: "Question", value: joke.joke },
                 { name: "Réponse", value: joke.answer }
             )
-            .setFooter({ 
+            .setFooter({
                 text: `Catégorie: ${categories.find(cat => cat.value === category)?.name} • Demandé par ${interaction.user.username}`,
                 iconURL: interaction.user.displayAvatarURL({ forceStatic: false })
             })
@@ -101,22 +102,22 @@ export async function execute(interaction: CommandInteraction) {
 
         collector.on("collect", async (i) => {
             if (i.user.id !== interaction.user.id) {
-                await i.reply({ content: "Vous ne pouvez pas utiliser ce bouton !", ephemeral: true });
+                await i.reply({ content: KEPLER_MESSAGES.unauthorizedComponent, ephemeral: true });
                 return;
             }
 
             await i.deferUpdate();
             try {
                 const newJoke = await fetchJoke(category);
-                
-                const newEmbed = new EmbedBuilder()
-                    .setColor("#FFD700")
+
+                const newEmbed = createKeplerEmbed()
+                    .setColor(KEPLER_COLORS.warning)
                     .setTitle("😄 Blague du jour")
                     .addFields(
                         { name: "Question", value: newJoke.joke },
                         { name: "Réponse", value: newJoke.answer }
                     )
-                    .setFooter({ 
+                    .setFooter({
                         text: `Catégorie: ${categories.find(cat => cat.value === category)?.name} • Demandé par ${interaction.user.username}`,
                         iconURL: interaction.user.displayAvatarURL({ forceStatic: false })
                     })
@@ -145,9 +146,9 @@ export async function execute(interaction: CommandInteraction) {
 
     } catch (error) {
         console.error('Error in execute function:', error);
-        
+
         let errorMessage = "Désolé, je n'ai pas pu récupérer de blague pour le moment.";
-        
+
         if (error instanceof Error) {
             if (error.message.includes('BLAGUES_API_TOKEN')) {
                 errorMessage = "Configuration manquante : Le token de l'API blagues n'est pas configuré.";
@@ -159,7 +160,7 @@ export async function execute(interaction: CommandInteraction) {
                 errorMessage = `Erreur API : ${error.message}`;
             }
         }
-        
+
         await interaction.editReply(errorMessage);
     }
 }
