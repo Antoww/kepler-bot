@@ -1,4 +1,5 @@
-import { Client, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
+import { createKeplerEmbed, KEPLER_COLORS } from '../../utils/theme.ts';
+import { Client, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 import { getExpiredReminders, deleteReminder } from '../../database/supabase.ts';
 import { isNetworkError } from '../../utils/retryHelper.ts';
 import { logger } from '../../utils/logger.ts';
@@ -14,10 +15,10 @@ export class ReminderManager {
 
     async start() {
         logger.manager('ReminderManager', 'démarré');
-        
+
         // Charger les rappels existants au démarrage
         await this.loadExistingReminders();
-        
+
         // Vérifier les rappels expirés toutes les minutes
         this.checkInterval = setInterval(() => {
             this.checkExpiredReminders();
@@ -42,7 +43,7 @@ export class ReminderManager {
     async loadExistingReminders() {
         try {
             logger.debug('Chargement rappels existants...', undefined, 'Reminders');
-            
+
             // Récupérer tous les rappels qui n'ont pas encore été déclenchés
             // Cette requête devrait récupérer tous les rappels futurs de tous les utilisateurs
             const { data: allReminders, error } = await (await import('../../database/supabase.ts')).supabase
@@ -74,7 +75,7 @@ export class ReminderManager {
 
     scheduleReminder(reminder: any) {
         const delay = reminder.timestamp - Date.now();
-        
+
         // Ne programmer que si le délai est positif et raisonnable (moins de 2^31-1 ms)
         if (delay > 0 && delay < 2147483647) {
             const timeout = setTimeout(async () => {
@@ -93,9 +94,9 @@ export class ReminderManager {
     async triggerReminder(reminder: any) {
         try {
             const user = await this.client.users.fetch(reminder.user_id);
-            
-            const reminderEmbed = new EmbedBuilder()
-                .setColor('#ff9900')
+
+            const reminderEmbed = createKeplerEmbed()
+                .setColor(KEPLER_COLORS.warning)
                 .setTitle('🔔 Rappel')
                 .setDescription(reminder.message)
                 .addFields(

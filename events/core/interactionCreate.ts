@@ -1,4 +1,5 @@
-import { type CommandInteraction, type ButtonInteraction, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
+import { createKeplerEmbed, KEPLER_COLORS, KEPLER_MESSAGES } from '../../utils/theme.ts';
+import { type CommandInteraction, type ButtonInteraction, ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
 import { createReminder } from '../../database/supabase.ts';
 import { addGiveawayParticipant, removeGiveawayParticipant, isParticipant, getGiveaway, getGiveawayParticipantCount } from '../../database/db.ts';
 import { formatTimeRemaining, generateGiveawayEmbed } from './giveawayManager.ts';
@@ -27,21 +28,21 @@ async function handleCommandInteraction(interaction: CommandInteraction) {
     } catch (error) {
         success = false;
         console.error(`Erreur dans la commande ${interaction.commandName}:`, error);
-        
+
         // Vérifier si l'interaction a déjà été gérée
         if (!interaction.deferred && !interaction.replied) {
             try {
-                await interaction.reply({ 
-                    content: 'Il y a eu une erreur en exécutant cette commande.', 
-                    ephemeral: true 
+                await interaction.reply({
+                    content: KEPLER_MESSAGES.unexpectedError,
+                    ephemeral: true
                 });
             } catch (replyError) {
                 console.error("Erreur lors de la réponse d'erreur:", replyError);
             }
         } else {
             try {
-                await interaction.editReply({ 
-                    content: 'Il y a eu une erreur en exécutant cette commande.' 
+                await interaction.editReply({
+                    content: KEPLER_MESSAGES.unexpectedError
                 });
             } catch (editError) {
                 console.error("Erreur lors de l'édition de la réponse d'erreur:", editError);
@@ -75,11 +76,11 @@ async function handleButtonInteraction(interaction: ButtonInteraction) {
         }
     } catch (error) {
         console.error('Erreur lors du traitement du bouton:', error);
-        
+
         if (!interaction.replied && !interaction.deferred) {
-            await interaction.reply({ 
-                content: '❌ Une erreur est survenue lors du traitement de votre demande.', 
-                ephemeral: true 
+            await interaction.reply({
+                content: KEPLER_MESSAGES.unexpectedError,
+                ephemeral: true
             });
         }
     }
@@ -105,9 +106,9 @@ async function handleGiveawayJoin(interaction: ButtonInteraction) {
 
         // Vérifier si l'utilisateur a le rôle requis
         if (giveaway.role_id && interaction.guild?.members.cache.get(interaction.user.id)?.roles.cache.has(giveaway.role_id) === false) {
-            await interaction.reply({ 
-                content: `❌ Vous devez avoir le rôle <@&${giveaway.role_id}> pour participer.`, 
-                ephemeral: true 
+            await interaction.reply({
+                content: `❌ Vous devez avoir le rôle <@&${giveaway.role_id}> pour participer.`,
+                ephemeral: true
             });
             return;
         }
@@ -118,7 +119,7 @@ async function handleGiveawayJoin(interaction: ButtonInteraction) {
         if (added) {
             // Récupérer le nombre de participants
             const count = await getGiveawayParticipantCount(giveawayId);
-            
+
             // Mettre à jour l'embed du message
             const embed = generateGiveawayEmbed(giveaway, count, formatTimeRemaining(new Date(giveaway.end_time)));
             const buttons = new ActionRowBuilder<ButtonBuilder>()
@@ -135,21 +136,21 @@ async function handleGiveawayJoin(interaction: ButtonInteraction) {
 
             await message.edit({ embeds: [embed], components: [buttons] });
 
-            await interaction.reply({ 
-                content: `✅ Vous participez maintenant au giveaway **${giveaway.title}**!`, 
-                ephemeral: true 
+            await interaction.reply({
+                content: `✅ Vous participez maintenant au giveaway **${giveaway.title}**!`,
+                ephemeral: true
             });
         } else {
-            await interaction.reply({ 
-                content: '❌ Vous participez déjà à ce giveaway.', 
-                ephemeral: true 
+            await interaction.reply({
+                content: '❌ Vous participez déjà à ce giveaway.',
+                ephemeral: true
             });
         }
     } catch (error) {
         console.error('Erreur lors de la participation au giveaway:', error);
-        await interaction.reply({ 
-            content: '❌ Une erreur est survenue.', 
-            ephemeral: true 
+        await interaction.reply({
+            content: '❌ Une erreur est survenue.',
+            ephemeral: true
         });
     }
 }
@@ -175,9 +176,9 @@ async function handleGiveawayLeave(interaction: ButtonInteraction) {
         // Vérifier si l'utilisateur participe
         const participated = await isParticipant(giveawayId, interaction.user.id);
         if (!participated) {
-            await interaction.reply({ 
-                content: '❌ Vous ne participez pas à ce giveaway.', 
-                ephemeral: true 
+            await interaction.reply({
+                content: '❌ Vous ne participez pas à ce giveaway.',
+                ephemeral: true
             });
             return;
         }
@@ -187,7 +188,7 @@ async function handleGiveawayLeave(interaction: ButtonInteraction) {
 
         // Récupérer le nombre de participants
         const count = await getGiveawayParticipantCount(giveawayId);
-        
+
         // Mettre à jour l'embed du message
         const embed = generateGiveawayEmbed(giveaway, count, formatTimeRemaining(new Date(giveaway.end_time)));
         const buttons = new ActionRowBuilder<ButtonBuilder>()
@@ -204,15 +205,15 @@ async function handleGiveawayLeave(interaction: ButtonInteraction) {
 
         await message.edit({ embeds: [embed], components: [buttons] });
 
-        await interaction.reply({ 
-            content: `✅ Vous avez quitté le giveaway **${giveaway.title}**.`, 
-            ephemeral: true 
+        await interaction.reply({
+            content: `✅ Vous avez quitté le giveaway **${giveaway.title}**.`,
+            ephemeral: true
         });
     } catch (error) {
         console.error('Erreur lors de la suppression du giveaway:', error);
-        await interaction.reply({ 
-            content: '❌ Une erreur est survenue.', 
-            ephemeral: true 
+        await interaction.reply({
+            content: '❌ Une erreur est survenue.',
+            ephemeral: true
         });
     }
 }
@@ -220,10 +221,10 @@ async function handleGiveawayLeave(interaction: ButtonInteraction) {
 async function handleRepeatReminder(interaction: ButtonInteraction) {
     const embed = interaction.message.embeds[0];
     const originalMessage = embed.description || 'Rappel sans message';
-    
+
     // Créer un nouveau rappel avec les mêmes paramètres
     const durationMs = 10 * 60 * 1000; // 10 minutes par défaut pour la répétition
-    
+
     try {
         const reminder = await createReminder(
             interaction.user.id,
@@ -231,8 +232,8 @@ async function handleRepeatReminder(interaction: ButtonInteraction) {
             durationMs
         );
 
-        const confirmEmbed = new EmbedBuilder()
-            .setColor('#00ff00')
+        const confirmEmbed = createKeplerEmbed()
+            .setColor(KEPLER_COLORS.success)
             .setTitle('🔄 Rappel répété')
             .setDescription(`Votre rappel a été reprogrammé pour dans 10 minutes`)
             .addFields(
@@ -245,8 +246,8 @@ async function handleRepeatReminder(interaction: ButtonInteraction) {
 
         // Programmer le nouveau rappel
         setTimeout(async () => {
-            const reminderEmbed = new EmbedBuilder()
-                .setColor('#ff9900')
+            const reminderEmbed = createKeplerEmbed()
+                .setColor(KEPLER_COLORS.warning)
                 .setTitle('🔔 Rappel (Répété)')
                 .setDescription(originalMessage)
                 .addFields(
@@ -280,9 +281,9 @@ async function handleRepeatReminder(interaction: ButtonInteraction) {
 
     } catch (error) {
         console.error('Erreur lors de la répétition du rappel:', error);
-        await interaction.reply({ 
-            content: '❌ Erreur lors de la répétition du rappel.', 
-            ephemeral: true 
+        await interaction.reply({
+            content: '❌ Erreur lors de la répétition du rappel.',
+            ephemeral: true
         });
     }
 }
@@ -290,10 +291,10 @@ async function handleRepeatReminder(interaction: ButtonInteraction) {
 async function handleSnoozeReminder(interaction: ButtonInteraction) {
     const embed = interaction.message.embeds[0];
     const originalMessage = embed.description || 'Rappel sans message';
-    
+
     // Reporter de 10 minutes
     const durationMs = 10 * 60 * 1000;
-    
+
     try {
         const reminder = await createReminder(
             interaction.user.id,
@@ -301,8 +302,8 @@ async function handleSnoozeReminder(interaction: ButtonInteraction) {
             durationMs
         );
 
-        const confirmEmbed = new EmbedBuilder()
-            .setColor('#ffaa00')
+        const confirmEmbed = createKeplerEmbed()
+            .setColor(KEPLER_COLORS.warning)
             .setTitle('😴 Rappel reporté')
             .setDescription(`Votre rappel a été reporté de 10 minutes`)
             .addFields(
@@ -316,8 +317,8 @@ async function handleSnoozeReminder(interaction: ButtonInteraction) {
 
         // Programmer le rappel reporté
         setTimeout(async () => {
-            const reminderEmbed = new EmbedBuilder()
-                .setColor('#ff9900')
+            const reminderEmbed = createKeplerEmbed()
+                .setColor(KEPLER_COLORS.warning)
                 .setTitle('🔔 Rappel (Reporté)')
                 .setDescription(originalMessage)
                 .addFields(
@@ -351,9 +352,9 @@ async function handleSnoozeReminder(interaction: ButtonInteraction) {
 
     } catch (error) {
         console.error('Erreur lors du report du rappel:', error);
-        await interaction.reply({ 
-            content: '❌ Erreur lors du report du rappel.', 
-            ephemeral: true 
+        await interaction.reply({
+            content: '❌ Erreur lors du report du rappel.',
+            ephemeral: true
         });
     }
 }

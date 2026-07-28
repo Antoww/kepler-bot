@@ -1,11 +1,12 @@
-import { 
-    type CommandInteraction, 
-    SlashCommandBuilder, 
-    EmbedBuilder, 
-    ActionRowBuilder, 
-    ButtonBuilder, 
+import { createKeplerEmbed, KEPLER_MESSAGES } from '../../utils/theme.ts';
+import {
+    type CommandInteraction,
+    SlashCommandBuilder,
+    EmbedBuilder,
+    ActionRowBuilder,
+    ButtonBuilder,
     ButtonStyle,
-    PermissionFlagsBits 
+    PermissionFlagsBits
 } from 'discord.js';
 
 export const data = new SlashCommandBuilder()
@@ -67,7 +68,7 @@ export const data = new SlashCommandBuilder()
 
 export async function execute(interaction: CommandInteraction) {
     if (!interaction.guild) {
-        await interaction.reply('Cette commande ne peut être utilisée que sur un serveur.');
+        await interaction.reply(KEPLER_MESSAGES.guildOnly);
         return;
     }
 
@@ -82,64 +83,64 @@ export async function execute(interaction: CommandInteraction) {
     const bouton1_texte = interaction.options.getString('bouton1_texte');
     const bouton1_lien = interaction.options.getString('bouton1_lien');
     const bouton1_emoji = interaction.options.getString('bouton1_emoji');
-    
+
     const bouton2_texte = interaction.options.getString('bouton2_texte');
     const bouton2_lien = interaction.options.getString('bouton2_lien');
     const bouton2_emoji = interaction.options.getString('bouton2_emoji');
-    
+
     const bouton3_texte = interaction.options.getString('bouton3_texte');
     const bouton3_lien = interaction.options.getString('bouton3_lien');
     const bouton3_emoji = interaction.options.getString('bouton3_emoji');
 
     // Validation des boutons (si texte fourni, lien obligatoire)
     const boutons = [];
-    
+
     if (bouton1_texte) {
         if (!bouton1_lien) {
-            await interaction.reply({ 
+            await interaction.reply({
                 content: '❌ Si vous spécifiez un texte pour le bouton 1, vous devez aussi fournir un lien.',
-                ephemeral: true 
+                ephemeral: true
             });
             return;
         }
         if (!isValidUrl(bouton1_lien)) {
-            await interaction.reply({ 
+            await interaction.reply({
                 content: '❌ Le lien du bouton 1 n\'est pas une URL valide.',
-                ephemeral: true 
+                ephemeral: true
             });
             return;
         }
     }
-    
+
     if (bouton2_texte) {
         if (!bouton2_lien) {
-            await interaction.reply({ 
+            await interaction.reply({
                 content: '❌ Si vous spécifiez un texte pour le bouton 2, vous devez aussi fournir un lien.',
-                ephemeral: true 
+                ephemeral: true
             });
             return;
         }
         if (!isValidUrl(bouton2_lien)) {
-            await interaction.reply({ 
+            await interaction.reply({
                 content: '❌ Le lien du bouton 2 n\'est pas une URL valide.',
-                ephemeral: true 
+                ephemeral: true
             });
             return;
         }
     }
-    
+
     if (bouton3_texte) {
         if (!bouton3_lien) {
-            await interaction.reply({ 
+            await interaction.reply({
                 content: '❌ Si vous spécifiez un texte pour le bouton 3, vous devez aussi fournir un lien.',
-                ephemeral: true 
+                ephemeral: true
             });
             return;
         }
         if (!isValidUrl(bouton3_lien)) {
-            await interaction.reply({ 
+            await interaction.reply({
                 content: '❌ Le lien du bouton 3 n\'est pas une URL valide.',
-                ephemeral: true 
+                ephemeral: true
             });
             return;
         }
@@ -147,26 +148,26 @@ export async function execute(interaction: CommandInteraction) {
 
     // Validation des URLs d'images
     if (image && !isValidUrl(image)) {
-        await interaction.reply({ 
+        await interaction.reply({
             content: '❌ L\'URL de l\'image n\'est pas valide.',
-            ephemeral: true 
+            ephemeral: true
         });
         return;
     }
-    
+
     if (thumbnail && !isValidUrl(thumbnail)) {
-        await interaction.reply({ 
+        await interaction.reply({
             content: '❌ L\'URL de la miniature n\'est pas valide.',
-            ephemeral: true 
+            ephemeral: true
         });
         return;
     }
 
     // Création de l'embed
-    const embed = new EmbedBuilder()
-        .setAuthor({ 
-            name: interaction.user.username, 
-            iconURL: interaction.user.displayAvatarURL({ forceStatic: false }) 
+    const embed = createKeplerEmbed()
+        .setAuthor({
+            name: interaction.user.username,
+            iconURL: interaction.user.displayAvatarURL({ forceStatic: false })
         })
         .setColor(color as any)
         .setTitle(`📢 ${titre}`)
@@ -181,7 +182,7 @@ export async function execute(interaction: CommandInteraction) {
     if (image) {
         embed.setImage(image);
     }
-    
+
     if (thumbnail) {
         embed.setThumbnail(thumbnail);
     }
@@ -195,11 +196,11 @@ export async function execute(interaction: CommandInteraction) {
             .setLabel(bouton1_texte)
             .setStyle(ButtonStyle.Link)
             .setURL(bouton1_lien);
-            
+
         if (bouton1_emoji) {
             button1.setEmoji(bouton1_emoji);
         }
-        
+
         buttons.push(button1);
     }
 
@@ -208,11 +209,11 @@ export async function execute(interaction: CommandInteraction) {
             .setLabel(bouton2_texte)
             .setStyle(ButtonStyle.Link)
             .setURL(bouton2_lien);
-            
+
         if (bouton2_emoji) {
             button2.setEmoji(bouton2_emoji);
         }
-        
+
         buttons.push(button2);
     }
 
@@ -221,11 +222,11 @@ export async function execute(interaction: CommandInteraction) {
             .setLabel(bouton3_texte)
             .setStyle(ButtonStyle.Link)
             .setURL(bouton3_lien);
-            
+
         if (bouton3_emoji) {
             button3.setEmoji(bouton3_emoji);
         }
-        
+
         buttons.push(button3);
     }
 
@@ -241,7 +242,7 @@ export async function execute(interaction: CommandInteraction) {
         embeds: EmbedBuilder[];
         components?: ActionRowBuilder<ButtonBuilder>[];
     } = { embeds: [embed] };
-    
+
     if (components.length > 0) {
         responseOptions.components = components;
     }
@@ -257,4 +258,4 @@ function isValidUrl(string: string): boolean {
     } catch (_) {
         return false;
     }
-} 
+}

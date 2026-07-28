@@ -1,4 +1,5 @@
-import { type CommandInteraction, SlashCommandBuilder, EmbedBuilder } from 'discord.js';
+import { createKeplerEmbed, KEPLER_COLORS, KEPLER_MESSAGES } from '../../utils/theme.ts';
+import { type CommandInteraction, SlashCommandBuilder } from 'discord.js';
 
 export const data = new SlashCommandBuilder()
     .setName('rolelist')
@@ -6,7 +7,7 @@ export const data = new SlashCommandBuilder()
 
 export async function execute(interaction: CommandInteraction) {
     if (!interaction.guild) {
-        await interaction.reply('Cette commande ne peut être utilisée que sur un serveur.');
+        await interaction.reply(KEPLER_MESSAGES.guildOnly);
         return;
     }
 
@@ -15,12 +16,12 @@ export async function execute(interaction: CommandInteraction) {
         .map(role => `${role} - ${role.members.size} membres`)
         .join('\n');
 
-    const embed = new EmbedBuilder()
-        .setAuthor({ 
-            name: interaction.client.user?.username, 
-            iconURL: interaction.client.user?.displayAvatarURL({ forceStatic: false }) 
+    const embed = createKeplerEmbed()
+        .setAuthor({
+            name: interaction.client.user?.username,
+            iconURL: interaction.client.user?.displayAvatarURL({ forceStatic: false })
         })
-        .setColor('#0099ff')
+        .setColor(KEPLER_COLORS.primary)
         .setTitle(`Rôles de ${interaction.guild.name}`)
         .setDescription(roles.length > 4096 ? roles.substring(0, 4093) + '...' : roles)
         .setFooter({
@@ -30,4 +31,4 @@ export async function execute(interaction: CommandInteraction) {
         .setTimestamp();
 
     await interaction.reply({ embeds: [embed] });
-} 
+}

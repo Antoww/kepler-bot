@@ -1,4 +1,5 @@
-import { type CommandInteraction, SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
+import { createKeplerEmbed, KEPLER_COLORS } from '../../utils/theme.ts';
+import { type CommandInteraction, SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 import { createReminder } from '../../database/supabase.ts';
 
 export const data = new SlashCommandBuilder()
@@ -18,7 +19,7 @@ export async function execute(interaction: CommandInteraction) {
     const message = interaction.options.getString('message')!;
     const durationInput = interaction.options.getString('duree');
     const dateInput = interaction.options.getString('date');
-    
+
     // Vérifier qu'au moins une option est fournie
     if (!durationInput && !dateInput) {
         await interaction.reply({
@@ -92,7 +93,7 @@ export async function execute(interaction: CommandInteraction) {
             });
             return;
         }
-    } 
+    }
     // Si une date est fournie
     else {
         const parsedDate = parseDate(dateInput!);
@@ -141,12 +142,12 @@ export async function execute(interaction: CommandInteraction) {
             durationMs
         );
 
-        const embed = new EmbedBuilder()
-            .setAuthor({ 
-                name: interaction.client.user?.username, 
-                iconURL: interaction.client.user?.displayAvatarURL({ forceStatic: false }) 
+        const embed = createKeplerEmbed()
+            .setAuthor({
+                name: interaction.client.user?.username,
+                iconURL: interaction.client.user?.displayAvatarURL({ forceStatic: false })
             })
-            .setColor('#00ff00')
+            .setColor(KEPLER_COLORS.success)
             .setTitle('⏰ Rappel créé')
             .setDescription(`Votre rappel a été programmé pour <t:${Math.floor(reminderTime.getTime() / 1000)}:F>`)
             .addFields(
@@ -168,8 +169,8 @@ export async function execute(interaction: CommandInteraction) {
         } else {
             // Fallback: programmer le rappel localement (comme avant)
             setTimeout(async () => {
-                const reminderEmbed = new EmbedBuilder()
-                    .setColor('#ff9900')
+                const reminderEmbed = createKeplerEmbed()
+                    .setColor(KEPLER_COLORS.warning)
                     .setTitle('🔔 Rappel')
                     .setDescription(message)
                     .addFields(
@@ -198,11 +199,11 @@ export async function execute(interaction: CommandInteraction) {
                     await interaction.user.send({ embeds: [reminderEmbed], components: [row] });
                     console.log(`✅ [RAPPEL LIVRÉ] ID: ${reminder.id} | Utilisateur: ${interaction.user.username} | Méthode: Message privé`);
                 } catch (error) {
-                    await interaction.followUp({ 
-                        content: '🔔 **Rappel !** Je n\'ai pas pu envoyer le rappel en message privé. Voici votre rappel :', 
-                        embeds: [reminderEmbed], 
-                        components: [row], 
-                        ephemeral: true 
+                    await interaction.followUp({
+                        content: '🔔 **Rappel !** Je n\'ai pas pu envoyer le rappel en message privé. Voici votre rappel :',
+                        embeds: [reminderEmbed],
+                        components: [row],
+                        ephemeral: true
                     });
                     console.log(`⚠️ [RAPPEL LIVRÉ] ID: ${reminder.id} | Utilisateur: ${interaction.user.username} | Méthode: Message public (MP fermés)`);
                 }
@@ -211,9 +212,9 @@ export async function execute(interaction: CommandInteraction) {
 
     } catch (error) {
         console.error('Erreur lors de la création du rappel:', error);
-        await interaction.reply({ 
-            content: '❌ Erreur lors de la création du rappel. Veuillez réessayer.', 
-            ephemeral: true 
+        await interaction.reply({
+            content: '❌ Erreur lors de la création du rappel. Veuillez réessayer.',
+            ephemeral: true
         });
     }
 }
@@ -221,12 +222,12 @@ export async function execute(interaction: CommandInteraction) {
 function parseDuration(duration: string): number | null {
     const regex = /^(\d+)(s|m|h|d|w|mo)$/i;
     const match = duration.toLowerCase().match(regex);
-    
+
     if (!match) return null;
-    
+
     const value = parseInt(match[1]);
     const unit = match[2];
-    
+
     switch (unit) {
         case 's': // secondes
             return value * 1000;
@@ -322,8 +323,8 @@ function parseDate(dateStr: string): Date | null {
             }
 
             // Vérifier que les valeurs correspondent (pour éviter des dates comme 32/13/2025)
-            if (date.getFullYear() !== year || 
-                date.getMonth() !== month || 
+            if (date.getFullYear() !== year ||
+                date.getMonth() !== month ||
                 date.getDate() !== day ||
                 date.getHours() !== hours ||
                 date.getMinutes() !== minutes) {
@@ -335,4 +336,4 @@ function parseDate(dateStr: string): Date | null {
     }
 
     return null;
-} 
+}

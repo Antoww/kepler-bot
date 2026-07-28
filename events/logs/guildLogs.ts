@@ -1,6 +1,7 @@
-import { 
-    EmbedBuilder, 
-    AuditLogEvent, 
+import { createKeplerEmbed, KEPLER_COLORS } from '../../utils/theme.ts';
+import {
+    EmbedBuilder,
+    AuditLogEvent,
     ChannelType,
     GuildAuditLogsEntry,
     TextChannel,
@@ -33,7 +34,7 @@ async function getAuditLog(guild: any, targetId: string, actionType: AuditLogEve
             type: actionType,
             limit: 1,
         });
-        
+
         const entry = auditLogs.entries.first();
         return entry;
     } catch (error) {
@@ -48,7 +49,7 @@ export async function logChannelCreate(channel: GuildChannel) {
 
     const auditEntry = await getAuditLog(channel.guild, channel.id, AuditLogEvent.ChannelCreate);
     const client = channel.client;
-    
+
     const fields: any[] = [
         { name: '📋 Type', value: getChannelTypeName(channel.type), inline: true },
         { name: '🆔 ID', value: `\`${channel.id}\``, inline: true },
@@ -63,16 +64,16 @@ export async function logChannelCreate(channel: GuildChannel) {
     // Ajouter des informations supplémentaires selon le type de canal
     if (channel.isTextBased()) {
         const textChannel = channel as TextChannel;
-        
+
         if (textChannel.topic) {
             const topicTrunc = textChannel.topic.length > 200 ? textChannel.topic.substring(0, 200) + '...' : textChannel.topic;
             fields.push({ name: '📝 Description', value: topicTrunc, inline: false });
         }
-        
+
         if (textChannel.rateLimitPerUser > 0) {
             fields.push({ name: '⏱️ Mode lent', value: `${textChannel.rateLimitPerUser}s`, inline: true });
         }
-        
+
         if (textChannel.nsfw) {
             fields.push({ name: '🔞 NSFW', value: 'Activé', inline: true });
         }
@@ -88,17 +89,17 @@ export async function logChannelCreate(channel: GuildChannel) {
         fields.push({ name: '👤 Créé par', value: `${auditEntry.executor.tag}\n\`${auditEntry.executor.id}\``, inline: true });
     }
 
-    const embed = new EmbedBuilder()
-        .setAuthor({ 
+    const embed = createKeplerEmbed()
+        .setAuthor({
             name: 'Kepler Bot - Système de Logs',
             iconURL: client.user?.displayAvatarURL({ forceStatic: false })
         })
-        .setColor('#57F287')
+        .setColor(KEPLER_COLORS.success)
         .setTitle('📝 Canal Créé')
         .setDescription(`### ${channel.name}\n> Un nouveau canal a été créé sur le serveur.`)
         .addFields(fields)
         .setThumbnail(channel.guild.iconURL({ forceStatic: false }))
-        .setFooter({ 
+        .setFooter({
             text: `Logs Serveur`,
             iconURL: channel.guild.iconURL({ forceStatic: false }) || undefined
         })
@@ -113,7 +114,7 @@ export async function logChannelDelete(channel: GuildChannel) {
 
     const auditEntry = await getAuditLog(channel.guild, channel.id, AuditLogEvent.ChannelDelete);
     const client = channel.client;
-    
+
     const fields: any[] = [
         { name: '📋 Type', value: getChannelTypeName(channel.type), inline: true },
         { name: '🆔 ID', value: `\`${channel.id}\``, inline: true },
@@ -128,17 +129,17 @@ export async function logChannelDelete(channel: GuildChannel) {
         fields.push({ name: '📄 Raison', value: auditEntry.reason, inline: false });
     }
 
-    const embed = new EmbedBuilder()
-        .setAuthor({ 
+    const embed = createKeplerEmbed()
+        .setAuthor({
             name: 'Kepler Bot - Système de Logs',
             iconURL: client.user?.displayAvatarURL({ forceStatic: false })
         })
-        .setColor('#ED4245')
+        .setColor(KEPLER_COLORS.danger)
         .setTitle('🗑️ Canal Supprimé')
         .setDescription(`### ${channel.name}\n> Un canal a été supprimé du serveur.`)
         .addFields(fields)
         .setThumbnail(channel.guild.iconURL({ forceStatic: false }))
-        .setFooter({ 
+        .setFooter({
             text: `Logs Serveur`,
             iconURL: channel.guild.iconURL({ forceStatic: false }) || undefined
         })
@@ -152,13 +153,13 @@ export async function logChannelUpdate(oldChannel: GuildChannel, newChannel: Gui
     if (!newChannel.guild) return;
 
     const auditEntry = await getAuditLog(newChannel.guild, newChannel.id, AuditLogEvent.ChannelUpdate);
-    
+
     const changes: string[] = [];
-    
+
     if (oldChannel.name !== newChannel.name) {
         changes.push(`**Nom:** ${oldChannel.name} → ${newChannel.name}`);
     }
-    
+
     if (oldChannel.type !== newChannel.type) {
         changes.push(`**Type:** ${getChannelTypeName(oldChannel.type)} → ${getChannelTypeName(newChannel.type)}`);
     }
@@ -191,7 +192,7 @@ export async function logChannelUpdate(oldChannel: GuildChannel, newChannel: Gui
     // Vérifier les changements de permissions
     const oldPermissions = oldChannel.permissionOverwrites?.cache;
     const newPermissions = newChannel.permissionOverwrites?.cache;
-    
+
     if (oldPermissions && newPermissions) {
         // Vérifier si des permissions ont été ajoutées
         for (const [id, perm] of newPermissions) {
@@ -203,14 +204,14 @@ export async function logChannelUpdate(oldChannel: GuildChannel, newChannel: Gui
                 // Comparer les permissions
                 const allowChanges = oldPerm.allow.bitfield !== perm.allow.bitfield;
                 const denyChanges = oldPerm.deny.bitfield !== perm.deny.bitfield;
-                
+
                 if (allowChanges || denyChanges) {
                     const targetName = perm.type === 0 ? `<@&${id}>` : `<@${id}>`;
                     changes.push(`**Permissions modifiées pour:** ${targetName}`);
                 }
             }
         }
-        
+
         // Vérifier si des permissions ont été supprimées
         for (const [id, perm] of oldPermissions) {
             if (!newPermissions.has(id)) {
@@ -234,17 +235,17 @@ export async function logChannelUpdate(oldChannel: GuildChannel, newChannel: Gui
         fields.push({ name: '👤 Modifié par', value: `${auditEntry.executor.tag}\n\`${auditEntry.executor.id}\``, inline: true });
     }
 
-    const embed = new EmbedBuilder()
-        .setAuthor({ 
+    const embed = createKeplerEmbed()
+        .setAuthor({
             name: 'Kepler Bot - Système de Logs',
             iconURL: client.user?.displayAvatarURL({ forceStatic: false })
         })
-        .setColor('#FEE75C')
+        .setColor(KEPLER_COLORS.warning)
         .setTitle('✏️ Canal Modifié')
         .setDescription(`### ${newChannel.name}\n> Le canal a été modifié avec **${changes.length}** changement(s).`)
         .addFields(fields)
         .setThumbnail(newChannel.guild.iconURL({ forceStatic: false }))
-        .setFooter({ 
+        .setFooter({
             text: `Logs Serveur • ${changes.length} modification(s)`,
             iconURL: newChannel.guild.iconURL({ forceStatic: false }) || undefined
         })
@@ -257,7 +258,7 @@ export async function logChannelUpdate(oldChannel: GuildChannel, newChannel: Gui
 export async function logRoleCreate(role: Role) {
     const auditEntry = await getAuditLog(role.guild, role.id, AuditLogEvent.RoleCreate);
     const client = role.client;
-    
+
     const fields: any[] = [
         { name: '🎨 Couleur', value: role.hexColor, inline: true },
         { name: '🆔 ID', value: `\`${role.id}\``, inline: true },
@@ -283,17 +284,17 @@ export async function logRoleCreate(role: Role) {
         fields.push({ name: '👤 Créé par', value: `${auditEntry.executor.tag}\n\`${auditEntry.executor.id}\``, inline: true });
     }
 
-    const embed = new EmbedBuilder()
-        .setAuthor({ 
+    const embed = createKeplerEmbed()
+        .setAuthor({
             name: 'Kepler Bot - Système de Logs',
             iconURL: client.user?.displayAvatarURL({ forceStatic: false })
         })
-        .setColor(role.hexColor || '#57F287')
+        .setColor(role.color || KEPLER_COLORS.success)
         .setTitle('🎭 Rôle Créé')
         .setDescription(`### ${role.name}\n> Un nouveau rôle a été créé sur le serveur.`)
         .addFields(fields)
         .setThumbnail(role.guild.iconURL({ forceStatic: false }))
-        .setFooter({ 
+        .setFooter({
             text: `Logs Serveur`,
             iconURL: role.guild.iconURL({ forceStatic: false }) || undefined
         })
@@ -306,7 +307,7 @@ export async function logRoleCreate(role: Role) {
 export async function logRoleDelete(role: Role) {
     const auditEntry = await getAuditLog(role.guild, role.id, AuditLogEvent.RoleDelete);
     const client = role.client;
-    
+
     const fields: any[] = [
         { name: '🎨 Couleur', value: role.hexColor, inline: true },
         { name: '🆔 ID', value: `\`${role.id}\``, inline: true },
@@ -321,17 +322,17 @@ export async function logRoleDelete(role: Role) {
         fields.push({ name: '📄 Raison', value: auditEntry.reason, inline: false });
     }
 
-    const embed = new EmbedBuilder()
-        .setAuthor({ 
+    const embed = createKeplerEmbed()
+        .setAuthor({
             name: 'Kepler Bot - Système de Logs',
             iconURL: client.user?.displayAvatarURL({ forceStatic: false })
         })
-        .setColor('#ED4245')
+        .setColor(KEPLER_COLORS.danger)
         .setTitle('🗑️ Rôle Supprimé')
         .setDescription(`### ${role.name}\n> Un rôle a été supprimé du serveur.`)
         .addFields(fields)
         .setThumbnail(role.guild.iconURL({ forceStatic: false }))
-        .setFooter({ 
+        .setFooter({
             text: `Logs Serveur`,
             iconURL: role.guild.iconURL({ forceStatic: false }) || undefined
         })
@@ -343,13 +344,13 @@ export async function logRoleDelete(role: Role) {
 // Log de modification de rôle
 export async function logRoleUpdate(oldRole: Role, newRole: Role) {
     const auditEntry = await getAuditLog(newRole.guild, newRole.id, AuditLogEvent.RoleUpdate);
-    
+
     const changes: string[] = [];
-    
+
     if (oldRole.name !== newRole.name) {
         changes.push(`**Nom:** ${oldRole.name} → ${newRole.name}`);
     }
-    
+
     if (oldRole.hexColor !== newRole.hexColor) {
         changes.push(`**Couleur:** ${oldRole.hexColor} → ${newRole.hexColor}`);
     }
@@ -357,15 +358,15 @@ export async function logRoleUpdate(oldRole: Role, newRole: Role) {
     // Vérifier les permissions
     const oldPerms = oldRole.permissions.bitfield;
     const newPerms = newRole.permissions.bitfield;
-    
+
     if (oldPerms !== newPerms) {
         const addedPerms = newRole.permissions.toArray().filter(p => !oldRole.permissions.has(p));
         const removedPerms = oldRole.permissions.toArray().filter(p => !newRole.permissions.has(p));
-        
+
         if (addedPerms.length > 0) {
             changes.push(`**Permissions ajoutées:** ${addedPerms.slice(0, 5).join(', ')}${addedPerms.length > 5 ? ` (+${addedPerms.length - 5})` : ''}`);
         }
-        
+
         if (removedPerms.length > 0) {
             changes.push(`**Permissions retirées:** ${removedPerms.slice(0, 5).join(', ')}${removedPerms.length > 5 ? ` (+${removedPerms.length - 5})` : ''}`);
         }
@@ -407,17 +408,17 @@ export async function logRoleUpdate(oldRole: Role, newRole: Role) {
         fields.push({ name: '👤 Modifié par', value: `${auditEntry.executor.tag}\n\`${auditEntry.executor.id}\``, inline: true });
     }
 
-    const embed = new EmbedBuilder()
-        .setAuthor({ 
+    const embed = createKeplerEmbed()
+        .setAuthor({
             name: 'Kepler Bot - Système de Logs',
             iconURL: client.user?.displayAvatarURL({ forceStatic: false })
         })
-        .setColor(newRole.hexColor || '#FEE75C')
+        .setColor(newRole.color || KEPLER_COLORS.warning)
         .setTitle('✏️ Rôle Modifié')
         .setDescription(`### ${newRole.name}\n> Le rôle a été modifié avec **${changes.length}** changement(s).`)
         .addFields(fields)
         .setThumbnail(newRole.guild.iconURL({ forceStatic: false }))
-        .setFooter({ 
+        .setFooter({
             text: `Logs Serveur • ${changes.length} modification(s)`,
             iconURL: newRole.guild.iconURL({ forceStatic: false }) || undefined
         })
@@ -429,13 +430,13 @@ export async function logRoleUpdate(oldRole: Role, newRole: Role) {
 // Log de modification du serveur
 export async function logGuildUpdate(oldGuild: any, newGuild: any) {
     const auditEntry = await getAuditLog(newGuild, newGuild.id, AuditLogEvent.GuildUpdate);
-    
+
     const changes: string[] = [];
-    
+
     if (oldGuild.name !== newGuild.name) {
         changes.push(`**Nom:** ${oldGuild.name} → ${newGuild.name}`);
     }
-    
+
     if (oldGuild.icon !== newGuild.icon) {
         changes.push(`**Icône:** Modifiée`);
     }
@@ -453,17 +454,17 @@ export async function logGuildUpdate(oldGuild: any, newGuild: any) {
         fields.push({ name: '👤 Modifié par', value: `${auditEntry.executor.tag}\n\`${auditEntry.executor.id}\``, inline: true });
     }
 
-    const embed = new EmbedBuilder()
-        .setAuthor({ 
+    const embed = createKeplerEmbed()
+        .setAuthor({
             name: 'Kepler Bot - Système de Logs',
             iconURL: client.user?.displayAvatarURL({ forceStatic: false })
         })
-        .setColor('#FEE75C')
+        .setColor(KEPLER_COLORS.warning)
         .setTitle('⚙️ Serveur Modifié')
         .setDescription(`### ${newGuild.name}\n> Le serveur a été modifié avec **${changes.length}** changement(s).`)
         .addFields(fields)
         .setThumbnail(newGuild.iconURL({ forceStatic: false }))
-        .setFooter({ 
+        .setFooter({
             text: `Logs Serveur • ${changes.length} modification(s)`,
             iconURL: newGuild.iconURL({ forceStatic: false }) || undefined
         })
@@ -484,4 +485,4 @@ function getChannelTypeName(type: ChannelType): string {
         case ChannelType.GuildForum: return 'Forum';
         default: return 'Inconnu';
     }
-} 
+}

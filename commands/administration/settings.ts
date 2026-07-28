@@ -1,3 +1,4 @@
+import { createKeplerEmbed, KEPLER_COLORS, KEPLER_MESSAGES } from '../../utils/theme.ts';
 import {
     ActionRowBuilder,
     ButtonBuilder,
@@ -5,7 +6,6 @@ import {
     ChannelSelectMenuBuilder,
     ChannelType,
     type ChatInputCommandInteraction,
-    EmbedBuilder,
     PermissionFlagsBits,
     RoleSelectMenuBuilder,
     SlashCommandBuilder,
@@ -36,7 +36,7 @@ export const data = new SlashCommandBuilder()
 
 export async function execute(interaction: ChatInputCommandInteraction) {
     if (!interaction.guild) {
-        await interaction.reply({ content: 'Cette commande ne peut être utilisée que sur un serveur.', ephemeral: true });
+        await interaction.reply({ content: KEPLER_MESSAGES.guildOnly, ephemeral: true });
         return;
     }
     if (!interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)) {
@@ -157,7 +157,7 @@ async function buildOverview(interaction: ChatInputCommandInteraction, notice?: 
         getMuteRole(guild.id)
     ]);
 
-    const embed = new EmbedBuilder()
+    const embed = createKeplerEmbed()
         .setColor(PANEL_COLOR)
         .setAuthor({
             name: `${interaction.client.user.username} // Configuration`,
@@ -189,7 +189,7 @@ async function buildOverview(interaction: ChatInputCommandInteraction, notice?: 
 }
 
 function buildSection(section: ConfigSection, guild: Guild) {
-    const embed = new EmbedBuilder()
+    const embed = createKeplerEmbed()
         .setColor(PANEL_COLOR)
         .setTitle(sectionLabel(section))
         .setDescription(sectionDescription(section))
@@ -235,8 +235,8 @@ function buildSection(section: ConfigSection, guild: Guild) {
 }
 
 function buildDisableConfirmation(section: ConfigSection) {
-    const embed = new EmbedBuilder()
-        .setColor(0xff6b6b)
+    const embed = createKeplerEmbed()
+        .setColor(KEPLER_COLORS.danger)
         .setTitle('Confirmer la désactivation')
         .setDescription(`La configuration « ${sectionLabel(section)} » sera supprimée.`);
     const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
@@ -247,8 +247,8 @@ function buildDisableConfirmation(section: ConfigSection) {
 }
 
 function buildMuteCreationConfirmation() {
-    const embed = new EmbedBuilder()
-        .setColor(0xf8c15c)
+    const embed = createKeplerEmbed()
+        .setColor(KEPLER_COLORS.warning)
         .setTitle('Créer un rôle de mute')
         .setDescription('Kepler créera le rôle `Muted` et appliquera ses restrictions à tous les salons compatibles.');
     const row = new ActionRowBuilder<ButtonBuilder>().addComponents(

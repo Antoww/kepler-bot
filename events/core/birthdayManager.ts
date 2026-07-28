@@ -1,4 +1,5 @@
-import { Client, EmbedBuilder, TextChannel } from 'discord.js';
+import { createKeplerEmbed, KEPLER_COLORS } from '../../utils/theme.ts';
+import { Client, TextChannel } from 'discord.js';
 import { getBirthdaysForDate, getBirthdayChannel } from '../../database/db.ts';
 import { isNetworkError } from '../../utils/retryHelper.ts';
 
@@ -52,12 +53,12 @@ export class BirthdayManager {
                 try {
                     // Récupérer les anniversaires pour cette date dans ce serveur
                     const birthdays = await getBirthdaysForDate(guild.id, day, month);
-                    
+
                     if (birthdays.length === 0) continue;
 
                     // Récupérer le canal d'anniversaires configuré
                     const birthdayChannelId = await getBirthdayChannel(guild.id);
-                    
+
                     if (!birthdayChannelId) {
                         console.log(`Aucun canal d'anniversaires configuré pour le serveur ${guild.name}`);
                         continue;
@@ -107,12 +108,12 @@ export class BirthdayManager {
             ageText = ` Il/elle fête ses ${age} ans ! 🎂`;
         }
 
-        const embed = new EmbedBuilder()
-            .setAuthor({ 
-                name: this.client.user?.username, 
-                iconURL: this.client.user?.displayAvatarURL({ forceStatic: false }) 
+        const embed = createKeplerEmbed()
+            .setAuthor({
+                name: this.client.user?.username,
+                iconURL: this.client.user?.displayAvatarURL({ forceStatic: false })
             })
-            .setColor('#FF69B4')
+            .setColor(KEPLER_COLORS.highlight)
             .setTitle('🎉 Joyeux Anniversaire !')
             .setDescription(`Aujourd'hui, c'est l'anniversaire de **${user.username}** !${ageText}`)
             .addFields(

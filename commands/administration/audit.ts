@@ -1,3 +1,4 @@
+import { createKeplerEmbed, KEPLER_COLORS, KEPLER_MESSAGES } from '../../utils/theme.ts';
 import {
   type CommandInteraction,
   SlashCommandBuilder,
@@ -34,7 +35,7 @@ export const data = new SlashCommandBuilder()
 
 export async function execute(interaction: CommandInteraction) {
   if (!interaction.guild) {
-    await interaction.reply('Cette commande ne peut être utilisée que sur un serveur.');
+    await interaction.reply(KEPLER_MESSAGES.guildOnly);
     return;
   }
 
@@ -145,7 +146,7 @@ async function runChannelsAudit(interaction: CommandInteraction) {
   ] as const;
   const globalMissing = globalNeeded.filter((p) => !me.permissions.has(p));
 
-  const embed = new EmbedBuilder()
+  const embed = createKeplerEmbed()
     .setAuthor({
       name: interaction.client.user?.username ?? 'Bot',
       iconURL: interaction.client.user?.displayAvatarURL({ forceStatic: false }),
@@ -337,12 +338,12 @@ async function runChannelsAudit(interaction: CommandInteraction) {
       return;
     }
     const choice = i.values[0];
-    const header = new EmbedBuilder()
+    const header = createKeplerEmbed()
       .setAuthor({
         name: interaction.client.user?.username ?? 'Bot',
         iconURL: interaction.client.user?.displayAvatarURL({ forceStatic: false }),
       })
-      .setColor(0x00aaff)
+      .setColor(KEPLER_COLORS.primary)
       .setTimestamp()
       .setFooter({
         text: `Demandé par ${interaction.user.tag}`,
@@ -465,7 +466,7 @@ async function runRolesAudit(interaction: CommandInteraction) {
     fields.push({ name: '✅ @everyone', value: 'Aucune permission critique détectée' });
   }
 
-  const embed = new EmbedBuilder()
+  const embed = createKeplerEmbed()
     .setAuthor({
       name: interaction.client.user?.username ?? 'Bot',
       iconURL: interaction.client.user?.displayAvatarURL({ forceStatic: false }),
@@ -533,7 +534,7 @@ function translatePermission(permission: string): string {
     'MoveMembers': 'Déplacer des membres',
     'ManageEvents': 'Gérer les événements',
     'CreateEvents': 'Créer des événements',
-    
+
     // Permissions de base
     'ViewChannel': 'Voir le salon',
     'SendMessages': 'Envoyer des messages',
@@ -544,13 +545,13 @@ function translatePermission(permission: string): string {
     'ReadMessageHistory': 'Lire l\'historique des messages',
     'SendTTSMessages': 'Envoyer des messages TTS',
     'ViewAuditLog': 'Voir les logs d\'audit',
-    
+
     // Permissions vocales
     'Connect': 'Se connecter',
     'Speak': 'Parler',
     'Stream': 'Streamer',
     'PrioritySpeaker': 'Priorité de parole',
   };
-  
+
   return translations[permission] || permission;
 }

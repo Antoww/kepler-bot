@@ -1,7 +1,7 @@
-import { 
-    type ChatInputCommandInteraction, 
-    SlashCommandBuilder, 
-    EmbedBuilder,
+import { createKeplerEmbed, KEPLER_COLORS, KEPLER_MESSAGES } from '../../utils/theme.ts';
+import {
+    type ChatInputCommandInteraction,
+    SlashCommandBuilder,
     AttachmentBuilder,
     PermissionFlagsBits
 } from 'discord.js';
@@ -131,7 +131,7 @@ export const data = new SlashCommandBuilder()
 export async function execute(interaction: ChatInputCommandInteraction) {
     if (!interaction.guild) {
         return interaction.reply({
-            content: '❌ Cette commande ne peut être utilisée qu\'en serveur.',
+            content: KEPLER_MESSAGES.guildOnly,
             ephemeral: true
         });
     }
@@ -161,7 +161,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
                 await handleCommands(interaction);
                 break;
             default:
-                await interaction.editReply('❌ Sous-commande inconnue.');
+                await interaction.editReply(KEPLER_MESSAGES.unknownSubcommand);
         }
     } catch (error) {
         console.error('[Graph Command] Erreur:', error);
@@ -213,8 +213,8 @@ async function handleOverview(interaction: ChatInputCommandInteraction) {
         `**Bots:** ${guild.members.cache.filter(m => m.user.bot).size.toLocaleString()}`
     ].join('\n');
 
-    const embed = new EmbedBuilder()
-        .setColor('#45d7ff')
+    const embed = createKeplerEmbed()
+        .setColor(KEPLER_COLORS.primary)
         .setTitle(`📊 Vue d'ensemble - ${guild.name}`)
         .setThumbnail(guild.iconURL() || null)
         .setDescription(`Statistiques sur **${periodLabel}**`)
@@ -285,8 +285,8 @@ async function handleActivity(interaction: ChatInputCommandInteraction) {
     const activityAttachment = new AttachmentBuilder(activityBuffer, { name: 'server-activity.webp' });
 
 
-    const embed = new EmbedBuilder()
-        .setColor('#45d7ff')
+    const embed = createKeplerEmbed()
+        .setColor(KEPLER_COLORS.primary)
         .setTitle(`📈 Activité du serveur`)
         .setDescription(`Période: **${periodLabel}**`)
         .addFields(
@@ -350,8 +350,8 @@ async function handleMembers(interaction: ChatInputCommandInteraction) {
     const membersAttachment = new AttachmentBuilder(membersBuffer, { name: 'server-members.webp' });
 
 
-    const embed = new EmbedBuilder()
-        .setColor('#9d8cff')
+    const embed = createKeplerEmbed()
+        .setColor(KEPLER_COLORS.accent)
         .setTitle(`👥 Statistiques des membres`)
         .setThumbnail(guild.iconURL() || null)
         .addFields(
@@ -407,12 +407,12 @@ async function handleChannels(interaction: ChatInputCommandInteraction) {
     const topChannels = await getTopChannels(days, limit, guildId);
 
     if (topChannels.length === 0) {
-        return interaction.editReply('📊 Aucune donnée disponible pour cette période.');
+        return interaction.editReply(KEPLER_MESSAGES.noData);
     }
 
     // Résoudre les noms de canaux et créer le graphique
     const chartData: { label: string; value: number }[] = [];
-    
+
     for (const channelStat of topChannels) {
         const channel = interaction.guild!.channels.cache.get(channelStat.channel_id);
         const name = channel ? `#${channel.name}` : 'Canal supprimé';
@@ -425,8 +425,8 @@ async function handleChannels(interaction: ChatInputCommandInteraction) {
     const channelsBuffer = await renderBarChart('Canaux les plus actifs', periodLabel, chartData, '#ff6b6b');
     const channelsAttachment = new AttachmentBuilder(channelsBuffer, { name: 'server-channels.webp' });
 
-    const embed = new EmbedBuilder()
-        .setColor('#ff6b6b')
+    const embed = createKeplerEmbed()
+        .setColor(KEPLER_COLORS.danger)
         .setTitle('📺 Canaux les plus actifs')
         .setDescription(`Période: **${periodLabel}**`)
         .addFields({
@@ -450,7 +450,7 @@ async function handleUsers(interaction: ChatInputCommandInteraction) {
     const topUsers = await getTopUsers(days, limit, guildId);
 
     if (topUsers.length === 0) {
-        return interaction.editReply('📊 Aucune donnée disponible pour cette période.');
+        return interaction.editReply(KEPLER_MESSAGES.noData);
     }
 
     // Résoudre les membres manquants en parallèle pour limiter la latence Discord.
@@ -477,8 +477,8 @@ async function handleUsers(interaction: ChatInputCommandInteraction) {
     const usersBuffer = await renderBarChart('Utilisateurs les plus actifs', periodLabel, chartData, '#ff8a5c');
     const usersAttachment = new AttachmentBuilder(usersBuffer, { name: 'server-users.webp' });
 
-    const embed = new EmbedBuilder()
-        .setColor('#ff8a5c')
+    const embed = createKeplerEmbed()
+        .setColor(KEPLER_COLORS.highlight)
         .setTitle('👑 Utilisateurs les plus actifs')
         .setDescription(`Période: **${periodLabel}**\n\n${userLines.join('\n')}`)
         .setImage('attachment://server-users.webp')
@@ -515,8 +515,8 @@ async function handleCommands(interaction: ChatInputCommandInteraction) {
     const commandsAttachment = new AttachmentBuilder(commandsBuffer, { name: 'server-commands.webp' });
 
 
-    const embed = new EmbedBuilder()
-        .setColor('#f8c15c')
+    const embed = createKeplerEmbed()
+        .setColor(KEPLER_COLORS.warning)
         .setTitle('⚡ Commandes les plus utilisées')
         .setDescription(`Période: **${periodLabel}**`)
         .addFields(

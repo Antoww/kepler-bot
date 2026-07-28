@@ -1,6 +1,7 @@
-import { 
-    EmbedBuilder, 
-    AuditLogEvent, 
+import { createKeplerEmbed, KEPLER_COLORS } from '../../utils/theme.ts';
+import {
+    EmbedBuilder,
+    AuditLogEvent,
     TextChannel,
     Message,
     PartialMessage
@@ -29,7 +30,7 @@ async function getAuditLog(guild: any, targetId: string, actionType: AuditLogEve
             type: actionType,
             limit: 1,
         });
-        
+
         const entry = auditLogs.entries.first();
         return entry;
     } catch (error) {
@@ -44,7 +45,7 @@ export async function logMessageDelete(message: Message | PartialMessage) {
 
     const auditEntry = await getAuditLog(message.guild, message.id, AuditLogEvent.MessageDelete);
     const client = message.client;
-    
+
     const fields: any[] = [
         { name: '💬 Canal', value: `<#${message.channel.id}>\n\`${message.channel.id}\``, inline: true },
         { name: '📅 Date', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: true }
@@ -78,17 +79,17 @@ export async function logMessageDelete(message: Message | PartialMessage) {
         });
     }
 
-    const embed = new EmbedBuilder()
-        .setAuthor({ 
+    const embed = createKeplerEmbed()
+        .setAuthor({
             name: 'Kepler Bot - Système de Logs',
             iconURL: client.user?.displayAvatarURL({ forceStatic: false })
         })
-        .setColor('#ED4245')
+        .setColor(KEPLER_COLORS.danger)
         .setTitle('🗑️ Message Supprimé')
         .setDescription(`### Message supprimé\n> Un message a été supprimé dans <#${message.channel.id}>.`)
         .addFields(fields)
         .setThumbnail(message.author?.displayAvatarURL({ forceStatic: false }) || null)
-        .setFooter({ 
+        .setFooter({
             text: `Logs Messages`,
             iconURL: message.guild.iconURL({ forceStatic: false }) || undefined
         })
@@ -143,17 +144,17 @@ export async function logMessageUpdate(oldMessage: Message | PartialMessage, new
         });
     }
 
-    const embed = new EmbedBuilder()
-        .setAuthor({ 
+    const embed = createKeplerEmbed()
+        .setAuthor({
             name: 'Kepler Bot - Système de Logs',
             iconURL: client.user?.displayAvatarURL({ forceStatic: false })
         })
-        .setColor('#FEE75C')
+        .setColor(KEPLER_COLORS.warning)
         .setTitle('✏️ Message Modifié')
         .setDescription(`### Message édité\n> Un message a été modifié dans <#${newMessage.channel.id}>.`)
         .addFields(fields)
         .setThumbnail(newMessage.author?.displayAvatarURL({ forceStatic: false }) || null)
-        .setFooter({ 
+        .setFooter({
             text: `Logs Messages`,
             iconURL: newMessage.guild.iconURL({ forceStatic: false }) || undefined
         })
@@ -168,7 +169,7 @@ export async function logMessageBulkDelete(messages: any, channel: any) {
 
     const auditEntry = await getAuditLog(channel.guild, channel.id, AuditLogEvent.MessageBulkDelete);
     const client = channel.client;
-    
+
     const fields: any[] = [
         { name: '💬 Canal', value: `<#${channel.id}>\n\`${channel.id}\``, inline: true },
         { name: '📊 Quantité', value: `${messages.size} messages`, inline: true },
@@ -181,24 +182,24 @@ export async function logMessageBulkDelete(messages: any, channel: any) {
 
     // Ajouter le lien d'archive si disponible
     if (messages.archiveUrl) {
-        fields.push({ 
-            name: '📄 Archive des messages', 
-            value: `[Voir les messages supprimés](${messages.archiveUrl})`, 
-            inline: false 
+        fields.push({
+            name: '📄 Archive des messages',
+            value: `[Voir les messages supprimés](${messages.archiveUrl})`,
+            inline: false
         });
     }
 
-    const embed = new EmbedBuilder()
-        .setAuthor({ 
+    const embed = createKeplerEmbed()
+        .setAuthor({
             name: 'Kepler Bot - Système de Logs',
             iconURL: client.user?.displayAvatarURL({ forceStatic: false })
         })
-        .setColor('#ED4245')
+        .setColor(KEPLER_COLORS.danger)
         .setTitle('🗑️ Suppression de masse')
         .setDescription(`### Nettoyage de messages\n> **${messages.size}** messages ont été supprimés dans <#${channel.id}>.`)
         .addFields(fields)
         .setThumbnail(channel.guild.iconURL({ forceStatic: false }))
-        .setFooter({ 
+        .setFooter({
             text: `Logs Messages • ${messages.size} messages supprimés`,
             iconURL: channel.guild.iconURL({ forceStatic: false }) || undefined
         })

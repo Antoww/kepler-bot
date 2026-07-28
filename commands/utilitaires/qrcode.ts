@@ -1,4 +1,5 @@
-import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
+import { createKeplerEmbed, KEPLER_COLORS } from '../../utils/theme.ts';
+import { SlashCommandBuilder } from 'discord.js';
 import QRCode from 'qrcode';
 import { Buffer } from 'node:buffer';
 
@@ -116,8 +117,8 @@ export async function execute(interaction: any) {
 		console.log(`[QRCODE] ✅ Généré (${buffer.length} bytes)`);
 
 		// Créer l'embed
-		const embed = new EmbedBuilder()
-			.setColor('#2e7d32')
+		const embed = createKeplerEmbed()
+			.setColor(KEPLER_COLORS.success)
 			.setTitle(title)
 			.setDescription(description)
 			.setImage('attachment://qrcode.png')

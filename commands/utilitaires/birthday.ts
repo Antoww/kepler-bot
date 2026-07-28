@@ -1,4 +1,5 @@
-import { type CommandInteraction, SlashCommandBuilder, EmbedBuilder, User } from 'discord.js';
+import { createKeplerEmbed, KEPLER_COLORS, KEPLER_MESSAGES } from '../../utils/theme.ts';
+import { type CommandInteraction, SlashCommandBuilder, User } from 'discord.js';
 import { setBirthday, getBirthday, deleteBirthday, getAllBirthdays, getBirthdayChannel } from '../../database/db.ts';
 
 export const data = new SlashCommandBuilder()
@@ -48,7 +49,7 @@ export const data = new SlashCommandBuilder()
 
 export async function execute(interaction: CommandInteraction) {
     if (!interaction.guild) {
-        await interaction.reply('Cette commande ne peut être utilisée que sur un serveur.');
+        await interaction.reply(KEPLER_MESSAGES.guildOnly);
         return;
     }
 
@@ -99,16 +100,16 @@ async function handleSetBirthday(interaction: CommandInteraction) {
         'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'
     ];
 
-    const dateString = year 
+    const dateString = year
         ? `${day} ${monthNames[month - 1]} ${year}`
         : `${day} ${monthNames[month - 1]}`;
 
-    const embed = new EmbedBuilder()
-        .setAuthor({ 
-            name: interaction.client.user?.username, 
-            iconURL: interaction.client.user?.displayAvatarURL({ forceStatic: false }) 
+    const embed = createKeplerEmbed()
+        .setAuthor({
+            name: interaction.client.user?.username,
+            iconURL: interaction.client.user?.displayAvatarURL({ forceStatic: false })
         })
-        .setColor('#FF69B4')
+        .setColor(KEPLER_COLORS.highlight)
         .setTitle('🎂 Anniversaire enregistré !')
         .setDescription(`Votre anniversaire a été défini au **${dateString}**`)
         .setFooter({
@@ -125,10 +126,10 @@ async function handleGetBirthday(interaction: CommandInteraction) {
     const birthday = await getBirthday(interaction.guild!.id, targetUser.id);
 
     if (!birthday) {
-        const message = targetUser.id === interaction.user.id 
+        const message = targetUser.id === interaction.user.id
             ? 'Vous n\'avez pas encore défini votre anniversaire. Utilisez `/birthday set` pour le faire.'
             : `${targetUser.username} n'a pas encore défini son anniversaire.`;
-        
+
         await interaction.reply(message);
         return;
     }
@@ -138,7 +139,7 @@ async function handleGetBirthday(interaction: CommandInteraction) {
         'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'
     ];
 
-    const dateString = birthday.birth_year 
+    const dateString = birthday.birth_year
         ? `${birthday.birth_day} ${monthNames[birthday.birth_month - 1]} ${birthday.birth_year}`
         : `${birthday.birth_day} ${monthNames[birthday.birth_month - 1]}`;
 
@@ -148,20 +149,20 @@ async function handleGetBirthday(interaction: CommandInteraction) {
         const today = new Date();
         let age = today.getFullYear() - birthday.birth_year;
         const birthdayThisYear = new Date(today.getFullYear(), birthday.birth_month - 1, birthday.birth_day);
-        
+
         if (today < birthdayThisYear) {
             age--;
         }
-        
+
         ageString = ` (${age} ans)`;
     }
 
-    const embed = new EmbedBuilder()
-        .setAuthor({ 
-            name: interaction.client.user?.username, 
-            iconURL: interaction.client.user?.displayAvatarURL({ forceStatic: false }) 
+    const embed = createKeplerEmbed()
+        .setAuthor({
+            name: interaction.client.user?.username,
+            iconURL: interaction.client.user?.displayAvatarURL({ forceStatic: false })
         })
-        .setColor('#FF69B4')
+        .setColor(KEPLER_COLORS.highlight)
         .setTitle('🎂 Anniversaire')
         .setDescription(`**${targetUser.username}** est né(e) le **${dateString}**${ageString}`)
         .setThumbnail(targetUser.displayAvatarURL({ forceStatic: false }))
@@ -184,12 +185,12 @@ async function handleRemoveBirthday(interaction: CommandInteraction) {
 
     await deleteBirthday(interaction.guild!.id, interaction.user.id);
 
-    const embed = new EmbedBuilder()
-        .setAuthor({ 
-            name: interaction.client.user?.username, 
-            iconURL: interaction.client.user?.displayAvatarURL({ forceStatic: false }) 
+    const embed = createKeplerEmbed()
+        .setAuthor({
+            name: interaction.client.user?.username,
+            iconURL: interaction.client.user?.displayAvatarURL({ forceStatic: false })
         })
-        .setColor('#FF0000')
+        .setColor(KEPLER_COLORS.danger)
         .setTitle('🗑️ Anniversaire supprimé')
         .setDescription('Votre anniversaire a été supprimé de la base de données.')
         .setFooter({
@@ -235,12 +236,12 @@ async function handleListBirthdays(interaction: CommandInteraction) {
         }
     }
 
-    const embed = new EmbedBuilder()
-        .setAuthor({ 
-            name: interaction.client.user?.username, 
-            iconURL: interaction.client.user?.displayAvatarURL({ forceStatic: false }) 
+    const embed = createKeplerEmbed()
+        .setAuthor({
+            name: interaction.client.user?.username,
+            iconURL: interaction.client.user?.displayAvatarURL({ forceStatic: false })
         })
-        .setColor('#FF69B4')
+        .setColor(KEPLER_COLORS.highlight)
         .setTitle('🎂 Liste des anniversaires')
         .setDescription(description)
         .setFooter({
@@ -254,16 +255,16 @@ async function handleListBirthdays(interaction: CommandInteraction) {
 
 async function handleCelebrateBirthday(interaction: CommandInteraction) {
     const targetUser = interaction.options.getUser('utilisateur')!;
-    
+
     // Vérifier si un canal d'anniversaires est configuré
     const birthdayChannelId = await getBirthdayChannel(interaction.guild!.id);
-    
-    const embed = new EmbedBuilder()
-        .setAuthor({ 
-            name: interaction.client.user?.username, 
-            iconURL: interaction.client.user?.displayAvatarURL({ forceStatic: false }) 
+
+    const embed = createKeplerEmbed()
+        .setAuthor({
+            name: interaction.client.user?.username,
+            iconURL: interaction.client.user?.displayAvatarURL({ forceStatic: false })
         })
-        .setColor('#FF69B4')
+        .setColor(KEPLER_COLORS.highlight)
         .setTitle('🎉 Joyeux Anniversaire !')
         .setDescription(`**${targetUser.username}** fête son anniversaire aujourd'hui ! 🎂`)
         .addFields(
@@ -302,7 +303,7 @@ function validateDate(day: number, month: number, year?: number): boolean {
 
     // Vérifier les jours par mois
     const daysInMonth = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-    
+
     // Gérer les années bissextiles si l'année est fournie
     if (year && month === 2) {
         const isLeapYear = (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
@@ -312,4 +313,4 @@ function validateDate(day: number, month: number, year?: number): boolean {
     }
 
     return day <= daysInMonth[month - 1];
-} 
+}

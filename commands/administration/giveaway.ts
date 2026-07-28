@@ -1,10 +1,10 @@
-import { 
-    type CommandInteraction, 
-    SlashCommandBuilder, 
+import { createKeplerEmbed, KEPLER_COLORS, KEPLER_MESSAGES } from '../../utils/theme.ts';
+import {
+    type CommandInteraction,
+    SlashCommandBuilder,
     ChannelType,
     PermissionFlagsBits,
     type ChatInputCommandInteraction,
-    EmbedBuilder,
     TextChannel
 } from 'discord.js';
 import {
@@ -67,7 +67,7 @@ export const data = new SlashCommandBuilder()
 
 export async function execute(interaction: CommandInteraction) {
     if (!interaction.guild) {
-        await interaction.reply('❌ Cette commande ne peut être utilisée que sur un serveur.');
+        await interaction.reply(KEPLER_MESSAGES.guildOnly);
         return;
     }
 
@@ -170,8 +170,8 @@ async function handleCreateGiveaway(interaction: CommandInteraction) {
         scheduleGiveaway(interaction.client, giveawayId, endTime);
 
         // Répondre à l'utilisateur
-        const confirmEmbed = new EmbedBuilder()
-            .setColor('#00FF00')
+        const confirmEmbed = createKeplerEmbed()
+            .setColor(KEPLER_COLORS.success)
             .setTitle('✅ Giveaway créé')
             .addFields(
                 { name: 'Titre', value: titre, inline: true },
@@ -216,8 +216,8 @@ async function handleCancelGiveaway(interaction: CommandInteraction) {
         // Annuler le giveaway
         await cancelGiveaway(interaction.client, giveawayId);
 
-        const confirmEmbed = new EmbedBuilder()
-            .setColor('#FF0000')
+        const confirmEmbed = createKeplerEmbed()
+            .setColor(KEPLER_COLORS.danger)
             .setTitle('✅ Giveaway annulé')
             .setDescription(`Le giveaway **${giveaway.title}** a été annulé.`)
             .addFields(
@@ -253,8 +253,8 @@ async function handleEndGiveaway(interaction: CommandInteraction) {
         // Terminer le giveaway
         await endGiveawayNow(interaction.client, giveawayId);
 
-        const confirmEmbed = new EmbedBuilder()
-            .setColor('#00FF00')
+        const confirmEmbed = createKeplerEmbed()
+            .setColor(KEPLER_COLORS.success)
             .setTitle('✅ Giveaway terminé')
             .setDescription(`Le giveaway **${giveaway.title}** a été terminé immédiatement.`)
             .addFields(

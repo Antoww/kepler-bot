@@ -1,4 +1,5 @@
-import { type CommandInteraction, SlashCommandBuilder, EmbedBuilder } from 'discord.js';
+import { createKeplerEmbed } from '../../utils/theme.ts';
+import { type CommandInteraction, SlashCommandBuilder } from 'discord.js';
 
 export const data = new SlashCommandBuilder()
     .setName('chifoumi')
@@ -18,7 +19,7 @@ export async function execute(interaction: CommandInteraction) {
     const userChoice = interaction.options.get('choix')?.value as string;
     const choices = ['pierre', 'papier', 'ciseaux'];
     const botChoice = choices[Math.floor(Math.random() * choices.length)];
-    
+
     const emojis = {
         'pierre': '🪨',
         'papier': '📄',
@@ -54,25 +55,25 @@ export async function execute(interaction: CommandInteraction) {
         color = 0xFF0000; // Rouge
     }
 
-    const embed = new EmbedBuilder()
+    const embed = createKeplerEmbed()
         .setColor(color)
         .setTitle(`${resultEmoji} ${result}`)
         .setDescription('Résultat du chifoumi')
         .addFields(
-            { 
-                name: '👤 Votre choix', 
-                value: `${emojis[userChoice]} ${choiceNames[userChoice]}`, 
-                inline: true 
+            {
+                name: '👤 Votre choix',
+                value: `${emojis[userChoice]} ${choiceNames[userChoice]}`,
+                inline: true
             },
-            { 
-                name: '🤖 Choix du bot', 
-                value: `${emojis[botChoice]} ${choiceNames[botChoice]}`, 
-                inline: true 
+            {
+                name: '🤖 Choix du bot',
+                value: `${emojis[botChoice]} ${choiceNames[botChoice]}`,
+                inline: true
             },
-            { 
-                name: '🏆 Résultat', 
-                value: result, 
-                inline: true 
+            {
+                name: '🏆 Résultat',
+                value: result,
+                inline: true
             }
         )
         .setFooter({

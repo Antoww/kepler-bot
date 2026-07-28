@@ -1,11 +1,11 @@
-import { 
-    type CommandInteraction, 
-    SlashCommandBuilder, 
-    EmbedBuilder, 
-    ActionRowBuilder, 
-    ButtonBuilder, 
+import { createKeplerEmbed, KEPLER_COLORS, KEPLER_MESSAGES } from '../../utils/theme.ts';
+import {
+    type CommandInteraction,
+    SlashCommandBuilder,
+    ActionRowBuilder,
+    ButtonBuilder,
     ButtonStyle,
-    ComponentType 
+    ComponentType
 } from 'discord.js';
 import { getUserReminders, deleteReminder } from '../../database/supabase.ts';
 
@@ -41,8 +41,8 @@ async function handleListReminders(interaction: CommandInteraction) {
         const reminders = await getUserReminders(interaction.user.id);
 
         if (!reminders || reminders.length === 0) {
-            const embed = new EmbedBuilder()
-                .setColor('#0099ff')
+            const embed = createKeplerEmbed()
+                .setColor(KEPLER_COLORS.primary)
                 .setTitle('📋 Vos rappels')
                 .setDescription('❌ Vous n\'avez aucun rappel actif.')
                 .setTimestamp();
@@ -63,8 +63,8 @@ async function handleListReminders(interaction: CommandInteraction) {
             const end = start + itemsPerPage;
             const currentReminders = sortedReminders.slice(start, end);
 
-            const embed = new EmbedBuilder()
-                .setColor('#0099ff')
+            const embed = createKeplerEmbed()
+                .setColor(KEPLER_COLORS.primary)
                 .setTitle('📋 Vos rappels actifs')
                 .setFooter({ text: `Page ${page + 1}/${totalPages} • ${sortedReminders.length} rappels total` })
                 .setTimestamp();
@@ -73,9 +73,9 @@ async function handleListReminders(interaction: CommandInteraction) {
                 const triggerTime = Math.floor(reminder.timestamp / 1000);
                 const createdTime = Math.floor(new Date(reminder.created_at).getTime() / 1000);
                 const isOverdue = reminder.timestamp < Date.now();
-                
+
                 const status = isOverdue ? '🔴 **Expiré**' : '🟢 **Actif**';
-                
+
                 return [
                     `**ID ${reminder.id}** - ${status}`,
                     `💬 ${reminder.message}`,
@@ -120,10 +120,10 @@ async function handleListReminders(interaction: CommandInteraction) {
             )
         ];
 
-        const response = await interaction.reply({ 
-            embeds: [embed], 
+        const response = await interaction.reply({
+            embeds: [embed],
             components,
-            fetchReply: true 
+            fetchReply: true
         });
 
         const collector = response.createMessageComponentCollector({
@@ -133,7 +133,7 @@ async function handleListReminders(interaction: CommandInteraction) {
 
         collector.on('collect', async i => {
             if (i.user.id !== interaction.user.id) {
-                await i.reply({ content: 'Vous ne pouvez pas utiliser ces boutons.', ephemeral: true });
+                await i.reply({ content: KEPLER_MESSAGES.unauthorizedComponent, ephemeral: true });
                 return;
             }
 
@@ -150,9 +150,9 @@ async function handleListReminders(interaction: CommandInteraction) {
                     return;
             }
 
-            await i.update({ 
-                embeds: [generateEmbed(currentPage)], 
-                components: [generateButtons(currentPage)] 
+            await i.update({
+                embeds: [generateEmbed(currentPage)],
+                components: [generateButtons(currentPage)]
             });
         });
 
@@ -192,8 +192,8 @@ async function handleDeleteReminder(interaction: CommandInteraction) {
         // Supprimer le rappel
         await deleteReminder(reminderId);
 
-        const embed = new EmbedBuilder()
-            .setColor('#ff0000')
+        const embed = createKeplerEmbed()
+            .setColor(KEPLER_COLORS.danger)
             .setTitle('🗑️ Rappel supprimé')
             .setDescription(`Le rappel **ID ${reminderId}** a été supprimé avec succès.`)
             .addFields(

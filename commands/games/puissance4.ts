@@ -1,9 +1,10 @@
-import { 
-    type CommandInteraction, 
-    SlashCommandBuilder, 
-    EmbedBuilder, 
-    ActionRowBuilder, 
-    ButtonBuilder, 
+import { createKeplerEmbed } from '../../utils/theme.ts';
+import {
+    type CommandInteraction,
+    SlashCommandBuilder,
+    EmbedBuilder,
+    ActionRowBuilder,
+    ButtonBuilder,
     ButtonStyle,
     ComponentType,
     type ButtonInteraction,
@@ -45,7 +46,7 @@ class Puissance4Game {
         for (let row = 5; row >= 0; row--) {
             if (this.board[row][column] === '⚪') {
                 this.board[row][column] = this.currentPlayer === 'red' ? '🔴' : '🟡';
-                
+
                 // Vérifier si il y a une victoire
                 if (this.checkWin(row, column)) {
                     this.winner = this.currentPlayer;
@@ -65,7 +66,7 @@ class Puissance4Game {
 
     private checkWin(row: number, col: number): boolean {
         const token = this.board[row][col];
-        
+
         // Vérifier horizontal
         if (this.checkDirection(row, col, 0, 1, token) >= 4) return true;
         // Vérifier vertical
@@ -74,13 +75,13 @@ class Puissance4Game {
         if (this.checkDirection(row, col, 1, 1, token) >= 4) return true;
         // Vérifier diagonal \
         if (this.checkDirection(row, col, 1, -1, token) >= 4) return true;
-        
+
         return false;
     }
 
     private checkDirection(row: number, col: number, deltaRow: number, deltaCol: number, token: string): number {
         let count = 1;
-        
+
         // Compter dans une direction
         let r = row + deltaRow;
         let c = col + deltaCol;
@@ -89,7 +90,7 @@ class Puissance4Game {
             r += deltaRow;
             c += deltaCol;
         }
-        
+
         // Compter dans l'autre direction
         r = row - deltaRow;
         c = col - deltaCol;
@@ -98,7 +99,7 @@ class Puissance4Game {
             r -= deltaRow;
             c -= deltaCol;
         }
-        
+
         return count;
     }
 
@@ -108,7 +109,7 @@ class Puissance4Game {
 
     public getBotMove(): number {
         // IA simple : essaie de gagner, puis de bloquer, sinon joue aléatoirement
-        
+
         // 1. Essayer de gagner
         for (let col = 0; col < 7; col++) {
             if (this.canDrop(col)) {
@@ -119,7 +120,7 @@ class Puissance4Game {
                 }
             }
         }
-        
+
         // 2. Essayer de bloquer l'adversaire
         for (let col = 0; col < 7; col++) {
             if (this.canDrop(col)) {
@@ -131,7 +132,7 @@ class Puissance4Game {
                 }
             }
         }
-        
+
         // 3. Jouer au centre ou aléatoirement
         const availableColumns: number[] = [];
         for (let col = 0; col < 7; col++) {
@@ -139,10 +140,10 @@ class Puissance4Game {
                 availableColumns.push(col);
             }
         }
-        
+
         // Préférer le centre
         if (availableColumns.includes(3)) return 3;
-        
+
         return availableColumns[Math.floor(Math.random() * availableColumns.length)];
     }
 
@@ -162,10 +163,10 @@ class Puissance4Game {
     public getEmbed(): EmbedBuilder {
         const boardString = this.board.map(row => row.join('')).join('\n');
         const numbers = '1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣';
-        
+
         let title: string;
         let color: number;
-        
+
         if (this.gameOver) {
             if (this.winner === 'tie') {
                 title = '🤝 Match nul !';
@@ -180,15 +181,15 @@ class Puissance4Game {
                 color = 0xFFFF00;
             }
         } else {
-            const currentPlayerName = this.currentPlayer === 'red' 
-                ? `<@${this.player1.id}>` 
+            const currentPlayerName = this.currentPlayer === 'red'
+                ? `<@${this.player1.id}>`
                 : (this.isVsBot ? 'Bot' : `<@${this.player2!.id}>`);
             const currentEmoji = this.currentPlayer === 'red' ? '🔴' : '🟡';
             title = `${currentEmoji} Tour de ${currentPlayerName}`;
             color = this.currentPlayer === 'red' ? 0xFF0000 : 0xFFFF00;
         }
 
-        return new EmbedBuilder()
+        return createKeplerEmbed()
             .setTitle(title)
             .setDescription(`${numbers}\n${boardString}`)
             .setColor(color)
@@ -214,7 +215,7 @@ class Puissance4Game {
     public getButtons(): ActionRowBuilder<ButtonBuilder>[] {
         const row1 = new ActionRowBuilder<ButtonBuilder>();
         const row2 = new ActionRowBuilder<ButtonBuilder>();
-        
+
         // Première rangée : colonnes 1-4
         for (let i = 0; i < 4; i++) {
             const button = new ButtonBuilder()
@@ -222,10 +223,10 @@ class Puissance4Game {
                 .setLabel(`${i + 1}`)
                 .setStyle(ButtonStyle.Primary)
                 .setDisabled(this.gameOver || !this.canDrop(i));
-            
+
             row1.addComponents(button);
         }
-        
+
         // Deuxième rangée : colonnes 5-7
         for (let i = 4; i < 7; i++) {
             const button = new ButtonBuilder()
@@ -233,17 +234,17 @@ class Puissance4Game {
                 .setLabel(`${i + 1}`)
                 .setStyle(ButtonStyle.Primary)
                 .setDisabled(this.gameOver || !this.canDrop(i));
-            
+
             row2.addComponents(button);
         }
-        
+
         return [row1, row2];
     }
 
     public isPlayerTurn(user: User): boolean {
         if (this.gameOver) return false;
         if (this.isVsBot && this.currentPlayer === 'yellow') return false;
-        
+
         return (this.currentPlayer === 'red' && user.id === this.player1.id) ||
                (this.currentPlayer === 'yellow' && !this.isVsBot && user.id === this.player2!.id);
     }
@@ -265,7 +266,7 @@ class Puissance4Game {
 
 export async function execute(interaction: CommandInteraction) {
     const adversaire = interaction.options.getUser('adversaire');
-    
+
     // Vérifications
     if (adversaire && adversaire.id === interaction.user.id) {
         await interaction.reply({
@@ -274,7 +275,7 @@ export async function execute(interaction: CommandInteraction) {
         });
         return;
     }
-    
+
     if (adversaire && adversaire.bot) {
         await interaction.reply({
             content: '❌ Vous ne pouvez pas jouer contre un bot ! Laissez le champ vide pour jouer contre l\'IA du bot.',
@@ -284,7 +285,7 @@ export async function execute(interaction: CommandInteraction) {
     }
 
     const game = new Puissance4Game(interaction.user, adversaire || undefined);
-    
+
     await interaction.reply({
         embeds: [game.getEmbed()],
         components: game.getButtons()
@@ -314,7 +315,7 @@ export async function execute(interaction: CommandInteraction) {
     collector?.on('collect', async (buttonInteraction: ButtonInteraction) => {
         // Réinitialiser le timer d'inactivité
         lastActivityTime = Date.now();
-        
+
         // Vérifier si c'est le tour du joueur
         if (!game.isPlayerTurn(buttonInteraction.user)) {
             await buttonInteraction.reply({
@@ -325,7 +326,7 @@ export async function execute(interaction: CommandInteraction) {
         }
 
         const column = parseInt(buttonInteraction.customId.split('_')[1]);
-        
+
         if (!game.dropToken(column)) {
             await buttonInteraction.reply({
                 content: '❌ Cette colonne est pleine !',
@@ -352,10 +353,10 @@ export async function execute(interaction: CommandInteraction) {
             setTimeout(async () => {
                 const botColumn = game.getBotMove();
                 game.dropToken(botColumn);
-                
+
                 // Réinitialiser le timer après le coup du bot aussi
                 lastActivityTime = Date.now();
-                
+
                 try {
                     await buttonInteraction.editReply({
                         embeds: [game.getEmbed()],
@@ -375,14 +376,14 @@ export async function execute(interaction: CommandInteraction) {
 
     collector?.on('end', async (collected, reason) => {
         clearInterval(inactivityTimer); // Nettoyer le timer
-        
+
         let message = '';
         if (reason === 'time') {
             message = '⏰ Le temps maximum (5 minutes) est écoulé ! La partie a été annulée.';
         } else if (reason === 'inactivity') {
             message = '😴 Aucune activité depuis 1 minute ! La partie a été annulée.';
         }
-        
+
         if (message) {
             try {
                 await interaction.editReply({

@@ -1,4 +1,5 @@
-import { type CommandInteraction, SlashCommandBuilder, EmbedBuilder } from 'discord.js';
+import { createKeplerEmbed, KEPLER_COLORS } from '../../utils/theme.ts';
+import { type CommandInteraction, SlashCommandBuilder } from 'discord.js';
 
 export const data = new SlashCommandBuilder()
     .setName('minecraft-uuid')
@@ -12,7 +13,7 @@ export async function execute(interaction: CommandInteraction) {
 
     try {
         const response = await fetch(`https://api.mojang.com/users/profiles/minecraft/${username}`);
-        
+
         if (!response.ok) {
             await interaction.reply(`Joueur **${username}** introuvable.`);
             return;
@@ -22,12 +23,12 @@ export async function execute(interaction: CommandInteraction) {
         const uuid = data.id;
         const formattedUuid = `${uuid.slice(0, 8)}-${uuid.slice(8, 12)}-${uuid.slice(12, 16)}-${uuid.slice(16, 20)}-${uuid.slice(20)}`;
 
-        const embed = new EmbedBuilder()
-            .setAuthor({ 
-                name: interaction.client.user?.username, 
-                iconURL: interaction.client.user?.displayAvatarURL({ forceStatic: false }) 
+        const embed = createKeplerEmbed()
+            .setAuthor({
+                name: interaction.client.user?.username,
+                iconURL: interaction.client.user?.displayAvatarURL({ forceStatic: false })
             })
-            .setColor('#00ff00')
+            .setColor(KEPLER_COLORS.success)
             .setTitle('🎮 Informations Minecraft')
             .addFields(
                 { name: '👤 Pseudo', value: data.name, inline: true },
@@ -45,4 +46,4 @@ export async function execute(interaction: CommandInteraction) {
         console.error('Erreur lors de la récupération de l\'UUID:', error);
         await interaction.reply('Erreur lors de la récupération de l\'UUID. Veuillez réessayer.');
     }
-} 
+}

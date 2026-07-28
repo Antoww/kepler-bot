@@ -1,6 +1,7 @@
-import { 
-    EmbedBuilder, 
-    AuditLogEvent, 
+import { createKeplerEmbed, KEPLER_COLORS } from '../../utils/theme.ts';
+import {
+    EmbedBuilder,
+    AuditLogEvent,
     TextChannel,
     GuildMember,
     VoiceState
@@ -29,7 +30,7 @@ async function getAuditLog(guild: any, targetId: string, actionType: AuditLogEve
             type: actionType,
             limit: 1,
         });
-        
+
         const entry = auditLogs.entries.first();
         return entry;
     } catch (error) {
@@ -42,28 +43,28 @@ async function getAuditLog(guild: any, targetId: string, actionType: AuditLogEve
 export async function logMemberUpdate(oldMember: GuildMember, newMember: GuildMember) {
     const auditEntry = await getAuditLog(newMember.guild, newMember.id, AuditLogEvent.MemberUpdate);
     const client = newMember.client;
-    
+
     const changes: string[] = [];
-    
+
     // Changement de pseudo
     if (oldMember.nickname !== newMember.nickname) {
         const oldNick = oldMember.nickname || oldMember.user.username;
         const newNick = newMember.nickname || newMember.user.username;
         changes.push(`**Pseudo:** ${oldNick} → ${newNick}`);
     }
-    
+
     // Changement de rôles
     const oldRoles = oldMember.roles.cache.filter(role => role.id !== newMember.guild.id);
     const newRoles = newMember.roles.cache.filter(role => role.id !== newMember.guild.id);
-    
+
     const addedRoles = newRoles.filter(role => !oldRoles.has(role.id));
     const removedRoles = oldRoles.filter(role => !newRoles.has(role.id));
-    
+
     if (addedRoles.size > 0) {
         const roleList = addedRoles.map(role => `\`${role.name}\``).join(', ');
         changes.push(`**Rôles ajoutés:** ${roleList}`);
     }
-    
+
     if (removedRoles.size > 0) {
         const roleList = removedRoles.map(role => `\`${role.name}\``).join(', ');
         changes.push(`**Rôles retirés:** ${roleList}`);
@@ -81,17 +82,17 @@ export async function logMemberUpdate(oldMember: GuildMember, newMember: GuildMe
         fields.push({ name: '👤 Modifié par', value: `${auditEntry.executor.tag}\n\`${auditEntry.executor.id}\``, inline: true });
     }
 
-    const embed = new EmbedBuilder()
-        .setAuthor({ 
+    const embed = createKeplerEmbed()
+        .setAuthor({
             name: 'Kepler Bot - Système de Logs',
             iconURL: client.user?.displayAvatarURL({ forceStatic: false })
         })
-        .setColor('#FEE75C')
+        .setColor(KEPLER_COLORS.warning)
         .setTitle('✏️ Membre Modifié')
         .setDescription(`### ${newMember.user.tag}\n> Le profil du membre a été modifié avec **${changes.length}** changement(s).`)
         .addFields(fields)
         .setThumbnail(newMember.user.displayAvatarURL({ forceStatic: false }))
-        .setFooter({ 
+        .setFooter({
             text: `Logs Membres • ${changes.length} modification(s)`,
             iconURL: newMember.guild.iconURL({ forceStatic: false }) || undefined
         })
@@ -122,17 +123,17 @@ export async function logMemberTimeout(member: GuildMember, timeout: Date | null
         });
     }
 
-    const embed = new EmbedBuilder()
-        .setAuthor({ 
+    const embed = createKeplerEmbed()
+        .setAuthor({
             name: 'Kepler Bot - Système de Logs',
             iconURL: client.user?.displayAvatarURL({ forceStatic: false })
         })
-        .setColor(isTimeout ? '#F26522' : '#57F287')
+        .setColor(isTimeout ? KEPLER_COLORS.warning : KEPLER_COLORS.success)
         .setTitle(isTimeout ? '🔇 Membre Mis en Timeout' : '🔊 Timeout Retiré')
         .setDescription(`### ${member.user.tag}\n> ${isTimeout ? 'Un membre a été mis en timeout.' : 'Le timeout d\'un membre a été retiré.'}`)
         .addFields(fields)
         .setThumbnail(member.user.displayAvatarURL({ forceStatic: false }))
-        .setFooter({ 
+        .setFooter({
             text: `Logs Modération`,
             iconURL: member.guild.iconURL({ forceStatic: false }) || undefined
         })
@@ -144,7 +145,7 @@ export async function logMemberTimeout(member: GuildMember, timeout: Date | null
 // Log d'activité vocale (connexion/déconnexion)
 export async function logVoiceStateUpdate(oldState: VoiceState, newState: VoiceState) {
     if (!newState.guild) return;
-    
+
     // Ignorer les bots
     if (newState.member?.user.bot) return;
 
@@ -160,17 +161,17 @@ export async function logVoiceStateUpdate(oldState: VoiceState, newState: VoiceS
             { name: '📅 Date', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: false }
         ];
 
-        const embed = new EmbedBuilder()
-            .setAuthor({ 
+        const embed = createKeplerEmbed()
+            .setAuthor({
                 name: 'Kepler Bot - Système de Logs',
                 iconURL: client.user?.displayAvatarURL({ forceStatic: false })
             })
-            .setColor('#57F287')
+            .setColor(KEPLER_COLORS.success)
             .setTitle('🔊 Connexion Vocale')
             .setDescription(`### ${member.user.tag}\n> S'est connecté au salon vocal **${newState.channel.name}**.`)
             .addFields(fields)
             .setThumbnail(member.user.displayAvatarURL({ forceStatic: false }))
-            .setFooter({ 
+            .setFooter({
                 text: `Logs Vocal`,
                 iconURL: newState.guild.iconURL({ forceStatic: false }) || undefined
             })
@@ -178,7 +179,7 @@ export async function logVoiceStateUpdate(oldState: VoiceState, newState: VoiceS
 
         await sendLog(newState.guild, embed);
     }
-    
+
     // Déconnexion d'un canal vocal
     else if (oldState.channel && !newState.channel) {
         const client = newState.client;
@@ -191,17 +192,17 @@ export async function logVoiceStateUpdate(oldState: VoiceState, newState: VoiceS
             { name: '📅 Date', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: false }
         ];
 
-        const embed = new EmbedBuilder()
-            .setAuthor({ 
+        const embed = createKeplerEmbed()
+            .setAuthor({
                 name: 'Kepler Bot - Système de Logs',
                 iconURL: client.user?.displayAvatarURL({ forceStatic: false })
             })
-            .setColor('#ED4245')
+            .setColor(KEPLER_COLORS.danger)
             .setTitle('🔇 Déconnexion Vocale')
             .setDescription(`### ${member.user.tag}\n> S'est déconnecté du salon vocal **${oldState.channel.name}**.`)
             .addFields(fields)
             .setThumbnail(member.user.displayAvatarURL({ forceStatic: false }))
-            .setFooter({ 
+            .setFooter({
                 text: `Logs Vocal`,
                 iconURL: newState.guild.iconURL({ forceStatic: false }) || undefined
             })
@@ -209,7 +210,7 @@ export async function logVoiceStateUpdate(oldState: VoiceState, newState: VoiceS
 
         await sendLog(newState.guild, embed);
     }
-    
+
     // Changement de canal vocal
     else if (oldState.channel && newState.channel && oldState.channel.id !== newState.channel.id) {
         const client = newState.client;
@@ -223,17 +224,17 @@ export async function logVoiceStateUpdate(oldState: VoiceState, newState: VoiceS
             { name: '📥 Canal rejoint', value: `${newState.channel.name}\n\`${newState.channel.id}\``, inline: true }
         ];
 
-        const embed = new EmbedBuilder()
-            .setAuthor({ 
+        const embed = createKeplerEmbed()
+            .setAuthor({
                 name: 'Kepler Bot - Système de Logs',
                 iconURL: client.user?.displayAvatarURL({ forceStatic: false })
             })
-            .setColor('#FEE75C')
+            .setColor(KEPLER_COLORS.warning)
             .setTitle('🔄 Changement de Canal Vocal')
             .setDescription(`### ${member.user.tag}\n> A changé de salon vocal : **${oldState.channel.name}** → **${newState.channel.name}**.`)
             .addFields(fields)
             .setThumbnail(member.user.displayAvatarURL({ forceStatic: false }))
-            .setFooter({ 
+            .setFooter({
                 text: `Logs Vocal`,
                 iconURL: newState.guild.iconURL({ forceStatic: false }) || undefined
             })

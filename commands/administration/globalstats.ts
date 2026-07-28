@@ -1,7 +1,7 @@
-import { 
-    type ChatInputCommandInteraction, 
-    SlashCommandBuilder, 
-    EmbedBuilder,
+import { createKeplerEmbed, KEPLER_COLORS, KEPLER_MESSAGES } from '../../utils/theme.ts';
+import {
+    type ChatInputCommandInteraction,
+    SlashCommandBuilder,
     AttachmentBuilder
 } from 'discord.js';
 import config from '../../config.json' with { type: 'json' };
@@ -113,7 +113,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
                 await handleTrendStats(interaction);
                 break;
             default:
-                await interaction.editReply('❌ Sous-commande inconnue.');
+                await interaction.editReply(KEPLER_MESSAGES.unknownSubcommand);
         }
     } catch (error) {
         console.error('[GlobalStats Command] Erreur:', error);
@@ -158,8 +158,8 @@ async function handleOverview(interaction: ChatInputCommandInteraction) {
         .map((c, i) => `${i + 1}. \`/${c.command_name}\` (${c.count.toLocaleString()})`)
         .join('\n') || 'Aucune donnée';
 
-    const embed = new EmbedBuilder()
-        .setColor('#f8c15c')
+    const embed = createKeplerEmbed()
+        .setColor(KEPLER_COLORS.warning)
         .setTitle('📋 Statistiques Globales - Vue d\'ensemble')
         .addFields(
             {
@@ -224,19 +224,19 @@ async function handleCommandsStats(interaction: ChatInputCommandInteraction) {
     const chartAttachment = new AttachmentBuilder(chartBuffer, { name: 'global-commands.webp' });
 
 
-    const embed = new EmbedBuilder()
-        .setColor('#ff6b6b')
+    const embed = createKeplerEmbed()
+        .setColor(KEPLER_COLORS.danger)
         .setTitle('📊 Statistiques Globales - Commandes')
         .setDescription(`Période analysée: **${periodLabel}**`)
         .addFields(
-            { 
-                name: '📈 Résumé', 
+            {
+                name: '📈 Résumé',
                 value: [
                     `**Total période:** ${periodCommands.toLocaleString()} commandes`,
                     `**Moyenne/jour:** ${avgPerDay.toLocaleString()} commandes`,
                     `**Total historique:** ${totalStats.totalCommands.toLocaleString()} commandes`
                 ].join('\n'),
-                inline: false 
+                inline: false
             },
             {
                 name: '🏆 Top 10 des commandes',
@@ -263,7 +263,7 @@ async function handleMessagesStats(interaction: ChatInputCommandInteraction) {
     // Calculer les stats de la période
     const periodMessages = dailyStats.reduce((sum, d) => sum + d.messages, 0);
     const avgPerDay = dailyStats.length > 0 ? Math.round(periodMessages / dailyStats.length) : 0;
-    const maxDay = dailyStats.length > 0 
+    const maxDay = dailyStats.length > 0
         ? dailyStats.reduce((max, d) => d.messages > max.messages ? d : max)
         : null;
 
@@ -284,20 +284,20 @@ async function handleMessagesStats(interaction: ChatInputCommandInteraction) {
     );
     const topDaysAttachment = new AttachmentBuilder(topDaysBuffer, { name: 'global-messages.webp' });
 
-    const embed = new EmbedBuilder()
-        .setColor('#45d7ff')
+    const embed = createKeplerEmbed()
+        .setColor(KEPLER_COLORS.primary)
         .setTitle('💬 Statistiques Globales - Messages')
         .setDescription(`Période analysée: **${periodLabel}**`)
         .addFields(
-            { 
-                name: '📈 Résumé', 
+            {
+                name: '📈 Résumé',
                 value: [
                     `**Total période:** ${periodMessages.toLocaleString()} messages`,
                     `**Moyenne/jour:** ${avgPerDay.toLocaleString()} messages`,
                     `**Jour record:** ${maxDay ? `${new Date(maxDay.date).toLocaleDateString('fr-FR')} (${maxDay.messages.toLocaleString()})` : 'N/A'}`,
                     `**Total historique:** ${totalStats.totalMessages.toLocaleString()} messages`
                 ].join('\n'),
-                inline: false 
+                inline: false
             },
             {
                 name: '🏆 Top 5 jours les plus actifs',
@@ -339,7 +339,7 @@ async function handleTrendStats(interaction: ChatInputCommandInteraction) {
     const trendAttachment = new AttachmentBuilder(trendBuffer, { name: 'global-trend.webp' });
 
 
-    const embed = new EmbedBuilder()
+    const embed = createKeplerEmbed()
         .setColor(color)
         .setTitle(title)
         .setDescription(`Période: **${periodLabel}**`)

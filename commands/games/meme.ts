@@ -1,4 +1,5 @@
-import { type CommandInteraction, SlashCommandBuilder, EmbedBuilder } from 'discord.js';
+import { createKeplerEmbed, KEPLER_COLORS } from '../../utils/theme.ts';
+import { type CommandInteraction, SlashCommandBuilder } from 'discord.js';
 
 interface MemeResponse {
     title: string;
@@ -6,7 +7,7 @@ interface MemeResponse {
     postLink: string;
     subreddit: string;
 }
- 
+
 export const data = new SlashCommandBuilder()
     .setName('meme')
     .setDescription('Affiche un meme aléatoire');
@@ -27,12 +28,12 @@ export async function execute(interaction: CommandInteraction) {
 
         const meme: MemeResponse = await response.json();
 
-        const embed = new EmbedBuilder()
-            .setAuthor({ 
-                name: interaction.client.user?.username, 
-                iconURL: interaction.client.user?.displayAvatarURL({ forceStatic: false }) 
+        const embed = createKeplerEmbed()
+            .setAuthor({
+                name: interaction.client.user?.username,
+                iconURL: interaction.client.user?.displayAvatarURL({ forceStatic: false })
             })
-            .setColor('#FF6B6B')
+            .setColor(KEPLER_COLORS.danger)
             .setTitle(`😂 ${meme.title}`)
             .setURL(meme.postLink)
             .setImage(meme.url)
@@ -47,4 +48,4 @@ export async function execute(interaction: CommandInteraction) {
         console.error('Erreur lors de la récupération du meme:', error);
         await interaction.editReply("Une erreur s'est produite lors de la récupération du meme. Réessayez plus tard !");
     }
-} 
+}

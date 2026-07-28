@@ -1,9 +1,9 @@
+import { createKeplerEmbed, KEPLER_COLORS, KEPLER_MESSAGES } from '../../utils/theme.ts';
 import {
     type CommandInteraction,
     SlashCommandBuilder,
     ChannelType,
-    PermissionFlagsBits,
-    EmbedBuilder
+    PermissionFlagsBits
 } from 'discord.js';
 import { supabase } from '../../database/supabase.ts';
 
@@ -31,7 +31,7 @@ export const data = new SlashCommandBuilder()
 
 export async function execute(interaction: CommandInteraction) {
     if (!interaction.guild) {
-        await interaction.reply({ content: '❌ Cette commande ne peut être utilisée que sur un serveur.', ephemeral: true });
+        await interaction.reply({ content: KEPLER_MESSAGES.guildOnly, ephemeral: true });
         return;
     }
 
@@ -80,8 +80,8 @@ async function handleChannelCommand(interaction: CommandInteraction) {
                 });
         }
 
-        const embed = new EmbedBuilder()
-            .setColor('#00ff00')
+        const embed = createKeplerEmbed()
+            .setColor(KEPLER_COLORS.success)
             .setTitle('✅ Comptage activé')
             .setDescription(`Le jeu de comptage a été configuré dans ${channel.toString()}`)
             .addFields(
@@ -96,8 +96,8 @@ async function handleChannelCommand(interaction: CommandInteraction) {
         try {
             const countingMessage = await channel.send({
                 embeds: [
-                    new EmbedBuilder()
-                        .setColor('#0099ff')
+                    createKeplerEmbed()
+                        .setColor(KEPLER_COLORS.primary)
                         .setTitle('🎮 Jeu de Comptage')
                         .setDescription('Bienvenue dans le jeu de comptage! Comptez chacun votre tour en envoyant un nombre.\n\n**Règles:**\n• Vous ne pouvez pas compter deux fois de suite\n• Le prochain nombre doit être supérieur d\'1 au précédent\n• Si vous vous trompez, votre message sera supprimé\n\n**Nombre actuel: 0**')
                         .setTimestamp()
@@ -135,8 +135,8 @@ async function handleStopCommand(interaction: CommandInteraction) {
             .delete()
             .eq('guild_id', interaction.guild.id);
 
-        const embed = new EmbedBuilder()
-            .setColor('#ff0000')
+        const embed = createKeplerEmbed()
+            .setColor(KEPLER_COLORS.danger)
             .setTitle('⛔ Comptage arrêté')
             .setDescription(`Le jeu de comptage a été arrêté. Le score final était: **${config.current_count}**`)
             .setTimestamp();

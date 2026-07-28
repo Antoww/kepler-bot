@@ -1,4 +1,5 @@
-import { type CommandInteraction, SlashCommandBuilder, EmbedBuilder } from 'discord.js';
+import { createKeplerEmbed, KEPLER_COLORS } from '../../utils/theme.ts';
+import { type CommandInteraction, SlashCommandBuilder } from 'discord.js';
 import version from '../../version.json' with { type: 'json' };
 
 export const data = new SlashCommandBuilder()
@@ -28,7 +29,7 @@ export async function execute(interaction: CommandInteraction) {
         // Si pas d'accès, utiliser heapTotal
         memoryTotalMB = Math.round((memoryUsage.heapTotal / 1024 / 1024) * 100) / 100;
     }
-    
+
     // CPU: Deno ne supporte pas process.cpuUsage(), on utilise une alternative
     let cpuPercent = 0;
     try {
@@ -48,12 +49,12 @@ export async function execute(interaction: CommandInteraction) {
     const wsPing = interaction.client.ws.ping;
     const pingDisplay = wsPing >= 0 ? `${wsPing}ms` : 'N/A';
 
-    const embed = new EmbedBuilder()
-        .setAuthor({ 
-            name: interaction.client.user?.username, 
-            iconURL: interaction.client.user?.displayAvatarURL({ forceStatic: false }) 
+    const embed = createKeplerEmbed()
+        .setAuthor({
+            name: interaction.client.user?.username,
+            iconURL: interaction.client.user?.displayAvatarURL({ forceStatic: false })
         })
-        .setColor('#0099ff')
+        .setColor(KEPLER_COLORS.primary)
         .setTitle('📊 Statistiques du Bot')
         .addFields(
             { name: '🏓 Latence', value: pingDisplay, inline: true },
@@ -73,4 +74,4 @@ export async function execute(interaction: CommandInteraction) {
         .setTimestamp();
 
     await interaction.reply({ embeds: [embed] });
-} 
+}

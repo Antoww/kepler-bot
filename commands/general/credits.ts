@@ -1,4 +1,5 @@
-import { type CommandInteraction, SlashCommandBuilder, EmbedBuilder } from 'discord.js';
+import { createKeplerEmbed, KEPLER_COLORS } from '../../utils/theme.ts';
+import { type CommandInteraction, SlashCommandBuilder } from 'discord.js';
 import config from '../../config.json' with { type: 'json' };
 
 export const data = new SlashCommandBuilder()
@@ -7,8 +8,8 @@ export const data = new SlashCommandBuilder()
 
 export async function execute(interaction: CommandInteraction) {
 
-    const embed = new EmbedBuilder()
-        .setColor('#0099ff')
+    const embed = createKeplerEmbed()
+        .setColor(KEPLER_COLORS.primary)
         .setTitle('👨‍💻 Crédits du Bot')
         .setDescription('Quelques informations relatives au bot Kepler.')
         .addFields(
@@ -26,4 +27,4 @@ export async function execute(interaction: CommandInteraction) {
         .setTimestamp();
 
     await interaction.reply({ embeds: [embed] });
-} 
+}

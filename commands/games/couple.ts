@@ -1,4 +1,5 @@
-import { type CommandInteraction, SlashCommandBuilder, EmbedBuilder, AttachmentBuilder, type User } from 'discord.js';
+import { createKeplerEmbed, KEPLER_COLORS } from '../../utils/theme.ts';
+import { type CommandInteraction, SlashCommandBuilder, AttachmentBuilder, type User } from 'discord.js';
 import sharp from 'sharp';
 import axios from 'axios';
 import { Buffer } from 'node:buffer';
@@ -23,37 +24,37 @@ export const data = new SlashCommandBuilder()
 async function getProcessedAvatar(user: User, size: number): Promise<Buffer> {
     const cacheKey = `${user.id}-${user.avatar}`;
     const cached = avatarCache.get(cacheKey);
-    
+
     // Retourner depuis le cache si valide
     if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
         return cached.buffer;
     }
-    
+
     // Télécharger en taille réduite (128px suffit pour un affichage 150px)
     const avatarURL = user.displayAvatarURL({ size: 128, extension: 'png' });
     const response = await axios.get(avatarURL, { responseType: 'arraybuffer' });
-    
+
     // Redimensionner
     const buffer = await sharp(Buffer.from(response.data), { animated: false })
         .resize(size, size, { fit: 'cover' })
         .toBuffer();
-    
+
     // Mettre en cache
     avatarCache.set(cacheKey, { buffer, timestamp: Date.now() });
-    
+
     // Nettoyer les anciennes entrées du cache (limite à 100)
     if (avatarCache.size > 100) {
         const oldestKey = avatarCache.keys().next().value;
         if (oldestKey) avatarCache.delete(oldestKey);
     }
-    
+
     return buffer;
 }
 
 async function generateCoupleImage(user1: User, user2: User): Promise<Buffer> {
     try {
         console.log(`[COUPLE] Génération d'image pour ${user1.username} et ${user2.username}...`);
-        
+
         const canvasWidth = 600;
         const canvasHeight = 200;
         const avatarSize = 150;
@@ -129,12 +130,12 @@ export async function execute(interaction: CommandInteraction) {
 
             // Get members from cache + voice/presences
             let members = guild.members.cache;
-            
+
             // Try to get from presences if cache is empty
             if (members.size < 2 && guild.presences) {
                 members = guild.presences.cache.mapValues(p => p.member).filter(m => m !== null);
             }
-            
+
             // Filter out bots
             const nonBotMembers = members.filter(m => m && !m.user.bot);
 
@@ -147,7 +148,7 @@ export async function execute(interaction: CommandInteraction) {
 
             // Pick random members
             const membersArray = Array.from(nonBotMembers.values()).filter(m => m !== null);
-            
+
             if (!user1 && membersArray.length > 0) {
                 const randomIndex1 = Math.floor(Math.random() * membersArray.length);
                 user1 = membersArray[randomIndex1].user;
@@ -193,8 +194,8 @@ export async function execute(interaction: CommandInteraction) {
         const randomDescription = descriptions[Math.floor(Math.random() * descriptions.length)];
 
         // Create embed
-        const embed = new EmbedBuilder()
-            .setColor('#ff1744')
+        const embed = createKeplerEmbed()
+            .setColor(KEPLER_COLORS.danger)
             .setTitle(`❤️ Amour entre ${user1.username} et ${user2.username}`)
             .setDescription(randomDescription)
             .setImage('attachment://couple.webp')

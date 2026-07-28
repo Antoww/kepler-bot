@@ -1,4 +1,5 @@
-import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
+import { createKeplerEmbed, KEPLER_COLORS } from '../../utils/theme.ts';
+import { SlashCommandBuilder } from 'discord.js';
 import axios from 'axios';
 import { config } from 'dotenv';
 
@@ -119,8 +120,8 @@ async function getChessStats(interaction: any) {
 
 		const stats = statsResponse.data;
 
-		const embed = new EmbedBuilder()
-			.setColor('#8b4513')
+		const embed = createKeplerEmbed()
+			.setColor(KEPLER_COLORS.neutral)
 			.setTitle(`♟️ Stats Chess.com - ${player.username}`)
 			.setThumbnail(player.avatar || null)
 			.addFields(
@@ -186,8 +187,8 @@ async function getLichessStats(interaction: any) {
 
 		const player = response.data;
 
-		const embed = new EmbedBuilder()
-			.setColor('#3a7c4f')
+		const embed = createKeplerEmbed()
+			.setColor(KEPLER_COLORS.success)
 			.setTitle(`♟️ Stats Lichess - ${player.username}`)
 			.setThumbnail(player.title ? `https://lichess.org/assets/${player.title}.png` : null)
 			.addFields(
@@ -264,8 +265,8 @@ async function getFortniteStats(interaction: any) {
 
 		const stats = response.data.result;
 
-		const embed = new EmbedBuilder()
-			.setColor('#7c3aff')
+		const embed = createKeplerEmbed()
+			.setColor(KEPLER_COLORS.accent)
 			.setTitle(`🎮 Stats Fortnite - ${username}`)
 			.setThumbnail(stats.battlePass?.level ? 'https://fortnite-api.com/images/cosmetics/br/v1/avatar.png' : null)
 			.addFields(
@@ -332,8 +333,8 @@ async function getCoCStats(interaction: any) {
 
 		const clan = response.data;
 
-		const embed = new EmbedBuilder()
-			.setColor('#c65d00')
+		const embed = createKeplerEmbed()
+			.setColor(KEPLER_COLORS.warning)
 			.setTitle(`🛡️ Stats Clash of Clans - ${clan.name}`)
 			.setThumbnail(clan.badgeUrls?.large || null)
 			.addFields(
@@ -391,8 +392,8 @@ async function getMinecraftStats(interaction: any) {
 		const profile = profileResponse.data;
 		const skinUrl = `https://visage.surgeplay.com/face/256/${uuid}`;
 
-		const embed = new EmbedBuilder()
-			.setColor('#00aa00')
+		const embed = createKeplerEmbed()
+			.setColor(KEPLER_COLORS.success)
 			.setTitle(`⛏️ Profil Minecraft - ${profile.name}`)
 			.setThumbnail(skinUrl)
 			.addFields(
@@ -485,8 +486,8 @@ async function getDota2Stats(interaction: any) {
 		const totalGames = (winLoss.win || 0) + (winLoss.lose || 0);
 		const winRate = totalGames > 0 ? ((winLoss.win / totalGames) * 100).toFixed(1) : '0';
 
-		const embed = new EmbedBuilder()
-			.setColor('#b5302b')
+		const embed = createKeplerEmbed()
+			.setColor(KEPLER_COLORS.danger)
 			.setTitle(`🎮 Stats Dota 2 - ${player.personaname || 'Anonyme'}`)
 			.setThumbnail(player.avatarfull || null)
 			.addFields(
@@ -511,13 +512,13 @@ async function getDota2Stats(interaction: any) {
 		return interaction.editReply({ embeds: [embed] });
 	} catch (error: any) {
 		console.error(`[STATS] Erreur Dota 2:`, error.message);
-		
+
 		if (error.response?.status === 404) {
 			return interaction.editReply({
 				content: `❌ Joueur \`${input}\` introuvable sur Dota 2`
 			});
 		}
-		
+
 		return interaction.editReply({
 			content: `❌ Erreur lors de la récupération des stats Dota 2`
 		});
@@ -553,8 +554,8 @@ async function getOsuStats(interaction: any) {
 
 		const user = response.data;
 
-		const embed = new EmbedBuilder()
-			.setColor('#ff66aa')
+		const embed = createKeplerEmbed()
+			.setColor(KEPLER_COLORS.highlight)
 			.setTitle(`🎵 Stats Osu! - ${user.username} (${modeNames[mode]})`)
 			.setThumbnail(user.avatar_url || null)
 			.addFields(
