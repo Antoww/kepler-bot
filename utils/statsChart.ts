@@ -146,13 +146,33 @@ export async function renderBarChart(
     return renderCached(JSON.stringify(['bar', title, subtitle, items, color]), svg, title);
 }
 
+function sampleLineData(labels: string[], series: ChartSeries[], maxPoints = 120): { labels: string[]; series: ChartSeries[] } {
+    if (labels.length <= maxPoints) return { labels, series };
+
+    const indexes = Array.from({ length: maxPoints }, (_, index) =>
+        Math.round(index * (labels.length - 1) / (maxPoints - 1))
+    );
+    return {
+        labels: indexes.map(index => labels[index]),
+        series: series.map(item => ({
+            ...item,
+            values: indexes.map(index => item.values[index] ?? 0)
+        }))
+    };
+}
+
 export async function renderLineChart(
     title: string,
     subtitle: string,
     labels: string[],
     series: ChartSeries[]
 ): Promise<Buffer> {
+    const sampled = sampleLineData(labels, series);
+    labels = sampled.labels;
+    series = sampled.series;
+
     const plot = { x: 95, y: 160, width: 1040, height: 390 };
+
     const allValues = series.flatMap(item => item.values);
     const maxValue = Math.max(...allValues, 1);
     const pointCount = Math.max(labels.length, ...series.map(item => item.values.length), 1);

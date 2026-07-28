@@ -185,149 +185,113 @@ async function updateGlobalDailyStats(type: 'command' | 'message', _guildId: str
 /**
  * Récupère les statistiques des 30 derniers jours
  */
-export async function getDailyStats(days: number = 30, guildId?: string): Promise<DailyStatsData[]> {
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - days);
-    const startDateStr = startDate.toISOString().split('T')[0];
+export async function getDailyStats(days: number | null = 30, guildId?: string): Promise<DailyStatsData[]> {
+    const startDate = days === null ? null : new Date();
+    if (startDate && days !== null) startDate.setDate(startDate.getDate() - days);
 
-    if (guildId) {
-        const { data, error } = await supabase
-            .from('daily_stats')
-            .select('stat_date, total_commands, total_messages, unique_users')
-            .eq('guild_id', guildId)
-            .gte('stat_date', startDateStr)
-            .order('stat_date', { ascending: true });
+    let query = supabase
+        .from(guildId ? 'daily_stats' : 'global_daily_stats')
+        .select('stat_date, total_commands, total_messages, unique_users')
+        .order('stat_date', { ascending: true });
 
-        if (error) throw error;
-        
-        return (data || []).map(d => ({
-            date: d.stat_date,
-            commands: d.total_commands,
-            messages: d.total_messages,
-            users: d.unique_users
-        }));
-    } else {
-        const { data, error } = await supabase
-            .from('global_daily_stats')
-            .select('stat_date, total_commands, total_messages, unique_users')
-            .gte('stat_date', startDateStr)
-            .order('stat_date', { ascending: true });
+    if (guildId) query = query.eq('guild_id', guildId);
+    if (startDate) query = query.gte('stat_date', startDate.toISOString().split('T')[0]);
 
-        if (error) throw error;
-        
-        return (data || []).map(d => ({
-            date: d.stat_date,
-            commands: d.total_commands,
-            messages: d.total_messages,
-            users: d.unique_users
-        }));
-    }
+    const { data, error } = await query;
+    if (error) throw error;
+
+    return (data || []).map(d => ({
+        date: d.stat_date,
+        commands: d.total_commands,
+        messages: d.total_messages,
+        users: d.unique_users
+    }));
 }
 
-/**
- * Récupère le top des commandes utilisées
- */
-export async function getTopCommands(days: number = 30, limit: number = 10, guildId?: string): Promise<CommandBreakdown[]> {
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - days);
+
+export async function getTopCommands(days: number | null = 30, limit: number = 10, guildId?: string): Promise<CommandBreakdown[]> {
+    const startDate = days === null ? null : new Date();
+    if (startDate && days !== null) startDate.setDate(startDate.getDate() - days);
 
     let query = supabase
         .from('command_stats')
-        .select('command_name')
-        .gte('executed_at', startDate.toISOString());
+        .select('command_name');
 
-    if (guildId) {
-        query = query.eq('guild_id', guildId);
-    }
+    if (startDate) query = query.gte('executed_at', startDate.toISOString());
+    if (guildId) query = query.eq('guild_id', guildId);
 
     const { data, error } = await query;
-
     if (error) throw error;
 
-    // Compter les commandes
     const counts: Record<string, number> = {};
     for (const row of data || []) {
         counts[row.command_name] = (counts[row.command_name] || 0) + 1;
     }
 
-    // Trier et limiter
     return Object.entries(counts)
         .map(([command_name, count]) => ({ command_name, count }))
         .sort((a, b) => b.count - a.count)
         .slice(0, limit);
 }
 
-/**
- * Récupère les utilisateurs les plus actifs (messages)
- */
-export async function getTopUsers(days: number = 30, limit: number = 10, guildId?: string): Promise<UserActivity[]> {
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - days);
-    const startDateStr = startDate.toISOString().split('T')[0];
+
+export async function getTopUsers(days: number | null = 30, limit: number = 10, guildId?: string): Promise<UserActivity[]> {
+    const startDate = days === null ? null : new Date();
+    if (startDate && days !== null) startDate.setDate(startDate.getDate() - days);
 
     let query = supabase
         .from('message_stats')
-        .select('user_id, message_count')
-        .gte('message_date', startDateStr);
+        .select('user_id, message_count');
 
-    if (guildId) {
-        query = query.eq('guild_id', guildId);
-    }
+    if (startDate) query = query.gte('message_date', startDate.toISOString().split('T')[0]);
+    if (guildId) query = query.eq('guild_id', guildId);
 
     const { data, error } = await query;
-
     if (error) throw error;
 
-    // Agréger par utilisateur
     const userCounts: Record<string, number> = {};
     for (const row of data || []) {
         userCounts[row.user_id] = (userCounts[row.user_id] || 0) + row.message_count;
     }
 
-    // Trier et limiter
     return Object.entries(userCounts)
         .map(([user_id, message_count]) => ({ user_id, message_count }))
         .sort((a, b) => b.message_count - a.message_count)
         .slice(0, limit);
 }
 
+
 export interface ChannelActivity {
     channel_id: string;
     message_count: number;
 }
 
-/**
- * Récupère les canaux les plus actifs
- */
-export async function getTopChannels(days: number = 30, limit: number = 10, guildId: string): Promise<ChannelActivity[]> {
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - days);
-    const startDateStr = startDate.toISOString().split('T')[0];
+export async function getTopChannels(days: number | null = 30, limit: number = 10, guildId: string): Promise<ChannelActivity[]> {
+    const startDate = days === null ? null : new Date();
+    if (startDate && days !== null) startDate.setDate(startDate.getDate() - days);
 
-    const { data, error } = await supabase
+    let query = supabase
         .from('message_stats')
         .select('channel_id, message_count')
-        .eq('guild_id', guildId)
-        .gte('message_date', startDateStr);
+        .eq('guild_id', guildId);
 
+    if (startDate) query = query.gte('message_date', startDate.toISOString().split('T')[0]);
+
+    const { data, error } = await query;
     if (error) throw error;
 
-    // Agréger par canal
     const channelCounts: Record<string, number> = {};
     for (const row of data || []) {
         channelCounts[row.channel_id] = (channelCounts[row.channel_id] || 0) + row.message_count;
     }
 
-    // Trier et limiter
     return Object.entries(channelCounts)
         .map(([channel_id, message_count]) => ({ channel_id, message_count }))
         .sort((a, b) => b.message_count - a.message_count)
         .slice(0, limit);
 }
 
-/**
- * Récupère les statistiques totales
- */
+
 export async function getTotalStats(guildId?: string): Promise<{
     totalCommands: number;
     totalMessages: number;

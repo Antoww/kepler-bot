@@ -29,8 +29,14 @@ export const data = new SlashCommandBuilder()
                     .setName('jours')
                     .setDescription('Nombre de jours à analyser (défaut: 30)')
                     .setMinValue(1)
-                    .setMaxValue(90)
+                    .setMaxValue(360)
             )
+            .addBooleanOption(option =>
+                option
+                    .setName('depuis_toujours')
+                    .setDescription('Analyser tout l\'historique disponible (prioritaire sur jours)')
+            )
+
     )
     .addSubcommand(subcommand =>
         subcommand
@@ -41,8 +47,14 @@ export const data = new SlashCommandBuilder()
                     .setName('jours')
                     .setDescription('Nombre de jours à analyser (défaut: 30)')
                     .setMinValue(1)
-                    .setMaxValue(90)
+                    .setMaxValue(360)
             )
+            .addBooleanOption(option =>
+                option
+                    .setName('depuis_toujours')
+                    .setDescription('Analyser tout l\'historique disponible (prioritaire sur jours)')
+            )
+
     )
     .addSubcommand(subcommand =>
         subcommand
@@ -63,8 +75,14 @@ export const data = new SlashCommandBuilder()
                     .setName('jours')
                     .setDescription('Nombre de jours (défaut: 14)')
                     .setMinValue(7)
-                    .setMaxValue(30)
+                    .setMaxValue(360)
             )
+            .addBooleanOption(option =>
+                option
+                    .setName('depuis_toujours')
+                    .setDescription('Analyser tout l\'historique disponible (prioritaire sur jours)')
+            )
+
     );
 
 export async function execute(interaction: ChatInputCommandInteraction) {
@@ -183,7 +201,8 @@ async function handleOverview(interaction: ChatInputCommandInteraction) {
 }
 
 async function handleCommandsStats(interaction: ChatInputCommandInteraction) {
-    const days = interaction.options.getInteger('jours') || 30;
+    const days = resolveStatsDays(interaction, 30);
+    const periodLabel = formatStatsPeriod(days);
 
     const [topCommands, dailyStats, totalStats] = await Promise.all([
         getTopCommands(days, 10),
@@ -201,14 +220,14 @@ async function handleCommandsStats(interaction: ChatInputCommandInteraction) {
         value: c.count
     }));
 
-    const chartBuffer = await renderBarChart('Top des commandes', `${days} derniers jours`, chartData, '#ff6b6b');
+    const chartBuffer = await renderBarChart('Top des commandes', periodLabel, chartData, '#ff6b6b');
     const chartAttachment = new AttachmentBuilder(chartBuffer, { name: 'global-commands.webp' });
 
 
     const embed = new EmbedBuilder()
         .setColor('#ff6b6b')
         .setTitle('📊 Statistiques Globales - Commandes')
-        .setDescription(`Période analysée: **${days} jours**`)
+        .setDescription(`Période analysée: **${periodLabel}**`)
         .addFields(
             { 
                 name: '📈 Résumé', 
@@ -233,7 +252,8 @@ async function handleCommandsStats(interaction: ChatInputCommandInteraction) {
 }
 
 async function handleMessagesStats(interaction: ChatInputCommandInteraction) {
-    const days = interaction.options.getInteger('jours') || 30;
+    const days = resolveStatsDays(interaction, 30);
+    const periodLabel = formatStatsPeriod(days);
 
     const [dailyStats, totalStats] = await Promise.all([
         getDailyStats(days),
@@ -255,7 +275,7 @@ async function handleMessagesStats(interaction: ChatInputCommandInteraction) {
 
     const topDaysBuffer = await renderBarChart(
         'Jours les plus actifs',
-        `${days} derniers jours`,
+        periodLabel,
         topDays.map(d => ({
             label: formatChartDate(d.date),
             value: d.messages
@@ -267,7 +287,7 @@ async function handleMessagesStats(interaction: ChatInputCommandInteraction) {
     const embed = new EmbedBuilder()
         .setColor('#45d7ff')
         .setTitle('💬 Statistiques Globales - Messages')
-        .setDescription(`Période analysée: **${days} jours**`)
+        .setDescription(`Période analysée: **${periodLabel}**`)
         .addFields(
             { 
                 name: '📈 Résumé', 
@@ -294,7 +314,8 @@ async function handleMessagesStats(interaction: ChatInputCommandInteraction) {
 
 async function handleTrendStats(interaction: ChatInputCommandInteraction) {
     const type = interaction.options.getString('type', true) as 'commands' | 'messages';
-    const days = interaction.options.getInteger('jours') || 14;
+    const days = resolveStatsDays(interaction, 14);
+    const periodLabel = formatStatsPeriod(days);
 
     const dailyStats = await getDailyStats(days);
 
@@ -311,7 +332,7 @@ async function handleTrendStats(interaction: ChatInputCommandInteraction) {
     const color = type === 'commands' ? '#ff6b6b' : '#45d7ff';
     const trendBuffer = await renderLineChart(
         metricLabel,
-        `${days} derniers jours`,
+        periodLabel,
         dailyStats.map(d => formatChartDate(d.date)),
         [{ label: metricLabel, color, values }]
     );
@@ -321,7 +342,7 @@ async function handleTrendStats(interaction: ChatInputCommandInteraction) {
     const embed = new EmbedBuilder()
         .setColor(color)
         .setTitle(title)
-        .setDescription(`Période: **${days} derniers jours**`)
+        .setDescription(`Période: **${periodLabel}**`)
         .addFields(
             {
                 name: '📈 Graphique',
@@ -347,5 +368,15 @@ async function handleTrendStats(interaction: ChatInputCommandInteraction) {
 }
 
 function formatChartDate(date: string): string {
-    return new Date(date).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
+    return new Date(date).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' });
+}
+
+function resolveStatsDays(interaction: ChatInputCommandInteraction, fallback: number): number | null {
+    return interaction.options.getBoolean('depuis_toujours')
+        ? null
+        : interaction.options.getInteger('jours') || fallback;
+}
+
+function formatStatsPeriod(days: number | null): string {
+    return days === null ? 'Depuis toujours' : `${days} derniers jours`;
 }
