@@ -111,7 +111,7 @@ async function handleComponent(component: MessageComponentInteraction, source: C
         }
         if (component.customId.startsWith('settings:section:')) {
             const section = component.customId.split(':')[2] as ConfigSection;
-            await component.update(buildSection(section, guild));
+            await component.update(await buildSection(section, guild));
             return;
         }
         if (component.customId.startsWith('settings:disable:')) {
@@ -282,7 +282,7 @@ async function buildOverview(interaction: ChatInputCommandInteraction, notice?: 
     return { content: '', embeds: [embed], components: [categories, actions] };
 }
 
-function buildSection(section: ConfigSection, guild: Guild) {
+async function buildSection(section: ConfigSection, guild: Guild) {
     const embed = createKeplerEmbed()
         .setColor(PANEL_COLOR)
         .setTitle(sectionLabel(section))
@@ -290,29 +290,42 @@ function buildSection(section: ConfigSection, guild: Guild) {
         .setFooter({ text: guild.name });
 
     if (section === 'tickets') {
+        const config = await getTicketConfig(guild.id);
         const channelSelect = new ChannelSelectMenuBuilder()
             .setCustomId('settings:select:tickets-channel')
             .setPlaceholder('Salon où publier le panneau')
             .addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement)
             .setMinValues(1)
             .setMaxValues(1);
+        if (config.ticket_panel_channel_id && guild.channels.cache.has(config.ticket_panel_channel_id)) {
+            channelSelect.setDefaultChannels(config.ticket_panel_channel_id);
+        }
         const roleSelect = new RoleSelectMenuBuilder()
             .setCustomId('settings:select:tickets-role')
             .setPlaceholder('Rôle autorisé à voir les tickets')
             .setMinValues(1)
             .setMaxValues(1);
+        if (config.ticket_support_role_id && guild.roles.cache.has(config.ticket_support_role_id)) {
+            roleSelect.setDefaultRoles(config.ticket_support_role_id);
+        }
         const categorySelect = new ChannelSelectMenuBuilder()
             .setCustomId('settings:select:tickets-category')
             .setPlaceholder('Catégorie où créer les tickets')
             .addChannelTypes(ChannelType.GuildCategory)
             .setMinValues(1)
             .setMaxValues(1);
+        if (config.ticket_category_id && guild.channels.cache.has(config.ticket_category_id)) {
+            categorySelect.setDefaultChannels(config.ticket_category_id);
+        }
         const logChannelSelect = new ChannelSelectMenuBuilder()
             .setCustomId('settings:select:tickets-logs')
             .setPlaceholder('Salon des états et archives')
             .addChannelTypes(ChannelType.GuildText)
             .setMinValues(1)
             .setMaxValues(1);
+        if (config.ticket_log_channel_id && guild.channels.cache.has(config.ticket_log_channel_id)) {
+            logChannelSelect.setDefaultChannels(config.ticket_log_channel_id);
+        }
         return {
             content: '',
             embeds: [embed],
@@ -332,17 +345,27 @@ function buildSection(section: ConfigSection, guild: Guild) {
     }
 
     if (section === 'reports') {
+        const [configuredChannelId, configuredRoleId] = await Promise.all([
+            getReportChannel(guild.id),
+            getReportRole(guild.id)
+        ]);
         const channelSelect = new ChannelSelectMenuBuilder()
             .setCustomId('settings:select:reports-channel')
             .setPlaceholder('Choisir le salon des reports')
             .addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement)
             .setMinValues(1)
             .setMaxValues(1);
+        if (configuredChannelId && guild.channels.cache.has(configuredChannelId)) {
+            channelSelect.setDefaultChannels(configuredChannelId);
+        }
         const roleSelect = new RoleSelectMenuBuilder()
             .setCustomId('settings:select:reports-role')
             .setPlaceholder('Choisir le rôle à mentionner (facultatif)')
             .setMinValues(1)
             .setMaxValues(1);
+        if (configuredRoleId && guild.roles.cache.has(configuredRoleId)) {
+            roleSelect.setDefaultRoles(configuredRoleId);
+        }
         return {
             content: '',
             embeds: [embed],
@@ -359,11 +382,15 @@ function buildSection(section: ConfigSection, guild: Guild) {
     }
 
     if (section === 'mute') {
+        const configuredRoleId = await getMuteRole(guild.id);
         const select = new RoleSelectMenuBuilder()
             .setCustomId('settings:select:mute')
             .setPlaceholder('Choisir un rôle existant')
             .setMinValues(1)
             .setMaxValues(1);
+        if (configuredRoleId && guild.roles.cache.has(configuredRoleId)) {
+            select.setDefaultRoles(configuredRoleId);
+        }
         return {
             content: '',
             embeds: [embed],
@@ -378,12 +405,20 @@ function buildSection(section: ConfigSection, guild: Guild) {
         };
     }
 
+    const configuredChannelId = section === 'logs'
+        ? await getLogChannel(guild.id)
+        : section === 'moderation'
+            ? await getModerationChannel(guild.id)
+            : await getBirthdayChannel(guild.id);
     const select = new ChannelSelectMenuBuilder()
         .setCustomId(`settings:select:${section}`)
         .setPlaceholder('Choisir un salon textuel')
         .addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement)
         .setMinValues(1)
         .setMaxValues(1);
+    if (configuredChannelId && guild.channels.cache.has(configuredChannelId)) {
+        select.setDefaultChannels(configuredChannelId);
+    }
     return {
         content: '',
         embeds: [embed],
@@ -529,7 +564,7 @@ async function customizeTicketPanel(component: ButtonInteraction, source: ChatIn
             ticket_button_emoji: buttonEmoji || null,
             ticket_button_style: buttonStyle
         });
-        await submission.editReply(buildSection('tickets', source.guild!));
+        await submission.editReply(await buildSection('tickets', source.guild!));
         await submission.followUp({
             content: '✅ Personnalisation du panneau de tickets enregistrée.',
             ephemeral: true
@@ -605,7 +640,7 @@ async function confirmSettingChange(
     section: ConfigSection,
     message: string
 ) {
-    await component.editReply(buildSection(section, source.guild!));
+    await component.editReply(await buildSection(section, source.guild!));
     await component.followUp({ content: `✅ ${message}`, ephemeral: true });
 }
 
