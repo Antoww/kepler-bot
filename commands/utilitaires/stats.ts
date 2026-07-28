@@ -64,7 +64,7 @@ function buildHome(user: User) {
 		.addFields({ name: '♟️ Échecs', value: 'Chess.com et Lichess', inline: true }, { name: '🕹️ Jeux', value: 'Minecraft, Dota 2 et osu!', inline: true })
 		.setFooter({ text: `Panneau privé • ${user.username} • expiration dans 5 minutes` });
 	const games = new ActionRowBuilder<ButtonBuilder>().addComponents(
-		gameButton('chess', '♟️'), gameButton('lichess', '♞'), gameButton('minecraft', '⛏️'), gameButton('dota2', '🛡️'), gameButton('osu', '🎵')
+		gameButton('chess', '♟️'), gameButton('lichess', '♟️'), gameButton('minecraft', '⛏️'), gameButton('dota2', '🛡️'), gameButton('osu', '🎵')
 	);
 	const controls = new ActionRowBuilder<ButtonBuilder>().addComponents(
 		new ButtonBuilder().setCustomId('gamestats:home').setEmoji('🔄').setStyle(ButtonStyle.Secondary),
