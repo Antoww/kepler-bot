@@ -2,6 +2,10 @@ import * as path from "jsr:@std/path";
 import type { Event, Command } from './types.d.ts';
 import { Client, Collection, GatewayIntentBits } from 'discord.js';
 import { logger } from './utils/logger.ts';
+import {
+    initializeDiscordErrorReporter,
+    sendDiscordErrorReporterTest
+} from './utils/discordErrorReporter.ts';
 
 // Initialisation du client
 const client = new Client({ 
@@ -18,6 +22,8 @@ const client = new Client({
         GatewayIntentBits.GuildEmojisAndStickers
     ] 
 });
+
+initializeDiscordErrorReporter(client);
 
 // Collection des commandes
 client.commands = new Collection();
@@ -112,6 +118,12 @@ await loadCommands(commandsPath);
 
 // Chargement des événements
 await loadEvents();
+
+client.once('ready', () => {
+    if (Deno.env.get('DISCORD_ERROR_REPORTER_TEST') === 'true') {
+        sendDiscordErrorReporterTest();
+    }
+});
 
 // Connexion du client
 client.login(Deno.env.get('TOKEN') as string);
