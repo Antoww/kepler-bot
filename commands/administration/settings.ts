@@ -166,7 +166,7 @@ async function buildOverview(interaction: ChatInputCommandInteraction, notice?: 
         .setTitle(`Configuration de ${guild.name}`)
         .setDescription(notice ? `✅ ${notice}` : 'Sélectionnez une catégorie pour modifier sa configuration.')
         .addFields(
-            { name: '📑 Journaux serveur', value: formatChannel(guild, logs), inline: true },
+            { name: '📑 Logs serveur', value: formatChannel(guild, logs), inline: true },
             { name: '🛡️ Modération', value: formatChannel(guild, moderation), inline: true },
             { name: '🎂 Anniversaires', value: formatChannel(guild, birthdays), inline: true },
             { name: '🔇 Rôle de mute', value: formatRole(guild, mute), inline: true }
@@ -175,7 +175,7 @@ async function buildOverview(interaction: ChatInputCommandInteraction, notice?: 
         .setTimestamp();
 
     const categories = new ActionRowBuilder<ButtonBuilder>().addComponents(
-        new ButtonBuilder().setCustomId('settings:section:logs').setLabel('Journaux').setEmoji('📑').setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder().setCustomId('settings:section:logs').setLabel('Logs').setEmoji('📑').setStyle(ButtonStyle.Secondary),
         new ButtonBuilder().setCustomId('settings:section:moderation').setLabel('Modération').setEmoji('🛡️').setStyle(ButtonStyle.Secondary),
         new ButtonBuilder().setCustomId('settings:section:birthdays').setLabel('Anniversaires').setEmoji('🎂').setStyle(ButtonStyle.Secondary),
         new ButtonBuilder().setCustomId('settings:section:mute').setLabel('Mute').setEmoji('🔇').setStyle(ButtonStyle.Secondary)
@@ -306,8 +306,8 @@ async function createMuteRole(guild: Guild, userTag: string) {
 
 function sectionLabel(section: ConfigSection): string {
     return ({
-        logs: 'Journaux serveur',
-        moderation: 'Journaux de modération',
+        logs: 'Logs serveur',
+        moderation: 'Logs de modération',
         birthdays: 'Annonces d’anniversaire',
         mute: 'Rôle de mute'
     })[section];
