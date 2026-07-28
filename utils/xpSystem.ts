@@ -7,6 +7,7 @@ import {
 import { supabase } from '../database/supabase.ts';
 import { createKeplerEmbed, setRequesterFooter } from './theme.ts';
 import { logger } from './logger.ts';
+import { sendXpLog } from './xpLogger.ts';
 
 export const XP_COOLDOWN_SECONDS = 60;
 export const XP_MIN_GAIN = 15;
@@ -34,10 +35,12 @@ export interface XpSettings {
     enabled: boolean;
     announce_level_up: boolean;
     level_up_channel_id: string | null;
+    xp_log_channel_id: string | null;
     cooldown_seconds: number;
     boost_multiplier: number;
     boost_starts_at: string | null;
     boost_ends_at: string | null;
+    boost_end_notified_at: string | null;
     excluded_channel_ids: string[];
     excluded_role_ids: string[];
 }
@@ -52,10 +55,12 @@ const DEFAULT_XP_SETTINGS: Omit<XpSettings, 'guild_id'> = {
     enabled: true,
     announce_level_up: true,
     level_up_channel_id: null,
+    xp_log_channel_id: null,
     cooldown_seconds: XP_COOLDOWN_SECONDS,
     boost_multiplier: 1,
     boost_starts_at: null,
     boost_ends_at: null,
+    boost_end_notified_at: null,
     excluded_channel_ids: [],
     excluded_role_ids: []
 };
@@ -301,6 +306,21 @@ export async function awardMessageXp(message: Message): Promise<void> {
     if (!result || result.level <= result.previous_level) return;
 
     const addedRoles = await syncXpRewardRoles(message.member, result.level);
+    await sendXpLog(
+        message.guild,
+        'Niveau atteint',
+        `<@${message.author.id}> a atteint le **niveau ${result.level}**.`,
+        'success',
+        [
+            { name: 'XP gagné', value: `+${xpGain}`, inline: true },
+            { name: 'XP total', value: Number(result.xp).toLocaleString('fr-FR'), inline: true },
+            {
+                name: 'Récompenses attribuées',
+                value: addedRoles.length ? addedRoles.map(id => `<@&${id}>`).join(', ') : 'Aucune',
+                inline: false
+            }
+        ]
+    );
     const roleLine = addedRoles.length
         ? `\nRécompense obtenue : ${addedRoles.map((id: string) => `<@&${id}>`).join(', ')}`
         : '';

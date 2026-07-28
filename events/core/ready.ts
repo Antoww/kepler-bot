@@ -7,6 +7,7 @@ import { initDatabase } from '../../database/supabase.ts';
 import { BirthdayManager } from './birthdayManager.ts';
 import { ModerationManager } from './moderationManager.ts';
 import { RGPDManager } from '../core/rgpdManager.ts';
+import { XpManager } from './xpManager.ts';
 
 export const name = 'ready';
 export const once = true;
@@ -40,6 +41,10 @@ export async function execute(client: Client<true>) {
     const rgpdManager = new RGPDManager();
     rgpdManager.start();
     logger.success('Gestionnaire RGPD démarré (90 jours)', undefined, 'MANAGER');
+
+    const xpManager = new XpManager(client);
+    xpManager.start();
+    logger.success('Gestionnaire XP démarré', undefined, 'MANAGER');
 
     // Enregistrer les commandes slash
     const rest = new REST({ version: '10' }).setToken(Deno.env.get('TOKEN') as string);

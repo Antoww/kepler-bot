@@ -172,7 +172,8 @@ async function handleComponent(component: MessageComponentInteraction, source: C
             await updateXpSettings(guild.id, {
                 boost_multiplier: 1,
                 boost_starts_at: null,
-                boost_ends_at: null
+                boost_ends_at: null,
+                boost_end_notified_at: null
             });
             await component.editReply(await buildXpBoosts(guild));
             return;
@@ -183,6 +184,16 @@ async function handleComponent(component: MessageComponentInteraction, source: C
         }
         if (component.customId === 'settings:xp:exclusions') {
             await component.update(await buildXpExclusions(guild));
+            return;
+        }
+        if (component.customId === 'settings:xp:logs') {
+            await component.update(await buildXpLogs(guild));
+            return;
+        }
+        if (component.customId === 'settings:xp:clear-log-channel') {
+            await component.deferUpdate();
+            await updateXpSettings(guild.id, { xp_log_channel_id: null });
+            await component.editReply(await buildXpLogs(guild));
             return;
         }
         if (component.customId === 'settings:xp:clear-excluded-channels') {
@@ -257,6 +268,12 @@ async function handleComponent(component: MessageComponentInteraction, source: C
             await component.deferUpdate();
             await updateXpSettings(guild.id, { level_up_channel_id: channelId });
             await component.editReply(await buildXpGeneral(guild));
+            return;
+        }
+        if (component.customId === 'settings:xp:log-channel') {
+            await component.deferUpdate();
+            await updateXpSettings(guild.id, { xp_log_channel_id: channelId });
+            await component.editReply(await buildXpLogs(guild));
             return;
         }
         if (component.customId === 'settings:xp:excluded-channels') {
@@ -651,7 +668,8 @@ async function buildXpHome(guild: Guild) {
                 new ButtonBuilder().setCustomId('settings:xp:general').setLabel('Général').setEmoji('⚙️').setStyle(ButtonStyle.Primary),
                 new ButtonBuilder().setCustomId('settings:xp:boosts').setLabel('Boosts').setEmoji('🚀').setStyle(ButtonStyle.Secondary),
                 new ButtonBuilder().setCustomId('settings:xp:rewards').setLabel('Récompenses').setEmoji('🎁').setStyle(ButtonStyle.Secondary),
-                new ButtonBuilder().setCustomId('settings:xp:exclusions').setLabel('Exclusions').setEmoji('🚫').setStyle(ButtonStyle.Secondary)
+                new ButtonBuilder().setCustomId('settings:xp:exclusions').setLabel('Exclusions').setEmoji('🚫').setStyle(ButtonStyle.Secondary),
+                new ButtonBuilder().setCustomId('settings:xp:logs').setLabel('Journal').setEmoji('📜').setStyle(ButtonStyle.Secondary)
             ),
             new ActionRowBuilder<ButtonBuilder>().addComponents(backButton())
         ]
@@ -827,6 +845,40 @@ async function buildXpExclusions(guild: Guild) {
             new ActionRowBuilder<ButtonBuilder>().addComponents(
                 new ButtonBuilder().setCustomId('settings:xp:clear-excluded-channels').setLabel('Vider les salons').setStyle(ButtonStyle.Secondary),
                 new ButtonBuilder().setCustomId('settings:xp:clear-excluded-roles').setLabel('Vider les rôles').setStyle(ButtonStyle.Secondary),
+                xpBackButton()
+            )
+        ]
+    };
+}
+
+async function buildXpLogs(guild: Guild) {
+    const settings = await getXpSettings(guild.id);
+    const select = new ChannelSelectMenuBuilder()
+        .setCustomId('settings:xp:log-channel')
+        .setPlaceholder('Salon du journal XP')
+        .addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement)
+        .setMinValues(1)
+        .setMaxValues(1);
+    if (settings.xp_log_channel_id && guild.channels.cache.has(settings.xp_log_channel_id)) {
+        select.setDefaultChannels(settings.xp_log_channel_id);
+    }
+    return {
+        content: '',
+        embeds: [
+            createKeplerEmbed('primary')
+                .setTitle('XP · Journal')
+                .setDescription(
+                    `Salon : ${settings.xp_log_channel_id ? formatChannel(guild, settings.xp_log_channel_id) : '⚪ Non configuré'}\n\n` +
+                    'Le journal reçoit les fins de boost, passages de niveau, attributions de rôles et resets administratifs.'
+                )
+        ],
+        components: [
+            new ActionRowBuilder<ChannelSelectMenuBuilder>().addComponents(select),
+            new ActionRowBuilder<ButtonBuilder>().addComponents(
+                new ButtonBuilder()
+                    .setCustomId('settings:xp:clear-log-channel')
+                    .setLabel('Désactiver le journal')
+                    .setStyle(ButtonStyle.Danger),
                 xpBackButton()
             )
         ]
@@ -1019,7 +1071,8 @@ async function showXpBoostPeriodModal(component: ButtonInteraction, source: Chat
     await updateXpSettings(source.guildId!, {
         boost_multiplier: multiplier,
         boost_starts_at: startAt.toISOString(),
-        boost_ends_at: endAt.toISOString()
+        boost_ends_at: endAt.toISOString(),
+        boost_end_notified_at: null
     });
     await submission.editReply(await buildXpBoosts(source.guild!));
 }

@@ -13,6 +13,7 @@ import {
     setRequesterFooter
 } from '../../utils/theme.ts';
 import { logger } from '../../utils/logger.ts';
+import { sendXpLog } from '../../utils/xpLogger.ts';
 
 export const data = new SlashCommandBuilder()
     .setName('xpadmin')
@@ -83,6 +84,19 @@ export async function execute(interaction: ChatInputCommandInteraction) {
             interaction.user
         );
         await interaction.editReply({ embeds: [embed], allowedMentions: { parse: [] } });
+        await sendXpLog(
+            interaction.guild,
+            'Profil XP réinitialisé',
+            existed
+                ? `<@${userId}> a été remis à zéro par <@${interaction.user.id}>.`
+                : `<@${interaction.user.id}> a demandé le reset de <@${userId}>, mais aucun profil n’existait.`,
+            existed ? 'warning' : 'neutral',
+            [{
+                name: 'Rôles retirés',
+                value: removedRoles.length ? removedRoles.map(id => `<@&${id}>`).join(', ') : 'Aucun',
+                inline: false
+            }]
+        );
     } catch (error) {
         logger.error(`Erreur reset XP de ${userId}`, error, 'XP');
         await interaction.editReply({ content: KEPLER_MESSAGES.unexpectedError });

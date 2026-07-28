@@ -2,6 +2,7 @@ import { Events, GuildMember } from 'discord.js';
 import { logMemberJoin } from '../logs/memberLogs.ts';
 import { syncXpRewardRoles } from '../../utils/xpSystem.ts';
 import { logger } from '../../utils/logger.ts';
+import { sendXpLog } from '../../utils/xpLogger.ts';
 
 export const name = Events.GuildMemberAdd;
 export const once = false;
@@ -9,7 +10,20 @@ export const once = false;
 export async function execute(member: GuildMember) {
     await logMemberJoin(member);
     try {
-        await syncXpRewardRoles(member);
+        const restoredRoles = await syncXpRewardRoles(member);
+        if (restoredRoles.length) {
+            await sendXpLog(
+                member.guild,
+                'Rôles XP restaurés',
+                `${restoredRoles.length} rôle(s) ont été rendus à <@${member.id}> après son retour.`,
+                'success',
+                [{
+                    name: 'Rôles',
+                    value: restoredRoles.map(roleId => `<@&${roleId}>`).join(', '),
+                    inline: false
+                }]
+            );
+        }
     } catch (error) {
         logger.error(`Erreur restauration des rôles XP de ${member.id}`, error, 'XP');
     }

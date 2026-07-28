@@ -36,6 +36,8 @@ Toute la configuration est centralisée dans `/settings`, section
   boosts par rôle.
 - **Récompenses** : association entre niveaux et rôles automatiques.
 - **Exclusions** : salons et rôles qui ne peuvent pas gagner d'XP.
+- **Journal** : salon privé recevant les fins de boost, passages de niveau,
+  rôles restaurés et resets administratifs.
 
 Pendant une période de boost, le multiplicateur temporaire est combiné au
 meilleur boost de rôle du membre. Les boosts de plusieurs rôles ne se cumulent
@@ -54,6 +56,7 @@ Exécuter les migrations suivantes dans Supabase avant de déployer le code :
 3. `database/migrations/20260728_secure_guild_xp_rls.sql`
 4. `database/migrations/20260728_fix_add_guild_xp_ambiguity.sql`
 5. `database/migrations/20260728_add_xp_level_channel.sql`
+6. `database/migrations/20260728_add_xp_logs.sql`
 
 La seconde est idempotente et peut aussi être appliquée à une installation
 ayant déjà reçu la première version du système. Les ajouts d'XP passent par une
