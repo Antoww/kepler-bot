@@ -180,16 +180,18 @@ async function requestTicketClose(interaction: ButtonInteraction): Promise<void>
 
     const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
         new ButtonBuilder()
-            .setCustomId(isOwner
-                ? `ticket:confirm-user-close:${ownerId}`
-                : `ticket:confirm-delete:${ownerId}`)
-            .setLabel(isOwner ? 'Confirmer et quitter' : 'Clôturer définitivement')
+            // Les droits d'équipe sont prioritaires sur le statut de propriétaire :
+            // un gestionnaire qui a ouvert le ticket peut donc le supprimer.
+            .setCustomId(isStaff
+                ? `ticket:confirm-delete:${ownerId}`
+                : `ticket:confirm-user-close:${ownerId}`)
+            .setLabel(isStaff ? 'Clôturer définitivement' : 'Confirmer et quitter')
             .setStyle(ButtonStyle.Danger)
     );
     await interaction.reply({
-        content: isOwner
-            ? 'Vous perdrez l’accès au ticket. L’équipe pourra ensuite le clôturer définitivement. Confirmer ?'
-            : 'Cette action supprimera définitivement le salon du ticket. Confirmer ?',
+        content: isStaff
+            ? 'Cette action supprimera définitivement le salon du ticket. Confirmer ?'
+            : 'Vous perdrez l’accès au ticket. L’équipe pourra ensuite le clôturer définitivement. Confirmer ?',
         components: [row],
         ephemeral: true
     });
@@ -260,6 +262,7 @@ function getTicketOwnerId(interaction: ButtonInteraction): string | null {
 async function isTicketStaff(interaction: ButtonInteraction): Promise<boolean> {
     const member = await interaction.guild!.members.fetch(interaction.user.id).catch(() => null);
     if (!member) return false;
+    if (member.permissions.has(PermissionFlagsBits.Administrator)) return true;
     if (member.permissions.has(PermissionFlagsBits.ManageChannels)) return true;
     const config = await getTicketConfig(interaction.guildId!);
     return !!config.ticket_support_role_id && member.roles.cache.has(config.ticket_support_role_id);
