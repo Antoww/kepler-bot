@@ -5,6 +5,7 @@ import { addGiveawayParticipant, removeGiveawayParticipant, isParticipant, getGi
 import { formatTimeRemaining, generateGiveawayEmbed } from './giveawayManager.ts';
 import { trackCommand } from '../../utils/statsTracker.ts';
 import { handleReportActionButton } from '../../utils/reportActions.ts';
+import { handleTicketButton } from '../../utils/tickets.ts';
 
 export const name = 'interactionCreate';
 
@@ -84,6 +85,8 @@ async function handleButtonInteraction(interaction: ButtonInteraction) {
     try {
         if (customId.startsWith('report:moderate:')) {
             await handleReportActionButton(interaction);
+        } else if (customId.startsWith('ticket:')) {
+            await handleTicketButton(interaction);
         } else if (customId === 'giveaway_join') {
             await handleGiveawayJoin(interaction);
         } else if (customId === 'giveaway_leave') {

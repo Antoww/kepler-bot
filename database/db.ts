@@ -105,8 +105,69 @@ export interface ServerConfig {
     birthday_channel_id?: string;
     report_channel_id?: string;
     report_role_id?: string;
+    ticket_panel_channel_id?: string;
+    ticket_support_role_id?: string;
+    ticket_panel_title?: string;
+    ticket_panel_message?: string;
+    ticket_button_label?: string;
+    ticket_button_emoji?: string;
+    ticket_button_style?: string;
     created_at: Date;
     updated_at: Date;
+}
+
+export interface TicketConfig {
+    guild_id: string;
+    ticket_panel_channel_id: string | null;
+    ticket_support_role_id: string | null;
+    ticket_panel_title: string;
+    ticket_panel_message: string;
+    ticket_button_label: string;
+    ticket_button_emoji: string | null;
+    ticket_button_style: string;
+}
+
+const DEFAULT_TICKET_CONFIG = {
+    ticket_panel_title: 'Besoin d’aide ?',
+    ticket_panel_message: 'Cliquez sur le bouton ci-dessous pour ouvrir un ticket privé avec l’équipe du serveur.',
+    ticket_button_label: 'Ouvrir un ticket',
+    ticket_button_emoji: '🎫',
+    ticket_button_style: 'Primary'
+} as const;
+
+export async function getTicketConfig(guildId: string): Promise<TicketConfig> {
+    const { data, error } = await supabase
+        .from('server_configs')
+        .select('guild_id, ticket_panel_channel_id, ticket_support_role_id, ticket_panel_title, ticket_panel_message, ticket_button_label, ticket_button_emoji, ticket_button_style')
+        .eq('guild_id', guildId)
+        .maybeSingle();
+
+    if (error) throw error;
+    return {
+        guild_id: guildId,
+        ticket_panel_channel_id: data?.ticket_panel_channel_id ?? null,
+        ticket_support_role_id: data?.ticket_support_role_id ?? null,
+        ticket_panel_title: data?.ticket_panel_title || DEFAULT_TICKET_CONFIG.ticket_panel_title,
+        ticket_panel_message: data?.ticket_panel_message || DEFAULT_TICKET_CONFIG.ticket_panel_message,
+        ticket_button_label: data?.ticket_button_label || DEFAULT_TICKET_CONFIG.ticket_button_label,
+        ticket_button_emoji: data?.ticket_button_emoji ?? DEFAULT_TICKET_CONFIG.ticket_button_emoji,
+        ticket_button_style: data?.ticket_button_style || DEFAULT_TICKET_CONFIG.ticket_button_style
+    };
+}
+
+export async function updateTicketConfig(
+    guildId: string,
+    values: Partial<Omit<TicketConfig, 'guild_id'>>
+): Promise<void> {
+    const { error } = await supabase
+        .from('server_configs')
+        .upsert({
+            guild_id: guildId,
+            ...values,
+            updated_at: new Date().toISOString()
+        }, { onConflict: 'guild_id' });
+
+    if (error) throw error;
 }
 
 // Mettre à jour le canal de logs d'un serveur

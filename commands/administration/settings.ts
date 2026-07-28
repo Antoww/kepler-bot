@@ -2,13 +2,17 @@ import { createKeplerEmbed, KEPLER_COLORS, KEPLER_MESSAGES } from '../../utils/t
 import {
     ActionRowBuilder,
     ButtonBuilder,
+    type ButtonInteraction,
     ButtonStyle,
     ChannelSelectMenuBuilder,
     ChannelType,
     type ChatInputCommandInteraction,
+    ModalBuilder,
     PermissionFlagsBits,
     RoleSelectMenuBuilder,
     SlashCommandBuilder,
+    TextInputBuilder,
+    TextInputStyle,
     type Guild,
     type MessageComponentInteraction
 } from 'discord.js';
@@ -19,16 +23,18 @@ import {
     getMuteRole,
     getReportChannel,
     getReportRole,
+    getTicketConfig,
     updateBirthdayChannel,
     updateLogChannel,
     updateModerationChannel,
     updateMuteRole,
     updateReportChannel,
-    updateReportRole
+    updateReportRole,
+    updateTicketConfig
 } from '../../database/db.ts';
 import { logger } from '../../utils/logger.ts';
 
-type ConfigSection = 'logs' | 'moderation' | 'birthdays' | 'mute' | 'reports';
+type ConfigSection = 'logs' | 'moderation' | 'birthdays' | 'mute' | 'reports' | 'tickets';
 
 const PANEL_COLOR = 0x45d7ff;
 const PANEL_TIMEOUT = 5 * 60 * 1000;
@@ -122,6 +128,25 @@ async function handleComponent(component: MessageComponentInteraction, source: C
             await component.update(buildMuteCreationConfirmation());
             return;
         }
+        if (component.customId === 'settings:tickets:customize') {
+            await customizeTicketPanel(component, source);
+            return;
+        }
+        if (component.customId === 'settings:tickets:publish') {
+            await component.deferUpdate();
+            try {
+                await publishTicketPanel(source);
+                await component.editReply(await buildOverview(source, 'Panneau de tickets publié.'));
+            } catch (error) {
+                const message = error instanceof Error ? error.message : 'Impossible de publier le panneau.';
+                await component.editReply({
+                    content: `❌ ${message}`,
+                    embeds: [],
+                    components: [new ActionRowBuilder<ButtonBuilder>().addComponents(backButton())]
+                });
+            }
+            return;
+        }
         if (component.customId === 'settings:clear-report-role') {
             await component.deferUpdate();
             await updateReportRole(guild.id, '');
@@ -142,6 +167,11 @@ async function handleComponent(component: MessageComponentInteraction, source: C
     if (component.isChannelSelectMenu()) {
         const channelId = component.values[0];
         await component.deferUpdate();
+        if (component.customId === 'settings:select:tickets-channel') {
+            await updateTicketConfig(guild.id, { ticket_panel_channel_id: channelId });
+            await component.editReply(await buildOverview(source, `Salon du panneau de tickets configuré sur <#${channelId}>.`));
+            return;
+        }
         if (component.customId === 'settings:select:reports-channel') {
             await updateReportChannel(guild.id, channelId);
             await component.editReply(await buildOverview(source, `Salon des reports configuré sur <#${channelId}>.`));
@@ -156,6 +186,16 @@ async function handleComponent(component: MessageComponentInteraction, source: C
     if (component.isRoleSelectMenu()) {
         const roleId = component.values[0];
         const role = guild.roles.cache.get(roleId) ?? await guild.roles.fetch(roleId);
+        if (component.customId === 'settings:select:tickets-role') {
+            if (!role || role.id === guild.roles.everyone.id) {
+                await component.reply({ content: KEPLER_MESSAGES.invalidRole, ephemeral: true });
+                return;
+            }
+            await component.deferUpdate();
+            await updateTicketConfig(guild.id, { ticket_support_role_id: role.id });
+            await component.editReply(await buildOverview(source, `Rôle support configuré sur ${role}.`));
+            return;
+        }
         if (component.customId === 'settings:select:reports-role') {
             if (!role) {
                 await component.reply({ content: KEPLER_MESSAGES.invalidRole, ephemeral: true });
@@ -183,13 +223,14 @@ async function handleComponent(component: MessageComponentInteraction, source: C
 
 async function buildOverview(interaction: ChatInputCommandInteraction, notice?: string) {
     const guild = interaction.guild!;
-    const [logs, moderation, birthdays, mute, reports, reportRole] = await Promise.all([
+    const [logs, moderation, birthdays, mute, reports, reportRole, tickets] = await Promise.all([
         getLogChannel(guild.id),
         getModerationChannel(guild.id),
         getBirthdayChannel(guild.id),
         getMuteRole(guild.id),
         getReportChannel(guild.id),
-        getReportRole(guild.id)
+        getReportRole(guild.id),
+        getTicketConfig(guild.id)
     ]);
 
     const embed = createKeplerEmbed()
@@ -206,7 +247,9 @@ async function buildOverview(interaction: ChatInputCommandInteraction, notice?: 
             { name: '🎂 Anniversaires', value: formatChannel(guild, birthdays), inline: true },
             { name: '🔇 Rôle de mute', value: formatRole(guild, mute), inline: true },
             { name: '🚩 Salon des reports', value: formatChannel(guild, reports), inline: true },
-            { name: '📣 Rôle mentionné', value: formatOptionalRole(guild, reportRole), inline: true }
+            { name: '📣 Rôle mentionné', value: formatOptionalRole(guild, reportRole), inline: true },
+            { name: '🎫 Panneau de tickets', value: formatChannel(guild, tickets.ticket_panel_channel_id), inline: true },
+            { name: '🧑‍💻 Rôle support', value: formatOptionalRole(guild, tickets.ticket_support_role_id), inline: true }
         )
         .setFooter({ text: 'Panneau privé • expiration dans 5 minutes' })
         .setTimestamp();
@@ -219,6 +262,7 @@ async function buildOverview(interaction: ChatInputCommandInteraction, notice?: 
         new ButtonBuilder().setCustomId('settings:section:reports').setLabel('Reports').setEmoji('🚩').setStyle(ButtonStyle.Secondary)
     );
     const actions = new ActionRowBuilder<ButtonBuilder>().addComponents(
+        new ButtonBuilder().setCustomId('settings:section:tickets').setLabel('Tickets').setEmoji('🎫').setStyle(ButtonStyle.Secondary),
         new ButtonBuilder().setCustomId('settings:refresh').setEmoji('🔄').setStyle(ButtonStyle.Primary),
         new ButtonBuilder().setCustomId('settings:close').setEmoji('✖️').setStyle(ButtonStyle.Secondary)
     );
@@ -232,6 +276,34 @@ function buildSection(section: ConfigSection, guild: Guild) {
         .setTitle(sectionLabel(section))
         .setDescription(sectionDescription(section))
         .setFooter({ text: guild.name });
+
+    if (section === 'tickets') {
+        const channelSelect = new ChannelSelectMenuBuilder()
+            .setCustomId('settings:select:tickets-channel')
+            .setPlaceholder('Salon où publier le panneau')
+            .addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement)
+            .setMinValues(1)
+            .setMaxValues(1);
+        const roleSelect = new RoleSelectMenuBuilder()
+            .setCustomId('settings:select:tickets-role')
+            .setPlaceholder('Rôle autorisé à voir les tickets')
+            .setMinValues(1)
+            .setMaxValues(1);
+        return {
+            content: '',
+            embeds: [embed],
+            components: [
+                new ActionRowBuilder<ChannelSelectMenuBuilder>().addComponents(channelSelect),
+                new ActionRowBuilder<RoleSelectMenuBuilder>().addComponents(roleSelect),
+                new ActionRowBuilder<ButtonBuilder>().addComponents(
+                    new ButtonBuilder().setCustomId('settings:tickets:customize').setLabel('Personnaliser').setEmoji('✏️').setStyle(ButtonStyle.Primary),
+                    new ButtonBuilder().setCustomId('settings:tickets:publish').setLabel('Publier').setEmoji('📨').setStyle(ButtonStyle.Success),
+                    new ButtonBuilder().setCustomId('settings:disable:tickets').setLabel('Désactiver').setStyle(ButtonStyle.Danger),
+                    backButton()
+                )
+            ]
+        };
+    }
 
     if (section === 'reports') {
         const channelSelect = new ChannelSelectMenuBuilder()
@@ -335,7 +407,164 @@ async function disableSection(section: ConfigSection, guildId: string) {
     else if (section === 'birthdays') await updateBirthdayChannel(guildId, '');
     else if (section === 'reports') {
         await Promise.all([updateReportChannel(guildId, ''), updateReportRole(guildId, '')]);
+    } else if (section === 'tickets') {
+        await updateTicketConfig(guildId, {
+            ticket_panel_channel_id: null,
+            ticket_support_role_id: null
+        });
     } else await updateMuteRole(guildId, '');
+}
+
+async function customizeTicketPanel(component: ButtonInteraction, source: ChatInputCommandInteraction) {
+    const config = await getTicketConfig(source.guild!.id);
+    const modalId = `settings:tickets:modal:${source.id}`;
+    const title = new TextInputBuilder()
+        .setCustomId('title')
+        .setLabel('Titre du panneau')
+        .setStyle(TextInputStyle.Short)
+        .setMinLength(1)
+        .setMaxLength(256)
+        .setValue(config.ticket_panel_title)
+        .setRequired(true);
+    const message = new TextInputBuilder()
+        .setCustomId('message')
+        .setLabel('Message du panneau')
+        .setStyle(TextInputStyle.Paragraph)
+        .setMinLength(1)
+        .setMaxLength(2000)
+        .setValue(config.ticket_panel_message)
+        .setRequired(true);
+    const label = new TextInputBuilder()
+        .setCustomId('label')
+        .setLabel('Texte du bouton')
+        .setStyle(TextInputStyle.Short)
+        .setMinLength(1)
+        .setMaxLength(80)
+        .setValue(config.ticket_button_label)
+        .setRequired(true);
+    const emoji = new TextInputBuilder()
+        .setCustomId('emoji')
+        .setLabel('Emoji du bouton (facultatif)')
+        .setStyle(TextInputStyle.Short)
+        .setMaxLength(100)
+        .setRequired(false);
+    if (config.ticket_button_emoji) emoji.setValue(config.ticket_button_emoji);
+    const style = new TextInputBuilder()
+        .setCustomId('style')
+        .setLabel('Couleur : bleu, gris, vert ou rouge')
+        .setStyle(TextInputStyle.Short)
+        .setMinLength(3)
+        .setMaxLength(5)
+        .setValue(ticketStyleLabel(config.ticket_button_style))
+        .setRequired(true);
+
+    const modal = new ModalBuilder()
+        .setCustomId(modalId)
+        .setTitle('Personnaliser le panneau')
+        .addComponents(
+            new ActionRowBuilder<TextInputBuilder>().addComponents(title),
+            new ActionRowBuilder<TextInputBuilder>().addComponents(message),
+            new ActionRowBuilder<TextInputBuilder>().addComponents(label),
+            new ActionRowBuilder<TextInputBuilder>().addComponents(emoji),
+            new ActionRowBuilder<TextInputBuilder>().addComponents(style)
+        );
+    await component.showModal(modal);
+
+    try {
+        const submission = await component.awaitModalSubmit({
+            filter: modalInteraction =>
+                modalInteraction.user.id === source.user.id && modalInteraction.customId === modalId,
+            time: PANEL_TIMEOUT
+        });
+        await submission.deferUpdate();
+        const buttonEmoji = submission.fields.getTextInputValue('emoji').trim();
+        const buttonStyle = parseTicketStyle(submission.fields.getTextInputValue('style'));
+        if (!buttonStyle) {
+            await submission.followUp({
+                content: '❌ Couleur invalide. Utilisez `bleu`, `gris`, `vert` ou `rouge`.',
+                ephemeral: true
+            });
+            return;
+        }
+        if (buttonEmoji) {
+            try {
+                new ButtonBuilder().setCustomId('ticket:emoji-validation').setEmoji(buttonEmoji);
+            } catch {
+                await submission.followUp({ content: '❌ L’emoji indiqué n’est pas valide.', ephemeral: true });
+                return;
+            }
+        }
+        await updateTicketConfig(source.guild!.id, {
+            ticket_panel_title: submission.fields.getTextInputValue('title').trim(),
+            ticket_panel_message: submission.fields.getTextInputValue('message').trim(),
+            ticket_button_label: submission.fields.getTextInputValue('label').trim(),
+            ticket_button_emoji: buttonEmoji || null,
+            ticket_button_style: buttonStyle
+        });
+        await submission.editReply(await buildOverview(source, 'Personnalisation du panneau de tickets enregistrée.'));
+    } catch (error: any) {
+        if (error?.code !== 'InteractionCollectorError') throw error;
+    }
+}
+
+async function publishTicketPanel(source: ChatInputCommandInteraction) {
+    const guild = source.guild!;
+    const config = await getTicketConfig(guild.id);
+    if (!config.ticket_panel_channel_id) {
+        throw new Error('Configurez d’abord le salon du panneau de tickets.');
+    }
+    const channel = await guild.channels.fetch(config.ticket_panel_channel_id);
+    if (!channel || (channel.type !== ChannelType.GuildText && channel.type !== ChannelType.GuildAnnouncement)) {
+        throw new Error('Le salon configuré pour les tickets est invalide.');
+    }
+    const botMember = guild.members.me;
+    const permissions = botMember ? channel.permissionsFor(botMember) : null;
+    if (!permissions?.has([PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.EmbedLinks])) {
+        throw new Error('Le bot ne peut pas envoyer de panneau dans ce salon.');
+    }
+
+    const embed = createKeplerEmbed()
+        .setColor(PANEL_COLOR)
+        .setTitle(config.ticket_panel_title)
+        .setDescription(config.ticket_panel_message)
+        .setFooter({ text: guild.name });
+    const button = new ButtonBuilder()
+        .setCustomId('ticket:open')
+        .setLabel(config.ticket_button_label)
+        .setStyle(ticketButtonStyle(config.ticket_button_style));
+    if (config.ticket_button_emoji) button.setEmoji(config.ticket_button_emoji);
+    await channel.send({
+        embeds: [embed],
+        components: [new ActionRowBuilder<ButtonBuilder>().addComponents(button)],
+        allowedMentions: { parse: [] }
+    });
+}
+
+function parseTicketStyle(value: string): 'Primary' | 'Secondary' | 'Success' | 'Danger' | null {
+    return ({
+        bleu: 'Primary',
+        gris: 'Secondary',
+        vert: 'Success',
+        rouge: 'Danger'
+    } as const)[value.trim().toLowerCase() as 'bleu' | 'gris' | 'vert' | 'rouge'] ?? null;
+}
+
+function ticketStyleLabel(style: string): string {
+    return ({
+        Primary: 'bleu',
+        Secondary: 'gris',
+        Success: 'vert',
+        Danger: 'rouge'
+    } as Record<string, string>)[style] || 'bleu';
+}
+
+function ticketButtonStyle(style: string): ButtonStyle {
+    return ({
+        Primary: ButtonStyle.Primary,
+        Secondary: ButtonStyle.Secondary,
+        Success: ButtonStyle.Success,
+        Danger: ButtonStyle.Danger
+    } as Record<string, ButtonStyle>)[style] ?? ButtonStyle.Primary;
 }
 
 async function createMuteRole(guild: Guild, userTag: string) {
@@ -377,7 +606,8 @@ function sectionLabel(section: ConfigSection): string {
         moderation: 'Logs de modération',
         birthdays: 'Annonces d’anniversaire',
         mute: 'Rôle de mute',
-        reports: 'Signalements'
+        reports: 'Signalements',
+        tickets: 'Tickets'
     })[section];
 }
 
@@ -387,7 +617,8 @@ function sectionDescription(section: ConfigSection): string {
         moderation: 'Choisissez le salon qui recevra les sanctions et actions de modération.',
         birthdays: 'Choisissez le salon dans lequel les anniversaires seront annoncés.',
         mute: 'Sélectionnez un rôle existant, créez-en un automatiquement ou utilisez les timeouts Discord.',
-        reports: 'Choisissez le salon qui recevra les signalements et, si nécessaire, le rôle de modération à mentionner.'
+        reports: 'Choisissez le salon qui recevra les signalements et, si nécessaire, le rôle de modération à mentionner.',
+        tickets: 'Choisissez où publier le panneau, le rôle support, puis personnalisez son message et son bouton.'
     })[section];
 }
 
