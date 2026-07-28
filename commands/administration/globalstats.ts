@@ -35,7 +35,7 @@ export const data = new SlashCommandBuilder()
     .addSubcommand(subcommand =>
         subcommand
             .setName('messages')
-            .setDescription('Statistiques des messages')
+            .setDescription('Statistiques des messages :')
             .addIntegerOption(option =>
                 option
                     .setName('jours')
