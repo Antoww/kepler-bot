@@ -10,8 +10,7 @@ import {
     getTopCommands,
     getTopUsers,
     getTopChannels,
-    getTotalStats,
-    generateSparkline
+    getTotalStats
 } from '../../utils/statsTracker.ts';
 import { renderBarChart, renderLineChart } from '../../utils/statsChart.ts';
 
@@ -158,9 +157,6 @@ async function handleOverview(interaction: ChatInputCommandInteraction) {
     const periodCommands = dailyStats.reduce((sum, d) => sum + d.commands, 0);
     const periodMessages = dailyStats.reduce((sum, d) => sum + d.messages, 0);
 
-    // Sparklines
-    const cmdSparkline = generateSparkline(dailyStats.slice(-14).map(d => d.commands));
-    const msgSparkline = generateSparkline(dailyStats.slice(-14).map(d => d.messages));
 
     const overviewBuffer = await renderLineChart(
         `Activité de ${interaction.guild!.name}`,
@@ -215,17 +211,6 @@ async function handleOverview(interaction: ChatInputCommandInteraction) {
                 ].join('\n'),
                 inline: true
             },
-            {
-                name: '📉 Tendance messages (14j)',
-                value: `\`${msgSparkline}\``,
-                inline: true
-            },
-            {
-                name: '📉 Tendance commandes (14j)',
-                value: `\`${cmdSparkline}\``,
-                inline: true
-            },
-            { name: '\u200b', value: '\u200b', inline: true },
             {
                 name: '🏆 Top 5 commandes',
                 value: topCmdList,
@@ -494,8 +479,6 @@ async function handleCommands(interaction: ChatInputCommandInteraction) {
     const commandsBuffer = await renderBarChart('Commandes les plus utilisées', `${days} derniers jours`, chartData, '#f39c12');
     const commandsAttachment = new AttachmentBuilder(commandsBuffer, { name: 'server-commands.webp' });
 
-    // Sparkline
-    const sparkline = generateSparkline(dailyStats.slice(-14).map(d => d.commands));
 
     const embed = new EmbedBuilder()
         .setColor('#f39c12')
@@ -513,11 +496,6 @@ async function handleCommands(interaction: ChatInputCommandInteraction) {
             {
                 name: '🏆 Top 10',
                 value: 'Graphique détaillé ci-dessous.',
-                inline: false
-            },
-            {
-                name: '📉 Tendance (14j)',
-                value: `\`${sparkline}\``,
                 inline: false
             }
         )

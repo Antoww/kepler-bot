@@ -8,8 +8,7 @@ import config from '../../config.json' with { type: 'json' };
 import {
     getDailyStats,
     getTopCommands,
-    getTotalStats,
-    generateSparkline
+    getTotalStats
 } from '../../utils/statsTracker.ts';
 import { renderBarChart, renderLineChart } from '../../utils/statsChart.ts';
 
@@ -124,9 +123,6 @@ async function handleOverview(interaction: ChatInputCommandInteraction) {
     const commands30 = dailyStats30.reduce((sum, d) => sum + d.commands, 0);
     const messages30 = dailyStats30.reduce((sum, d) => sum + d.messages, 0);
 
-    // Sparklines
-    const cmdSparkline = generateSparkline(dailyStats30.slice(-14).map(d => d.commands));
-    const msgSparkline = generateSparkline(dailyStats30.slice(-14).map(d => d.messages));
 
     const overviewBuffer = await renderLineChart(
         'Activité globale',
@@ -174,17 +170,6 @@ async function handleOverview(interaction: ChatInputCommandInteraction) {
                 inline: true
             },
             {
-                name: '📈 Tendance commandes (14j)',
-                value: `\`${cmdSparkline}\``,
-                inline: true
-            },
-            {
-                name: '📈 Tendance messages (14j)',
-                value: `\`${msgSparkline}\``,
-                inline: true
-            },
-            { name: '\u200b', value: '\u200b', inline: true },
-            {
                 name: '🏆 Top 5 commandes (30j)',
                 value: topCmdList,
                 inline: false
@@ -219,9 +204,6 @@ async function handleCommandsStats(interaction: ChatInputCommandInteraction) {
     const chartBuffer = await renderBarChart('Top des commandes', `${days} derniers jours`, chartData, '#3498db');
     const chartAttachment = new AttachmentBuilder(chartBuffer, { name: 'global-commands.webp' });
 
-    // Sparkline des derniers jours
-    const recentValues = dailyStats.slice(-14).map(d => d.commands);
-    const sparkline = generateSparkline(recentValues);
 
     const embed = new EmbedBuilder()
         .setColor('#3498db')
@@ -240,11 +222,6 @@ async function handleCommandsStats(interaction: ChatInputCommandInteraction) {
             {
                 name: '🏆 Top 10 des commandes',
                 value: 'Graphique détaillé ci-dessous.',
-                inline: false
-            },
-            {
-                name: '📉 Tendance (14 derniers jours)',
-                value: `\`${sparkline}\``,
                 inline: false
             }
         )
@@ -270,9 +247,6 @@ async function handleMessagesStats(interaction: ChatInputCommandInteraction) {
         ? dailyStats.reduce((max, d) => d.messages > max.messages ? d : max)
         : null;
 
-    // Sparkline des derniers jours
-    const recentValues = dailyStats.slice(-14).map(d => d.messages);
-    const sparkline = generateSparkline(recentValues);
 
     // Top 5 jours les plus actifs
     const topDays = [...dailyStats]
@@ -308,11 +282,6 @@ async function handleMessagesStats(interaction: ChatInputCommandInteraction) {
             {
                 name: '🏆 Top 5 jours les plus actifs',
                 value: 'Graphique détaillé ci-dessous.',
-                inline: false
-            },
-            {
-                name: '📉 Tendance (14 derniers jours)',
-                value: `\`${sparkline}\``,
                 inline: false
             }
         )
