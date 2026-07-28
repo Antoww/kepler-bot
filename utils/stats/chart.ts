@@ -1,7 +1,7 @@
 import sharp from 'sharp';
 import { Buffer } from 'node:buffer';
-import { logger } from './logger.ts';
-import { KEPLER_CHART_COLORS, KEPLER_HEX } from './theme.ts';
+import { logger } from '../logger.ts';
+import { KEPLER_CHART_COLORS, KEPLER_HEX } from '../theme.ts';
 
 export interface ChartDatum {
     label: string;

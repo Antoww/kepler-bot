@@ -1,6 +1,6 @@
 import { type ChatInputCommandInteraction, SlashCommandBuilder } from 'discord.js';
 import { KEPLER_MESSAGES } from '../../utils/theme.ts';
-import { openReportModal } from '../../utils/reporting.ts';
+import { openReportModal } from '../../utils/reports/service.ts';
 
 export const data = new SlashCommandBuilder()
     .setName('report')

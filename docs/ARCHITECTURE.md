@@ -8,7 +8,14 @@ events/
   handlers/           Un fichier par événement Discord
   logs/               Construction des journaux d’événements Discord
 managers/             Services persistants démarrés avec le bot
-utils/                Fonctions métier et infrastructure réutilisables
+utils/
+  moderation/        Archives et journal de modération
+  privacy/           Données et conformité RGPD
+  reports/           Signalements
+  stats/             Tracking et graphiques
+  tickets/           Gestion des tickets
+  xp/                Progression et journal XP
+  *.ts               Fondations transversales
 docs/                 Documentation technique et fonctionnelle
 changelogs/           Historique des versions
 ```

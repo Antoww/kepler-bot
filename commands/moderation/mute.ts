@@ -1,6 +1,6 @@
 import { createKeplerEmbed, KEPLER_COLORS, KEPLER_MESSAGES } from '../../utils/theme.ts';
 import { type CommandInteraction, SlashCommandBuilder, PermissionFlagsBits, GuildMember, Role } from 'discord.js';
-import { logModeration } from '../../utils/moderationLogger.ts';
+import { logModeration } from '../../utils/moderation/logger.ts';
 import { createTempMute, addModerationHistory, getMuteRole } from '../../database/db.ts';
 
 export const data = new SlashCommandBuilder()

@@ -1,7 +1,7 @@
-import { createKeplerEmbed, KEPLER_COLORS } from './theme.ts';
+import { createKeplerEmbed, KEPLER_COLORS } from '../theme.ts';
 import { Guild, User, TextChannel } from 'discord.js';
-import { getModerationChannel } from '../database/db.ts';
-import { logger } from './logger.ts';
+import { getModerationChannel } from '../../database/db.ts';
+import { logger } from '../logger.ts';
 
 export async function logModeration(
     guild: Guild,

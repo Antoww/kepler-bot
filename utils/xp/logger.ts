@@ -2,9 +2,9 @@ import {
     ChannelType,
     type Guild
 } from 'discord.js';
-import { supabase } from '../database/supabase.ts';
-import { createKeplerEmbed, type KeplerTone } from './theme.ts';
-import { logger } from './logger.ts';
+import { supabase } from '../../database/supabase.ts';
+import { createKeplerEmbed, type KeplerTone } from '../theme.ts';
+import { logger } from '../logger.ts';
 
 interface XpLogField {
     name: string;

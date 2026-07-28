@@ -17,7 +17,7 @@ import {
     getActiveTempBan,
     getActiveTempMute
 } from '../../database/db.ts';
-import { logModeration } from '../../utils/moderationLogger.ts';
+import { logModeration } from '../../utils/moderation/logger.ts';
 
 export const data = new SlashCommandBuilder()
     .setName('sanctions')

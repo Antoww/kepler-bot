@@ -6,24 +6,29 @@ Ce dossier contient les modules utilitaires partagés par le bot.
 
 ```
 utils/
-├── statsTracker.ts      # Tracking des statistiques d'utilisation
-├── rgpdData.ts          # Gestion RGPD des données utilisateur
-├── moderationLogger.ts  # Logs de modération
-├── messageArchiver.ts   # Archivage des messages
-├── archiveCache.ts      # Cache pour l'archivage
-└── retryHelper.ts       # Retry automatique pour les requêtes réseau
+├── moderation/          # Logs et archives de modération
+├── privacy/             # Export, suppression et purge RGPD
+├── reports/             # Signalements utilisateur et actions associées
+├── stats/               # Tracking, agrégation et rendu des graphiques
+├── tickets/             # Cycle de vie des tickets
+├── xp/                  # Progression, récompenses et journal XP
+├── discordErrorReporter.ts
+├── logger.ts
+├── retryHelper.ts
+├── theme.ts
+└── timezone.ts
 ```
 
 ---
 
-## 📊 `statsTracker.ts`
+## 📊 `stats/tracker.ts`
 
 Module de tracking des statistiques du bot pour la commande `/graph`.
 
 ### Fonctions de tracking
 
 ```typescript
-import { trackCommand, trackMessage } from './utils/statsTracker.ts';
+import { trackCommand, trackMessage } from './utils/stats/tracker.ts';
 
 // Tracker une commande
 await trackCommand({
@@ -53,7 +58,7 @@ await trackMessage({
 
 ---
 
-## 🔐 `rgpdData.ts`
+## 🔐 `privacy/rgpdData.ts`
 
 Module complet de gestion RGPD pour la conformité aux données personnelles.
 
@@ -65,7 +70,7 @@ import {
     exportCompleteUserData,
     deleteVoluntaryUserData,
     purgeAllOldData
-} from './utils/rgpdData.ts';
+} from './utils/privacy/rgpdData.ts';
 ```
 
 | Fonction | Description | Droit RGPD |
@@ -84,12 +89,12 @@ import {
 
 ---
 
-## 📝 `moderationLogger.ts`
+## 📝 `moderation/logger.ts`
 
 Envoi des logs de modération dans le canal configuré.
 
 ```typescript
-import { logModeration } from './utils/moderationLogger.ts';
+import { logModeration } from './utils/moderation/logger.ts';
 
 await logModeration(client, guildId, {
     action: 'BAN',
@@ -102,18 +107,18 @@ await logModeration(client, guildId, {
 
 ---
 
-## 💾 `messageArchiver.ts` & `archiveCache.ts`
+## 💾 `moderation/messageArchiver.ts` et `moderation/archiveCache.ts`
 
 Archivage des messages supprimés pour les logs.
 
 ```typescript
-import { archiveMessage, getArchivedMessage } from './utils/messageArchiver.ts';
+import {
+    formatMessagesForArchive,
+    uploadToPastebin
+} from './utils/moderation/messageArchiver.ts';
 
-// Archiver un message avant suppression
-archiveMessage(message);
-
-// Récupérer un message archivé
-const archived = getArchivedMessage(messageId);
+const archive = formatMessagesForArchive(messages, 'Europe/Paris');
+const url = await uploadToPastebin(archive, 'Messages supprimés');
 ```
 
 ---

@@ -1,8 +1,8 @@
 import { Events, GuildMember } from 'discord.js';
 import { logMemberJoin } from '../logs/memberLogs.ts';
-import { syncXpRewardRoles } from '../../utils/xpSystem.ts';
+import { syncXpRewardRoles } from '../../utils/xp/system.ts';
 import { logger } from '../../utils/logger.ts';
-import { sendXpLog } from '../../utils/xpLogger.ts';
+import { sendXpLog } from '../../utils/xp/logger.ts';
 
 export const name = Events.GuildMemberAdd;
 export const once = false;

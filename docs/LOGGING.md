@@ -131,11 +131,11 @@ logger.error('Erreur lors du chargement', error, 'LOADER');
 
 ### Utils
 - ✅ `utils/logger.ts` (nouveau)
-- ✅ `utils/messageArchiver.ts`
-- ✅ `utils/archiveCache.ts`
-- ✅ `utils/statsTracker.ts`
-- ✅ `utils/rgpdData.ts`
-- ✅ `utils/moderationLogger.ts`
+- ✅ `utils/moderation/messageArchiver.ts`
+- ✅ `utils/moderation/archiveCache.ts`
+- ✅ `utils/stats/tracker.ts`
+- ✅ `utils/privacy/rgpdData.ts`
+- ✅ `utils/moderation/logger.ts`
 
 ### Prochaines mises à jour recommandées
 - `managers/moderationManager.ts`

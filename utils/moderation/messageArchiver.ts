@@ -1,6 +1,6 @@
 import { Message, Collection } from 'discord.js';
-import { logger } from './logger.ts';
-import { DEFAULT_TIMEZONE } from './timezone.ts';
+import { logger } from '../logger.ts';
+import { DEFAULT_TIMEZONE } from '../timezone.ts';
 
 /**
  * Formate les messages supprimés en texte lisible

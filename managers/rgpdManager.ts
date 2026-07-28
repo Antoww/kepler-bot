@@ -1,4 +1,4 @@
-import { purgeAllOldData } from '../utils/rgpdData.ts';
+import { purgeAllOldData } from '../utils/privacy/rgpdData.ts';
 import { logger } from '../utils/logger.ts';
 
 /**

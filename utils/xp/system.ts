@@ -4,10 +4,10 @@ import {
     type GuildMember,
     type Message
 } from 'discord.js';
-import { supabase } from '../database/supabase.ts';
-import { createKeplerEmbed, setRequesterFooter } from './theme.ts';
-import { logger } from './logger.ts';
-import { sendXpLog } from './xpLogger.ts';
+import { supabase } from '../../database/supabase.ts';
+import { createKeplerEmbed, setRequesterFooter } from '../theme.ts';
+import { logger } from '../logger.ts';
+import { sendXpLog } from './logger.ts';
 
 export const XP_COOLDOWN_SECONDS = 60;
 export const XP_MIN_GAIN = 15;

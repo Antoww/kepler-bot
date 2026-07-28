@@ -9,10 +9,10 @@ import {
     TextInputBuilder,
     TextInputStyle
 } from 'discord.js';
-import { addModerationHistory, createTempBan, createWarning } from '../database/db.ts';
-import { logModeration } from './moderationLogger.ts';
-import { KEPLER_MESSAGES } from './theme.ts';
-import { logger } from './logger.ts';
+import { addModerationHistory, createTempBan, createWarning } from '../../database/db.ts';
+import { logModeration } from '../moderation/logger.ts';
+import { KEPLER_MESSAGES } from '../theme.ts';
+import { logger } from '../logger.ts';
 
 type ReportAction = 'warn' | 'timeout' | 'kick' | 'ban';
 

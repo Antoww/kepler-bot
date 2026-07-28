@@ -1,7 +1,7 @@
 import { type Message } from 'discord.js';
 import { CountingManager } from '../../managers/countingManager.ts';
-import { trackMessage } from '../../utils/statsTracker.ts';
-import { awardMessageXp } from '../../utils/xpSystem.ts';
+import { trackMessage } from '../../utils/stats/tracker.ts';
+import { awardMessageXp } from '../../utils/xp/system.ts';
 import { logger } from '../../utils/logger.ts';
 
 export const name = 'messageCreate';

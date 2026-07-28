@@ -13,7 +13,7 @@ import {
     exportCompleteUserData,
     deleteVoluntaryUserData,
     generatePrivacyReport
-} from '../../utils/rgpdData.ts';
+} from '../../utils/privacy/rgpdData.ts';
 
 export const data = new SlashCommandBuilder()
     .setName('mesdonnees')

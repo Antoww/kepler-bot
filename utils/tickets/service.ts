@@ -12,9 +12,9 @@ import {
     type TextChannel
 } from 'discord.js';
 import { Buffer } from 'node:buffer';
-import { getTicketConfig } from '../database/db.ts';
-import { createKeplerEmbed, KEPLER_COLORS, KEPLER_MESSAGES } from './theme.ts';
-import { logger } from './logger.ts';
+import { getTicketConfig } from '../../database/db.ts';
+import { createKeplerEmbed, KEPLER_COLORS, KEPLER_MESSAGES } from '../theme.ts';
+import { logger } from '../logger.ts';
 
 const TICKET_TOPIC_PREFIX = 'kepler-ticket:';
 const openingTickets = new Set<string>();

@@ -3,9 +3,9 @@ import { type CommandInteraction, type ButtonInteraction, ActionRowBuilder, Butt
 import { createReminder } from '../../database/supabase.ts';
 import { addGiveawayParticipant, removeGiveawayParticipant, isParticipant, getGiveaway, getGiveawayParticipantCount } from '../../database/db.ts';
 import { formatTimeRemaining, generateGiveawayEmbed } from '../../managers/giveawayManager.ts';
-import { trackCommand } from '../../utils/statsTracker.ts';
-import { handleReportActionButton } from '../../utils/reportActions.ts';
-import { handleTicketButton } from '../../utils/tickets.ts';
+import { trackCommand } from '../../utils/stats/tracker.ts';
+import { handleReportActionButton } from '../../utils/reports/actions.ts';
+import { handleTicketButton } from '../../utils/tickets/service.ts';
 
 export const name = 'interactionCreate';
 

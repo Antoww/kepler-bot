@@ -2,7 +2,7 @@
  * Cache temporaire pour stocker les URLs d'archives Pastebin
  * Utilisé pour transmettre les URLs entre la commande clear et l'événement MessageBulkDelete
  */
-import { logger } from './logger.ts';
+import { logger } from '../logger.ts';
 
 interface ArchiveEntry {
     url: string;

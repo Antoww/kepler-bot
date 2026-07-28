@@ -10,9 +10,9 @@ import {
     TextInputStyle,
     type User
 } from 'discord.js';
-import { getReportChannel, getReportRole } from '../database/db.ts';
-import { createKeplerEmbed, KEPLER_MESSAGES } from './theme.ts';
-import { logger } from './logger.ts';
+import { getReportChannel, getReportRole } from '../../database/db.ts';
+import { createKeplerEmbed, KEPLER_MESSAGES } from '../theme.ts';
+import { logger } from '../logger.ts';
 
 type ReportInteraction = ChatInputCommandInteraction | MessageContextMenuCommandInteraction;
 

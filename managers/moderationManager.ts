@@ -1,6 +1,6 @@
 import { Client } from 'discord.js';
 import { getExpiredTempBans, getExpiredTempMutes, removeTempBan, removeTempMute } from '../database/db.ts';
-import { logModeration } from '../utils/moderationLogger.ts';
+import { logModeration } from '../utils/moderation/logger.ts';
 import { isNetworkError, isMaintenanceError, dbCircuitBreaker } from '../utils/retryHelper.ts';
 import { logger } from '../utils/logger.ts';
 

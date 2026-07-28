@@ -1,7 +1,7 @@
 import { KEPLER_MESSAGES } from '../../utils/theme.ts';
 import { type CommandInteraction, SlashCommandBuilder, ChannelType, TextChannel, PermissionFlagsBits, Message } from "discord.js";
-import { formatMessagesForArchive, uploadToPastebin } from "../../utils/messageArchiver.ts";
-import { storeArchiveUrl } from "../../utils/archiveCache.ts";
+import { formatMessagesForArchive, uploadToPastebin } from "../../utils/moderation/messageArchiver.ts";
+import { storeArchiveUrl } from "../../utils/moderation/archiveCache.ts";
 import { getServerTimezone } from '../../database/db.ts';
 
 export const data = new SlashCommandBuilder()

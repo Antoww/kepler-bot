@@ -46,7 +46,7 @@ import {
     setXpReward,
     setXpRoleBoost,
     updateXpSettings
-} from '../../utils/xpSystem.ts';
+} from '../../utils/xp/system.ts';
 import {
     COMMON_TIMEZONES,
     formatDateTimeInZone,

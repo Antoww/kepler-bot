@@ -13,8 +13,8 @@ import {
     getDailyStats,
     getTopCommands,
     getTotalStats
-} from '../../utils/statsTracker.ts';
-import { renderBarChart, renderLineChart } from '../../utils/statsChart.ts';
+} from '../../utils/stats/tracker.ts';
+import { renderBarChart, renderLineChart } from '../../utils/stats/chart.ts';
 
 type GlobalStatsAction = 'overview' | 'commands' | 'messages' | 'trend-commands' | 'trend-messages';
 const PANEL_TIMEOUT = 5 * 60 * 1000;

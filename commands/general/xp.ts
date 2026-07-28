@@ -8,7 +8,7 @@ import {
     getXpRank,
     progressBar,
     xpProgress
-} from '../../utils/xpSystem.ts';
+} from '../../utils/xp/system.ts';
 import {
     createKeplerEmbed,
     KEPLER_MESSAGES,

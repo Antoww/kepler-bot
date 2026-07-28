@@ -6,14 +6,14 @@ import {
 import {
     removeXpRewardRoles,
     resetXpProfile
-} from '../../utils/xpSystem.ts';
+} from '../../utils/xp/system.ts';
 import {
     createKeplerEmbed,
     KEPLER_MESSAGES,
     setRequesterFooter
 } from '../../utils/theme.ts';
 import { logger } from '../../utils/logger.ts';
-import { sendXpLog } from '../../utils/xpLogger.ts';
+import { sendXpLog } from '../../utils/xp/logger.ts';
 
 export const data = new SlashCommandBuilder()
     .setName('xpadmin')
