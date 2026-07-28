@@ -392,6 +392,79 @@ export async function getReportRole(guildId: string): Promise<string | null> {
     return data?.report_role_id || null;
 }
 
+export interface QuizScore {
+    scope_id: string;
+    user_id: string;
+    current_streak: number;
+    best_streak: number;
+    total_correct: number;
+    total_answers: number;
+    updated_at: string;
+}
+
+export async function getQuizScore(scopeId: string, userId: string): Promise<QuizScore | null> {
+    const { data, error } = await supabase
+        .from('quiz_scores')
+        .select('*')
+        .eq('scope_id', scopeId)
+        .eq('user_id', userId)
+        .single();
+
+    if (error) {
+        if (error.code === 'PGRST116') return null;
+        throw error;
+    }
+    return data;
+}
+
+export async function getQuizLeaderboard(scopeId: string, limit = 10): Promise<QuizScore[]> {
+    const { data, error } = await supabase
+        .from('quiz_scores')
+        .select('*')
+        .eq('scope_id', scopeId)
+        .order('best_streak', { ascending: false })
+        .order('total_correct', { ascending: false })
+        .limit(limit);
+
+    if (error) throw error;
+    return data || [];
+}
+
+export async function recordQuizAnswer(guildId: string, userId: string, correct: boolean): Promise<{ server: QuizScore; global: QuizScore }> {
+    const scopes = [guildId, 'global'];
+    const { data: currentScores, error: readError } = await supabase
+        .from('quiz_scores')
+        .select('*')
+        .eq('user_id', userId)
+        .in('scope_id', scopes);
+
+    if (readError) throw readError;
+    const currentByScope = new Map((currentScores || []).map(score => [score.scope_id, score as QuizScore]));
+    const scores = scopes.map(scopeId => {
+        const current = currentByScope.get(scopeId);
+        const currentStreak = correct ? (current?.current_streak ?? 0) + 1 : 0;
+        return {
+            scope_id: scopeId,
+            user_id: userId,
+            current_streak: currentStreak,
+            best_streak: Math.max(current?.best_streak ?? 0, currentStreak),
+            total_correct: (current?.total_correct ?? 0) + (correct ? 1 : 0),
+            total_answers: (current?.total_answers ?? 0) + 1,
+            updated_at: new Date().toISOString()
+        };
+    });
+    const { data, error } = await supabase
+        .from('quiz_scores')
+        .upsert(scores, { onConflict: 'scope_id,user_id' })
+        .select();
+
+    if (error) throw error;
+    const server = data?.find(score => score.scope_id === guildId) as QuizScore | undefined;
+    const global = data?.find(score => score.scope_id === 'global') as QuizScore | undefined;
+    if (!server || !global) throw new Error('Impossible de mettre à jour les scores du quiz');
+    return { server, global };
+}
+
 // Interface pour les sanctions temporaires
 export interface TempBan {
     id: number;

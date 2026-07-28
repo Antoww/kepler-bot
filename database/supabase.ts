@@ -2,10 +2,12 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 // Configuration Supabase
 const supabaseUrl = Deno.env.get('SUPABASE_URL');
-const supabaseKey = Deno.env.get('SUPABASE_KEY');
+const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? Deno.env.get('SUPABASE_KEY');
 
 if (!supabaseUrl || !supabaseKey) {
-    throw new Error('Variables d\'environnement SUPABASE_URL et SUPABASE_KEY requises');
+    throw new Error(
+        'Variables d\'environnement SUPABASE_URL et SUPABASE_SERVICE_ROLE_KEY requises'
+    );
 }
 
 // Client Supabase
@@ -173,4 +175,4 @@ export async function getLogChannel(guildId: string): Promise<string | null> {
 // Fermer la connexion à la base de données (pas nécessaire avec Supabase)
 export async function closeDatabase(): Promise<void> {
     console.log('🔌 Connexion à Supabase fermée');
-} 
+}
