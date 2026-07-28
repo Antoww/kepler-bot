@@ -1,6 +1,8 @@
 import { type Message } from 'discord.js';
 import { CountingManager } from '../core/countingManager.ts';
 import { trackMessage } from '../../utils/statsTracker.ts';
+import { awardMessageXp } from '../../utils/xpSystem.ts';
+import { logger } from '../../utils/logger.ts';
 
 export const name = 'messageCreate';
 
@@ -18,6 +20,10 @@ export async function execute(message: Message) {
         user_id: message.author.id
     }).catch(() => {
         // Ignorer silencieusement les erreurs de tracking
+    });
+
+    awardMessageXp(message).catch(error => {
+        logger.error('Erreur attribution XP', error, 'XP');
     });
 
     // Traiter le comptage
