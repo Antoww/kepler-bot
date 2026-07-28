@@ -197,7 +197,7 @@ async function requestTicketClose(interaction: ButtonInteraction): Promise<void>
 
 async function removeTicketOwner(interaction: ButtonInteraction): Promise<void> {
     const ownerId = getTicketOwnerId(interaction);
-    const expectedOwnerId = interaction.customId.split(':')[3];
+    const expectedOwnerId = interaction.customId.split(':')[2];
     if (!ownerId || ownerId !== expectedOwnerId || interaction.user.id !== ownerId) {
         await interaction.reply({ content: '❌ Confirmation de fermeture invalide.', ephemeral: true });
         return;
@@ -236,7 +236,7 @@ async function removeTicketOwner(interaction: ButtonInteraction): Promise<void> 
 
 async function deleteTicket(interaction: ButtonInteraction): Promise<void> {
     const ownerId = getTicketOwnerId(interaction);
-    const expectedOwnerId = interaction.customId.split(':')[3];
+    const expectedOwnerId = interaction.customId.split(':')[2];
     if (!ownerId || ownerId !== expectedOwnerId || !(await isTicketStaff(interaction))) {
         await interaction.reply({ content: '❌ Confirmation de clôture invalide.', ephemeral: true });
         return;
