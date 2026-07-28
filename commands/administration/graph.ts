@@ -1,6 +1,10 @@
 import { createKeplerEmbed, KEPLER_COLORS, KEPLER_MESSAGES } from '../../utils/theme.ts';
 import {
     type ChatInputCommandInteraction,
+    ActionRowBuilder,
+    ButtonBuilder,
+    ButtonStyle,
+    StringSelectMenuBuilder,
     SlashCommandBuilder,
     AttachmentBuilder,
     PermissionFlagsBits
@@ -14,160 +18,125 @@ import {
 } from '../../utils/statsTracker.ts';
 import { renderBarChart, renderLineChart } from '../../utils/statsChart.ts';
 
+type ServerStatsAction = 'overview' | 'activity' | 'members' | 'channels' | 'users' | 'commands';
+const PANEL_TIMEOUT = 5 * 60 * 1000;
+
 export const data = new SlashCommandBuilder()
     .setName('graph')
-    .setDescription('📊 Affiche les statistiques du serveur')
-    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
-    .addSubcommand(subcommand =>
-        subcommand
-            .setName('vue-ensemble')
-            .setDescription('Vue d\'ensemble des statistiques du serveur')
-            .addIntegerOption(option =>
-                option
-                    .setName('jours')
-                    .setDescription('Nombre de jours à analyser (défaut: 30)')
-                    .setMinValue(7)
-                    .setMaxValue(360)
-            )
-            .addBooleanOption(option =>
-                option
-                    .setName('depuis_toujours')
-                    .setDescription('Analyser tout l\'historique disponible (prioritaire sur jours)')
-            )
-
-    )
-    .addSubcommand(subcommand =>
-        subcommand
-            .setName('activite')
-            .setDescription('Statistiques d\'activité (messages et commandes)')
-            .addIntegerOption(option =>
-                option
-                    .setName('jours')
-                    .setDescription('Nombre de jours à analyser (défaut: 30)')
-                    .setMinValue(7)
-                    .setMaxValue(360)
-            )
-            .addBooleanOption(option =>
-                option
-                    .setName('depuis_toujours')
-                    .setDescription('Analyser tout l\'historique disponible (prioritaire sur jours)')
-            )
-
-    )
-    .addSubcommand(subcommand =>
-        subcommand
-            .setName('membres')
-            .setDescription('Évolution et statistiques des membres')
-    )
-    .addSubcommand(subcommand =>
-        subcommand
-            .setName('canaux')
-            .setDescription('Canaux les plus actifs')
-            .addIntegerOption(option =>
-                option
-                    .setName('jours')
-                    .setDescription('Nombre de jours à analyser (défaut: 30)')
-                    .setMinValue(7)
-                    .setMaxValue(360)
-            )
-            .addBooleanOption(option =>
-                option
-                    .setName('depuis_toujours')
-                    .setDescription('Analyser tout l\'historique disponible (prioritaire sur jours)')
-            )
-
-            .addIntegerOption(option =>
-                option
-                    .setName('limite')
-                    .setDescription('Nombre de canaux à afficher (défaut: 10)')
-                    .setMinValue(5)
-                    .setMaxValue(15)
-            )
-    )
-    .addSubcommand(subcommand =>
-        subcommand
-            .setName('utilisateurs')
-            .setDescription('Utilisateurs les plus actifs')
-            .addIntegerOption(option =>
-                option
-                    .setName('jours')
-                    .setDescription('Nombre de jours à analyser (défaut: 30)')
-                    .setMinValue(7)
-                    .setMaxValue(360)
-            )
-            .addBooleanOption(option =>
-                option
-                    .setName('depuis_toujours')
-                    .setDescription('Analyser tout l\'historique disponible (prioritaire sur jours)')
-            )
-
-            .addIntegerOption(option =>
-                option
-                    .setName('limite')
-                    .setDescription('Nombre d\'utilisateurs à afficher (défaut: 10)')
-                    .setMinValue(5)
-                    .setMaxValue(20)
-            )
-    )
-    .addSubcommand(subcommand =>
-        subcommand
-            .setName('commandes')
-            .setDescription('Commandes les plus utilisées')
-            .addIntegerOption(option =>
-                option
-                    .setName('jours')
-                    .setDescription('Nombre de jours à analyser (défaut: 30)')
-                    .setMinValue(7)
-                    .setMaxValue(360)
-            )
-            .addBooleanOption(option =>
-                option
-                    .setName('depuis_toujours')
-                    .setDescription('Analyser tout l\'historique disponible (prioritaire sur jours)')
-            )
-
-    );
+    .setDescription('Ouvre le panneau des statistiques du serveur')
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator);
 
 export async function execute(interaction: ChatInputCommandInteraction) {
-    if (!interaction.guild) {
-        return interaction.reply({
-            content: KEPLER_MESSAGES.guildOnly,
-            ephemeral: true
-        });
+    if (!interaction.guild) return void await interaction.reply({ content: KEPLER_MESSAGES.guildOnly, ephemeral: true });
+    if (!interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)) {
+        return void await interaction.reply({ content: KEPLER_MESSAGES.administratorOnly, ephemeral: true });
     }
-
-    await interaction.deferReply();
-
-    const subcommand = interaction.options.getSubcommand();
-
-    try {
-        switch (subcommand) {
-            case 'vue-ensemble':
-                await handleOverview(interaction);
-                break;
-            case 'activite':
-                await handleActivity(interaction);
-                break;
-            case 'membres':
-                await handleMembers(interaction);
-                break;
-            case 'canaux':
-                await handleChannels(interaction);
-                break;
-            case 'utilisateurs':
-                await handleUsers(interaction);
-                break;
-            case 'commandes':
-                await handleCommands(interaction);
-                break;
-            default:
-                await interaction.editReply(KEPLER_MESSAGES.unknownSubcommand);
+    const response = await interaction.reply({ ...serverHome(interaction), ephemeral: true, fetchReply: true });
+    const collector = response.createMessageComponentCollector({ time: PANEL_TIMEOUT });
+    collector.on('collect', async component => {
+        if (component.user.id !== interaction.user.id) return void await component.reply({ content: KEPLER_MESSAGES.unauthorizedComponent, ephemeral: true });
+        try {
+            if (component.isButton()) {
+                if (component.customId === 'graph:home') return void await component.update(serverHome(interaction));
+                if (component.customId === 'graph:close') return void await component.update({ content: 'Panneau fermé.', embeds: [], components: [], attachments: [] });
+                if (component.customId.startsWith('graph:action:')) {
+                    const action = component.customId.split(':')[2] as ServerStatsAction;
+                    return action === 'members'
+                        ? void await runServerAction(interaction, component, action, 30)
+                        : void await component.update(periodPicker(action));
+                }
+            }
+            if (component.isStringSelectMenu() && component.customId.startsWith('graph:period:')) {
+                const action = component.customId.split(':')[2] as ServerStatsAction;
+                const period = component.values[0];
+                if (action === 'channels' || action === 'users') {
+                    await component.update(limitPicker(action, period));
+                } else {
+                    await runServerAction(interaction, component, action, period === 'all' ? null : Number(period));
+                }
+                return;
+            }
+            if (component.isStringSelectMenu() && component.customId.startsWith('graph:limit:')) {
+                const [, , actionValue, period] = component.customId.split(':');
+                await runServerAction(
+                    interaction,
+                    component,
+                    actionValue as ServerStatsAction,
+                    period === 'all' ? null : Number(period),
+                    Number(component.values[0])
+                );
+            }
+        } catch (error) {
+            console.error('[Graph Panel] Erreur:', error);
+            const payload = { content: KEPLER_MESSAGES.unexpectedError, embeds: [], components: [] };
+            if (component.deferred || component.replied) await component.editReply(payload);
+            else await component.reply({ content: payload.content, ephemeral: true });
         }
-    } catch (error) {
-        console.error('[Graph Command] Erreur:', error);
-        await interaction.editReply('❌ Une erreur est survenue lors de la récupération des statistiques.');
-    }
+    });
+    collector.on('end', async () => { try { await interaction.editReply({ components: [] }); } catch { /* fermé */ } });
 }
+
+function serverHome(interaction: ChatInputCommandInteraction) {
+    const embed = createKeplerEmbed('primary').setTitle(`📊 Statistiques de ${interaction.guild!.name}`)
+        .setDescription('Choisissez une vue, puis la période à analyser.').setThumbnail(interaction.guild!.iconURL({ forceStatic: true }))
+        .setFooter({ text: 'Panneau privé • expiration dans 5 minutes' });
+    const row1 = new ActionRowBuilder<ButtonBuilder>().addComponents(serverButton('overview', 'Vue d’ensemble', '📊'), serverButton('activity', 'Activité', '📈'), serverButton('members', 'Membres', '👥'));
+    const row2 = new ActionRowBuilder<ButtonBuilder>().addComponents(serverButton('channels', 'Canaux', '📺'), serverButton('users', 'Utilisateurs', '👑'), serverButton('commands', 'Commandes', '⚡'));
+    const controls = new ActionRowBuilder<ButtonBuilder>().addComponents(new ButtonBuilder().setCustomId('graph:home').setEmoji('🔄').setStyle(ButtonStyle.Secondary), new ButtonBuilder().setCustomId('graph:close').setEmoji('✖️').setStyle(ButtonStyle.Secondary));
+    return { content: '', embeds: [embed], components: [row1, row2, controls], attachments: [] };
+}
+
+function serverButton(action: ServerStatsAction, label: string, emoji: string) {
+    return new ButtonBuilder().setCustomId(`graph:action:${action}`).setLabel(label).setEmoji(emoji).setStyle(ButtonStyle.Secondary);
+}
+
+function periodPicker(action: ServerStatsAction) {
+    const select = new StringSelectMenuBuilder().setCustomId(`graph:period:${action}`).setPlaceholder('Choisir la période').addOptions(
+        { label: '7 jours', value: '7' }, { label: '30 jours', value: '30', default: true }, { label: '90 jours', value: '90' },
+        { label: '180 jours', value: '180' }, { label: '360 jours', value: '360' }, { label: 'Depuis toujours', value: 'all' }
+    );
+    return { content: '', embeds: [createKeplerEmbed('primary').setTitle('📅 Période analysée').setDescription('Sélectionnez la période du graphique.')], attachments: [], components: [new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(select), new ActionRowBuilder<ButtonBuilder>().addComponents(serverBackButton())] };
+}
+
+function limitPicker(action: 'channels' | 'users', period: string) {
+    const options = [5, 10, 15, ...(action === 'users' ? [20] : [])]
+        .map(value => ({ label: `Top ${value}`, value: String(value), default: value === 10 }));
+    const select = new StringSelectMenuBuilder()
+        .setCustomId(`graph:limit:${action}:${period}`)
+        .setPlaceholder('Choisir la taille du classement')
+        .addOptions(options);
+    return {
+        content: '',
+        embeds: [createKeplerEmbed('primary').setTitle('🏆 Taille du classement').setDescription('Choisissez le nombre d’éléments à afficher.')],
+        attachments: [],
+        components: [
+            new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(select),
+            new ActionRowBuilder<ButtonBuilder>().addComponents(serverBackButton())
+        ]
+    };
+}
+
+async function runServerAction(source: ChatInputCommandInteraction, component: any, action: ServerStatsAction, days: number | null, limit = 10) {
+    await component.deferUpdate();
+    await component.editReply({ content: '', attachments: [], components: [], embeds: [createKeplerEmbed('neutral').setTitle('Génération du graphique').setDescription('⏳ Préparation des statistiques…')] });
+    const interaction = statsAdapter(source, component, days, limit);
+    if (action === 'overview') await handleOverview(interaction); else if (action === 'activity') await handleActivity(interaction);
+    else if (action === 'members') await handleMembers(interaction); else if (action === 'channels') await handleChannels(interaction);
+    else if (action === 'users') await handleUsers(interaction); else await handleCommands(interaction);
+}
+
+function statsAdapter(source: ChatInputCommandInteraction, component: any, days: number | null, limit: number): ChatInputCommandInteraction {
+    return { guild: source.guild, guildId: source.guildId, user: source.user, client: source.client,
+        options: { getBoolean: (name: string) => name === 'depuis_toujours' ? days === null : null, getInteger: (name: string) => name === 'jours' ? days : name === 'limite' ? limit : null },
+        editReply: (payload: any) => component.editReply(serverResult(payload)) } as unknown as ChatInputCommandInteraction;
+}
+
+function serverResult(payload: any) {
+    const value = typeof payload === 'string' ? { content: payload } : payload;
+    return { content: value.content ?? '', embeds: value.embeds ?? [], files: value.files ?? [], components: [new ActionRowBuilder<ButtonBuilder>().addComponents(serverBackButton())] };
+}
+
+function serverBackButton() { return new ButtonBuilder().setCustomId('graph:home').setLabel('Retour').setEmoji('↩️').setStyle(ButtonStyle.Secondary); }
 
 // ============================================
 // Handlers pour les sous-commandes

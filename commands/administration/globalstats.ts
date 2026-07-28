@@ -1,6 +1,10 @@
 import { createKeplerEmbed, KEPLER_COLORS, KEPLER_MESSAGES } from '../../utils/theme.ts';
 import {
     type ChatInputCommandInteraction,
+    ActionRowBuilder,
+    ButtonBuilder,
+    ButtonStyle,
+    StringSelectMenuBuilder,
     SlashCommandBuilder,
     AttachmentBuilder
 } from 'discord.js';
@@ -12,114 +16,101 @@ import {
 } from '../../utils/statsTracker.ts';
 import { renderBarChart, renderLineChart } from '../../utils/statsChart.ts';
 
-export const data = new SlashCommandBuilder()
-    .setName('globalstats')
-    .setDescription('📊 Statistiques globales du bot (Owner uniquement)')
-    .addSubcommand(subcommand =>
-        subcommand
-            .setName('vue-ensemble')
-            .setDescription('Vue d\'ensemble des statistiques globales')
-    )
-    .addSubcommand(subcommand =>
-        subcommand
-            .setName('commandes')
-            .setDescription('Statistiques des commandes exécutées')
-            .addIntegerOption(option =>
-                option
-                    .setName('jours')
-                    .setDescription('Nombre de jours à analyser (défaut: 30)')
-                    .setMinValue(1)
-                    .setMaxValue(360)
-            )
-            .addBooleanOption(option =>
-                option
-                    .setName('depuis_toujours')
-                    .setDescription('Analyser tout l\'historique disponible (prioritaire sur jours)')
-            )
+type GlobalStatsAction = 'overview' | 'commands' | 'messages' | 'trend-commands' | 'trend-messages';
+const PANEL_TIMEOUT = 5 * 60 * 1000;
 
-    )
-    .addSubcommand(subcommand =>
-        subcommand
-            .setName('messages')
-            .setDescription('Statistiques des messages :')
-            .addIntegerOption(option =>
-                option
-                    .setName('jours')
-                    .setDescription('Nombre de jours à analyser (défaut: 30)')
-                    .setMinValue(1)
-                    .setMaxValue(360)
-            )
-            .addBooleanOption(option =>
-                option
-                    .setName('depuis_toujours')
-                    .setDescription('Analyser tout l\'historique disponible (prioritaire sur jours)')
-            )
-
-    )
-    .addSubcommand(subcommand =>
-        subcommand
-            .setName('tendance')
-            .setDescription('Graphique de tendance sur plusieurs jours')
-            .addStringOption(option =>
-                option
-                    .setName('type')
-                    .setDescription('Type de statistique')
-                    .setRequired(true)
-                    .addChoices(
-                        { name: 'Commandes', value: 'commands' },
-                        { name: 'Messages', value: 'messages' }
-                    )
-            )
-            .addIntegerOption(option =>
-                option
-                    .setName('jours')
-                    .setDescription('Nombre de jours (défaut: 14)')
-                    .setMinValue(7)
-                    .setMaxValue(360)
-            )
-            .addBooleanOption(option =>
-                option
-                    .setName('depuis_toujours')
-                    .setDescription('Analyser tout l\'historique disponible (prioritaire sur jours)')
-            )
-
-    );
+export const data = new SlashCommandBuilder().setName('globalstats').setDescription('Ouvre le panneau des statistiques globales du bot');
 
 export async function execute(interaction: ChatInputCommandInteraction) {
-    // Vérifier que c'est l'owner du bot
     if (interaction.user.id !== config.ownerId) {
-        return interaction.reply({
-            content: '❌ Cette commande est réservée au propriétaire du bot.',
-            ephemeral: true
-        });
+        await interaction.reply({ content: '❌ Cette commande est réservée au propriétaire du bot.', ephemeral: true });
+        return;
     }
-
-    await interaction.deferReply();
-
-    const subcommand = interaction.options.getSubcommand();
-
-    try {
-        switch (subcommand) {
-            case 'vue-ensemble':
-                await handleOverview(interaction);
-                break;
-            case 'commandes':
-                await handleCommandsStats(interaction);
-                break;
-            case 'messages':
-                await handleMessagesStats(interaction);
-                break;
-            case 'tendance':
-                await handleTrendStats(interaction);
-                break;
-            default:
-                await interaction.editReply(KEPLER_MESSAGES.unknownSubcommand);
+    const response = await interaction.reply({ ...globalHome(), ephemeral: true, fetchReply: true });
+    const collector = response.createMessageComponentCollector({ time: PANEL_TIMEOUT });
+    collector.on('collect', async component => {
+        if (component.user.id !== interaction.user.id) return void await component.reply({ content: KEPLER_MESSAGES.unauthorizedComponent, ephemeral: true });
+        try {
+            if (component.isButton()) {
+                if (component.customId === 'globalstats:home') return void await component.update(globalHome());
+                if (component.customId === 'globalstats:close') return void await component.update({ content: 'Panneau fermé.', embeds: [], components: [], attachments: [] });
+                if (component.customId.startsWith('globalstats:action:')) {
+                    const action = component.customId.split(':')[2] as GlobalStatsAction;
+                    return action === 'overview'
+                        ? void await runGlobalAction(interaction, component, action, 30)
+                        : void await component.update(globalPeriodPicker(action));
+                }
+            }
+            if (component.isStringSelectMenu() && component.customId.startsWith('globalstats:period:')) {
+                const action = component.customId.split(':')[2] as GlobalStatsAction;
+                const period = component.values[0];
+                await runGlobalAction(interaction, component, action, period === 'all' ? null : Number(period));
+            }
+        } catch (error) {
+            console.error('[GlobalStats Panel] Erreur:', error);
+            const payload = { content: KEPLER_MESSAGES.unexpectedError, embeds: [], components: [] };
+            if (component.deferred || component.replied) await component.editReply(payload);
+            else await component.reply({ content: payload.content, ephemeral: true });
         }
-    } catch (error) {
-        console.error('[GlobalStats Command] Erreur:', error);
-        await interaction.editReply('❌ Une erreur est survenue lors de la récupération des statistiques.');
-    }
+    });
+    collector.on('end', async () => { try { await interaction.editReply({ components: [] }); } catch { /* fermé */ } });
 }
+
+function globalHome() {
+    const embed = createKeplerEmbed('warning').setTitle('📊 Statistiques globales de Kepler')
+        .setDescription('Choisissez les données globales à analyser. Ce panneau est réservé au propriétaire du bot.')
+        .setFooter({ text: 'Panneau owner privé • expiration dans 5 minutes' });
+    const views = new ActionRowBuilder<ButtonBuilder>().addComponents(
+        globalButton('overview', 'Vue d’ensemble', '📊'), globalButton('commands', 'Commandes', '⚡'), globalButton('messages', 'Messages', '💬')
+    );
+    const trends = new ActionRowBuilder<ButtonBuilder>().addComponents(
+        globalButton('trend-commands', 'Tendance commandes', '📈'), globalButton('trend-messages', 'Tendance messages', '📉')
+    );
+    const controls = new ActionRowBuilder<ButtonBuilder>().addComponents(
+        new ButtonBuilder().setCustomId('globalstats:home').setEmoji('🔄').setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder().setCustomId('globalstats:close').setEmoji('✖️').setStyle(ButtonStyle.Secondary)
+    );
+    return { content: '', embeds: [embed], components: [views, trends, controls], attachments: [] };
+}
+
+function globalButton(action: GlobalStatsAction, label: string, emoji: string) {
+    return new ButtonBuilder().setCustomId(`globalstats:action:${action}`).setLabel(label).setEmoji(emoji).setStyle(ButtonStyle.Secondary);
+}
+
+function globalPeriodPicker(action: GlobalStatsAction) {
+    const select = new StringSelectMenuBuilder().setCustomId(`globalstats:period:${action}`).setPlaceholder('Choisir la période').addOptions(
+        { label: '7 jours', value: '7' }, { label: '30 jours', value: '30', default: true }, { label: '90 jours', value: '90' },
+        { label: '180 jours', value: '180' }, { label: '360 jours', value: '360' }, { label: 'Depuis toujours', value: 'all' }
+    );
+    return { content: '', embeds: [createKeplerEmbed('warning').setTitle('📅 Période globale').setDescription('Sélectionnez la période du graphique.')], attachments: [], components: [new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(select), new ActionRowBuilder<ButtonBuilder>().addComponents(globalBackButton())] };
+}
+
+async function runGlobalAction(source: ChatInputCommandInteraction, component: any, action: GlobalStatsAction, days: number | null) {
+    await component.deferUpdate();
+    await component.editReply({ content: '', attachments: [], components: [], embeds: [createKeplerEmbed('neutral').setTitle('Génération du graphique').setDescription('⏳ Agrégation des statistiques globales…')] });
+    const interaction = globalStatsAdapter(source, component, days, action);
+    if (action === 'overview') await handleOverview(interaction);
+    else if (action === 'commands') await handleCommandsStats(interaction);
+    else if (action === 'messages') await handleMessagesStats(interaction);
+    else await handleTrendStats(interaction);
+}
+
+function globalStatsAdapter(source: ChatInputCommandInteraction, component: any, days: number | null, action: GlobalStatsAction): ChatInputCommandInteraction {
+    return { user: source.user, client: source.client,
+        options: {
+            getBoolean: (name: string) => name === 'depuis_toujours' ? days === null : null,
+            getInteger: (name: string) => name === 'jours' ? days : null,
+            getString: (name: string) => name === 'type' ? (action === 'trend-commands' ? 'commands' : 'messages') : null
+        },
+        editReply: (payload: any) => component.editReply(globalResult(payload)) } as unknown as ChatInputCommandInteraction;
+}
+
+function globalResult(payload: any) {
+    const value = typeof payload === 'string' ? { content: payload } : payload;
+    return { content: value.content ?? '', embeds: value.embeds ?? [], files: value.files ?? [], components: [new ActionRowBuilder<ButtonBuilder>().addComponents(globalBackButton())] };
+}
+
+function globalBackButton() { return new ButtonBuilder().setCustomId('globalstats:home').setLabel('Retour').setEmoji('↩️').setStyle(ButtonStyle.Secondary); }
 
 // ============================================
 // Handlers pour les sous-commandes
