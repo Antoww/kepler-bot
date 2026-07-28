@@ -19,7 +19,7 @@ import {
     generateGiveawayEmbed,
     createGiveawayButtons,
     formatTimeRemaining
-} from '../../events/core/giveawayManager.ts';
+} from '../../managers/giveawayManager.ts';
 
 export const data = new SlashCommandBuilder()
     .setName('giveaway')

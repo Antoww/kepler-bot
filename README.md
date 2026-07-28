@@ -22,8 +22,8 @@ Kepler est un bot Discord polyvalent en **développement actif**, conçu pour en
 - **Gestion des sanctions** : Numérotation automatique, historique complet avec `/modinfo`
 - **Gestion personnalisée** : `/sanctions voir` et `/sanctions supprimer` pour gérer les historiques
 - **Système de mute hybride** : Timeout Discord (≤28j) ou rôles personnalisés (>28j)
-- **Configuration flexible** : `/muteroleconfig` pour personnaliser le système de mute
-- **Logs automatiques** : Suivi complet des actions de modération via `/moderationconfig`
+- **Configuration flexible** : panneau centralisé `/settings`
+- **Logs automatiques** : suivi complet configurable depuis `/settings`
 - **Expirations automatiques** : Débannissement et démute automatiques
 - **Audit serveur** : `/audit` pour vérifier la configuration des canaux et rôles
 
@@ -45,10 +45,7 @@ Kepler est un bot Discord polyvalent en **développement actif**, conçu pour en
 - **Divertissement** : `/blague`, `/meme`
 
 ### ⚙️ Administration & Configuration
-- **Configuration des logs** : `/logconfig` pour personnaliser les journaux serveur
-- **Configuration des anniversaires** : `/bdayconfig` pour configurer le système
-- **Configuration des mutes** : `/muteroleconfig` pour le système de mute hybride
-- **Configuration de la modération** : `/moderationconfig` pour les logs de modération
+- **Configuration centralisée** : logs, anniversaires, mute, modération, tickets et XP via `/settings`
 - **Annonces** : `/annonce` pour communiquer avec votre communauté
 - **Audit serveur** : `/audit` pour vérifier la configuration complète
 - **Gestion des anniversaires** : `/birthday` pour ajouter/modifier/supprimer des anniversaires
@@ -102,12 +99,7 @@ Kepler est un bot Discord polyvalent en **développement actif**, conçu pour en
 
 ### Administration
 ```
-/muteroleconfig set <role>              # Configurer le rôle de mute
-/muteroleconfig create [nom]            # Créer un rôle de mute
-/muteroleconfig disable                 # Désactiver le rôle de mute
-/moderationconfig <canal>               # Configurer les logs de modération
-/logconfig <canal>                      # Configurer les logs du serveur
-/bdayconfig <canal>                     # Configurer le canal des anniversaires
+/settings                               # Ouvrir toute la configuration du serveur
 /annonce <message>                      # Faire une annonce
 /audit channel                          # Auditer les canaux configurés
 /audit roles                            # Auditer les rôles configurés

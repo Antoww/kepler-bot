@@ -1,7 +1,7 @@
 import type { Client } from 'discord.js';
-import { supabase } from '../../database/supabase.ts';
-import { sendXpLog } from '../../utils/xpLogger.ts';
-import { logger } from '../../utils/logger.ts';
+import { supabase } from '../database/supabase.ts';
+import { sendXpLog } from '../utils/xpLogger.ts';
+import { logger } from '../utils/logger.ts';
 
 const CHECK_INTERVAL = 60_000;
 

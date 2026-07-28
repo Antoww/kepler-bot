@@ -1,8 +1,8 @@
-import { createKeplerEmbed, KEPLER_COLORS } from '../../utils/theme.ts';
+import { createKeplerEmbed, KEPLER_COLORS } from '../utils/theme.ts';
 import { Client, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
-import { getExpiredReminders, deleteReminder } from '../../database/supabase.ts';
-import { isNetworkError } from '../../utils/retryHelper.ts';
-import { logger } from '../../utils/logger.ts';
+import { getExpiredReminders, deleteReminder } from '../database/supabase.ts';
+import { isNetworkError } from '../utils/retryHelper.ts';
+import { logger } from '../utils/logger.ts';
 
 export class ReminderManager {
     private client: Client;
@@ -46,7 +46,7 @@ export class ReminderManager {
 
             // Récupérer tous les rappels qui n'ont pas encore été déclenchés
             // Cette requête devrait récupérer tous les rappels futurs de tous les utilisateurs
-            const { data: allReminders, error } = await (await import('../../database/supabase.ts')).supabase
+            const { data: allReminders, error } = await (await import('../database/supabase.ts')).supabase
                 .from('reminders')
                 .select('*')
                 .gt('timestamp', Date.now())

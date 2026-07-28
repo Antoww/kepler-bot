@@ -1,8 +1,10 @@
 import type { SlashCommandBuilder, ContextMenuCommandBuilder, CommandInteraction, Collection } from "npm:discord.js@^14.17.2";
+import type { ReminderManager } from './managers/reminderManager.ts';
 
 declare module 'discord.js' {
     export interface Client {
         commands: Collection<string, Command>;
+        reminderManager?: ReminderManager;
     }
 }
 

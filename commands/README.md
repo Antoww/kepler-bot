@@ -23,12 +23,9 @@ Commandes réservées aux administrateurs du serveur ou à l'owner du bot.
 |----------|-------------|------------|
 | `/annonce` | Envoyer une annonce dans un canal | Admin |
 | `/audit` | Consulter les logs d'audit | Admin |
-| `/bdayconfig` | Configurer le canal d'anniversaires | Admin |
 | `/giveaway` | Créer et gérer des giveaways | Admin |
 | `/graph` | Statistiques d'utilisation du bot | Owner |
-| `/logconfig` | Configurer le canal de logs | Admin |
-| `/moderationconfig` | Configurer le canal de modération | Admin |
-| `/muteroleconfig` | Configurer le rôle mute | Admin |
+| `/settings` | Configurer les modules du serveur | Admin |
 
 ---
 
@@ -169,4 +166,4 @@ Chaque commande doit avoir :
 
 ## 🚀 Chargement automatique
 
-Le système de chargement parcourt récursivement tous les sous-dossiers et charge automatiquement toutes les commandes trouvées. Aucune configuration supplémentaire n'est nécessaire. 
+Le système de chargement parcourt récursivement tous les sous-dossiers et charge automatiquement toutes les commandes trouvées. Aucune configuration supplémentaire n'est nécessaire.

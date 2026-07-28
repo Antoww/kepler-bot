@@ -2,7 +2,7 @@ import { createKeplerEmbed, KEPLER_COLORS, KEPLER_MESSAGES } from '../../utils/t
 import { type CommandInteraction, type ButtonInteraction, ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
 import { createReminder } from '../../database/supabase.ts';
 import { addGiveawayParticipant, removeGiveawayParticipant, isParticipant, getGiveaway, getGiveawayParticipantCount } from '../../database/db.ts';
-import { formatTimeRemaining, generateGiveawayEmbed } from './giveawayManager.ts';
+import { formatTimeRemaining, generateGiveawayEmbed } from '../../managers/giveawayManager.ts';
 import { trackCommand } from '../../utils/statsTracker.ts';
 import { handleReportActionButton } from '../../utils/reportActions.ts';
 import { handleTicketButton } from '../../utils/tickets.ts';

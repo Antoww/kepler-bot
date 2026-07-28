@@ -428,7 +428,7 @@ export async function purgeAllOldData(): Promise<{
         }
     };
 
-    // Le log est déjà géré par events/core/rgpdManager.ts
+    // Le log est déjà géré par managers/rgpdManager.ts
     return result;
 }
 

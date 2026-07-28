@@ -4,12 +4,8 @@ Ce dossier contient toutes les commandes liées à la modération du serveur Dis
 
 ## Configuration
 
-### `moderationconfig`
-Configure le canal où seront envoyés les logs de modération.
-
-**Utilisation :** `/moderationconfig canal:#logs-moderation`
-
-**Permissions requises :** Administrateur
+La configuration du canal de modération et du rôle de mute est centralisée
+dans `/settings` et nécessite la permission Administrateur.
 
 ## Commandes de Sanction
 

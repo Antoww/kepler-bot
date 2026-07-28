@@ -1,5 +1,5 @@
 import { type Message } from 'discord.js';
-import { CountingManager } from '../core/countingManager.ts';
+import { CountingManager } from '../../managers/countingManager.ts';
 import { trackMessage } from '../../utils/statsTracker.ts';
 import { awardMessageXp } from '../../utils/xpSystem.ts';
 import { logger } from '../../utils/logger.ts';

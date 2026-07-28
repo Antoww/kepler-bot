@@ -1,8 +1,8 @@
-import { createKeplerEmbed, KEPLER_COLORS } from '../../utils/theme.ts';
+import { createKeplerEmbed, KEPLER_COLORS } from '../utils/theme.ts';
 import { Client, TextChannel } from 'discord.js';
-import { getBirthdaysForDate, getBirthdayChannel, getServerTimezone } from '../../database/db.ts';
-import { isNetworkError } from '../../utils/retryHelper.ts';
-import { getDatePartsInZone } from '../../utils/timezone.ts';
+import { getBirthdaysForDate, getBirthdayChannel, getServerTimezone } from '../database/db.ts';
+import { isNetworkError } from '../utils/retryHelper.ts';
+import { getDatePartsInZone } from '../utils/timezone.ts';
 
 export class BirthdayManager {
     private client: Client;

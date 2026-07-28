@@ -7,7 +7,7 @@ Ce dossier contient les modules utilitaires partagés par le bot.
 ```
 utils/
 ├── statsTracker.ts      # Tracking des statistiques d'utilisation
-├── rgpdManager.ts       # Gestion RGPD des données utilisateur
+├── rgpdData.ts          # Gestion RGPD des données utilisateur
 ├── moderationLogger.ts  # Logs de modération
 ├── messageArchiver.ts   # Archivage des messages
 ├── archiveCache.ts      # Cache pour l'archivage
@@ -53,7 +53,7 @@ await trackMessage({
 
 ---
 
-## 🔐 `rgpdManager.ts`
+## 🔐 `rgpdData.ts`
 
 Module complet de gestion RGPD pour la conformité aux données personnelles.
 
@@ -65,7 +65,7 @@ import {
     exportCompleteUserData,
     deleteVoluntaryUserData,
     purgeAllOldData
-} from './utils/rgpdManager.ts';
+} from './utils/rgpdData.ts';
 ```
 
 | Fonction | Description | Droit RGPD |

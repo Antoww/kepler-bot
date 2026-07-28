@@ -1,6 +1,6 @@
-import { createKeplerEmbed, KEPLER_COLORS } from '../../utils/theme.ts';
+import { createKeplerEmbed, KEPLER_COLORS } from '../utils/theme.ts';
 import { type Message } from 'discord.js';
-import { supabase } from '../../database/supabase.ts';
+import { supabase } from '../database/supabase.ts';
 
 export class CountingManager {
     /**

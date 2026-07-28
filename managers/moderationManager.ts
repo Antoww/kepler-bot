@@ -1,8 +1,8 @@
 import { Client } from 'discord.js';
-import { getExpiredTempBans, getExpiredTempMutes, removeTempBan, removeTempMute } from '../../database/db.ts';
-import { logModeration } from '../../utils/moderationLogger.ts';
-import { isNetworkError, isMaintenanceError, dbCircuitBreaker } from '../../utils/retryHelper.ts';
-import { logger } from '../../utils/logger.ts';
+import { getExpiredTempBans, getExpiredTempMutes, removeTempBan, removeTempMute } from '../database/db.ts';
+import { logModeration } from '../utils/moderationLogger.ts';
+import { isNetworkError, isMaintenanceError, dbCircuitBreaker } from '../utils/retryHelper.ts';
+import { logger } from '../utils/logger.ts';
 
 export class ModerationManager {
     private client: Client;

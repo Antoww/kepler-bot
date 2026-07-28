@@ -1,5 +1,5 @@
-import { purgeAllOldData } from '../../utils/rgpdManager.ts';
-import { logger } from '../../utils/logger.ts';
+import { purgeAllOldData } from '../utils/rgpdData.ts';
+import { logger } from '../utils/logger.ts';
 
 /**
  * Gestionnaire RGPD - Purge automatique des données anciennes

@@ -1,7 +1,7 @@
-import { createKeplerEmbed, KEPLER_COLORS } from '../../utils/theme.ts';
+import { createKeplerEmbed, KEPLER_COLORS } from '../utils/theme.ts';
 import { Client, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, TextChannel, Message } from 'discord.js';
-import { getExpiredGiveaways, endGiveaway, getGiveawayParticipants, deleteGiveaway, getGiveaway } from '../../database/db.ts';
-import { logger } from '../../utils/logger.ts';
+import { getExpiredGiveaways, endGiveaway, getGiveawayParticipants, deleteGiveaway, getGiveaway } from '../database/db.ts';
+import { logger } from '../utils/logger.ts';
 
 // Map pour stocker les timers actifs
 const activeGiveawayTimers = new Map<string, NodeJS.Timeout>();
