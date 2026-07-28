@@ -17,14 +17,18 @@ import {
     getLogChannel,
     getModerationChannel,
     getMuteRole,
+    getReportChannel,
+    getReportRole,
     updateBirthdayChannel,
     updateLogChannel,
     updateModerationChannel,
-    updateMuteRole
+    updateMuteRole,
+    updateReportChannel,
+    updateReportRole
 } from '../../database/db.ts';
 import { logger } from '../../utils/logger.ts';
 
-type ConfigSection = 'logs' | 'moderation' | 'birthdays' | 'mute';
+type ConfigSection = 'logs' | 'moderation' | 'birthdays' | 'mute' | 'reports';
 
 const PANEL_COLOR = 0x45d7ff;
 const PANEL_TIMEOUT = 5 * 60 * 1000;
@@ -110,6 +114,12 @@ async function handleComponent(component: MessageComponentInteraction, source: C
             await component.update(buildMuteCreationConfirmation());
             return;
         }
+        if (component.customId === 'settings:clear-report-role') {
+            await component.deferUpdate();
+            await updateReportRole(guild.id, '');
+            await component.editReply(await buildOverview(source, 'Le rôle mentionné lors des reports a été retiré.'));
+            return;
+        }
         if (component.customId === 'settings:confirm-create-mute') {
             await component.deferUpdate();
             const result = await createMuteRole(guild, source.user.tag);
@@ -122,9 +132,14 @@ async function handleComponent(component: MessageComponentInteraction, source: C
     }
 
     if (component.isChannelSelectMenu()) {
-        const section = component.customId.split(':')[2] as ConfigSection;
         const channelId = component.values[0];
         await component.deferUpdate();
+        if (component.customId === 'settings:select:reports-channel') {
+            await updateReportChannel(guild.id, channelId);
+            await component.editReply(await buildOverview(source, `Salon des reports configuré sur <#${channelId}>.`));
+            return;
+        }
+        const section = component.customId.split(':')[2] as ConfigSection;
         await updateChannelSection(section, guild.id, channelId);
         await component.editReply(await buildOverview(source, `${sectionLabel(section)} configuré sur <#${channelId}>.`));
         return;
@@ -133,6 +148,16 @@ async function handleComponent(component: MessageComponentInteraction, source: C
     if (component.isRoleSelectMenu()) {
         const roleId = component.values[0];
         const role = guild.roles.cache.get(roleId) ?? await guild.roles.fetch(roleId);
+        if (component.customId === 'settings:select:reports-role') {
+            if (!role) {
+                await component.reply({ content: KEPLER_MESSAGES.invalidRole, ephemeral: true });
+                return;
+            }
+            await component.deferUpdate();
+            await updateReportRole(guild.id, role.id);
+            await component.editReply(await buildOverview(source, `Rôle de report configuré sur ${role}.`));
+            return;
+        }
         const botMember = guild.members.me;
         if (!role || !botMember || role.position >= botMember.roles.highest.position) {
             await component.reply({
@@ -150,11 +175,13 @@ async function handleComponent(component: MessageComponentInteraction, source: C
 
 async function buildOverview(interaction: ChatInputCommandInteraction, notice?: string) {
     const guild = interaction.guild!;
-    const [logs, moderation, birthdays, mute] = await Promise.all([
+    const [logs, moderation, birthdays, mute, reports, reportRole] = await Promise.all([
         getLogChannel(guild.id),
         getModerationChannel(guild.id),
         getBirthdayChannel(guild.id),
-        getMuteRole(guild.id)
+        getMuteRole(guild.id),
+        getReportChannel(guild.id),
+        getReportRole(guild.id)
     ]);
 
     const embed = createKeplerEmbed()
@@ -169,7 +196,9 @@ async function buildOverview(interaction: ChatInputCommandInteraction, notice?: 
             { name: '📑 Logs serveur', value: formatChannel(guild, logs), inline: true },
             { name: '🛡️ Modération', value: formatChannel(guild, moderation), inline: true },
             { name: '🎂 Anniversaires', value: formatChannel(guild, birthdays), inline: true },
-            { name: '🔇 Rôle de mute', value: formatRole(guild, mute), inline: true }
+            { name: '🔇 Rôle de mute', value: formatRole(guild, mute), inline: true },
+            { name: '🚩 Salon des reports', value: formatChannel(guild, reports), inline: true },
+            { name: '📣 Rôle mentionné', value: formatOptionalRole(guild, reportRole), inline: true }
         )
         .setFooter({ text: 'Panneau privé • expiration dans 5 minutes' })
         .setTimestamp();
@@ -178,7 +207,8 @@ async function buildOverview(interaction: ChatInputCommandInteraction, notice?: 
         new ButtonBuilder().setCustomId('settings:section:logs').setLabel('Logs').setEmoji('📑').setStyle(ButtonStyle.Secondary),
         new ButtonBuilder().setCustomId('settings:section:moderation').setLabel('Modération').setEmoji('🛡️').setStyle(ButtonStyle.Secondary),
         new ButtonBuilder().setCustomId('settings:section:birthdays').setLabel('Anniversaires').setEmoji('🎂').setStyle(ButtonStyle.Secondary),
-        new ButtonBuilder().setCustomId('settings:section:mute').setLabel('Mute').setEmoji('🔇').setStyle(ButtonStyle.Secondary)
+        new ButtonBuilder().setCustomId('settings:section:mute').setLabel('Mute').setEmoji('🔇').setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder().setCustomId('settings:section:reports').setLabel('Reports').setEmoji('🚩').setStyle(ButtonStyle.Secondary)
     );
     const actions = new ActionRowBuilder<ButtonBuilder>().addComponents(
         new ButtonBuilder().setCustomId('settings:refresh').setEmoji('🔄').setStyle(ButtonStyle.Primary),
@@ -194,6 +224,33 @@ function buildSection(section: ConfigSection, guild: Guild) {
         .setTitle(sectionLabel(section))
         .setDescription(sectionDescription(section))
         .setFooter({ text: guild.name });
+
+    if (section === 'reports') {
+        const channelSelect = new ChannelSelectMenuBuilder()
+            .setCustomId('settings:select:reports-channel')
+            .setPlaceholder('Choisir le salon des reports')
+            .addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement)
+            .setMinValues(1)
+            .setMaxValues(1);
+        const roleSelect = new RoleSelectMenuBuilder()
+            .setCustomId('settings:select:reports-role')
+            .setPlaceholder('Choisir le rôle à mentionner (facultatif)')
+            .setMinValues(1)
+            .setMaxValues(1);
+        return {
+            content: '',
+            embeds: [embed],
+            components: [
+                new ActionRowBuilder<ChannelSelectMenuBuilder>().addComponents(channelSelect),
+                new ActionRowBuilder<RoleSelectMenuBuilder>().addComponents(roleSelect),
+                new ActionRowBuilder<ButtonBuilder>().addComponents(
+                    new ButtonBuilder().setCustomId('settings:clear-report-role').setLabel('Retirer le rôle').setStyle(ButtonStyle.Secondary),
+                    new ButtonBuilder().setCustomId('settings:disable:reports').setLabel('Désactiver').setStyle(ButtonStyle.Danger),
+                    backButton()
+                )
+            ]
+        };
+    }
 
     if (section === 'mute') {
         const select = new RoleSelectMenuBuilder()
@@ -268,7 +325,9 @@ async function disableSection(section: ConfigSection, guildId: string) {
     if (section === 'logs') await updateLogChannel(guildId, '');
     else if (section === 'moderation') await updateModerationChannel(guildId, '');
     else if (section === 'birthdays') await updateBirthdayChannel(guildId, '');
-    else await updateMuteRole(guildId, '');
+    else if (section === 'reports') {
+        await Promise.all([updateReportChannel(guildId, ''), updateReportRole(guildId, '')]);
+    } else await updateMuteRole(guildId, '');
 }
 
 async function createMuteRole(guild: Guild, userTag: string) {
@@ -309,7 +368,8 @@ function sectionLabel(section: ConfigSection): string {
         logs: 'Logs serveur',
         moderation: 'Logs de modération',
         birthdays: 'Annonces d’anniversaire',
-        mute: 'Rôle de mute'
+        mute: 'Rôle de mute',
+        reports: 'Signalements'
     })[section];
 }
 
@@ -318,7 +378,8 @@ function sectionDescription(section: ConfigSection): string {
         logs: 'Choisissez le salon qui recevra les événements généraux du serveur.',
         moderation: 'Choisissez le salon qui recevra les sanctions et actions de modération.',
         birthdays: 'Choisissez le salon dans lequel les anniversaires seront annoncés.',
-        mute: 'Sélectionnez un rôle existant, créez-en un automatiquement ou utilisez les timeouts Discord.'
+        mute: 'Sélectionnez un rôle existant, créez-en un automatiquement ou utilisez les timeouts Discord.',
+        reports: 'Choisissez le salon qui recevra les signalements et, si nécessaire, le rôle de modération à mentionner.'
     })[section];
 }
 
@@ -329,6 +390,11 @@ function formatChannel(guild: Guild, channelId: string | null): string {
 
 function formatRole(guild: Guild, roleId: string | null): string {
     if (!roleId) return '⚪ Timeouts Discord';
+    return guild.roles.cache.has(roleId) ? `🟢 <@&${roleId}>` : '🟠 Rôle introuvable';
+}
+
+function formatOptionalRole(guild: Guild, roleId: string | null): string {
+    if (!roleId) return '⚪ Aucun rôle';
     return guild.roles.cache.has(roleId) ? `🟢 <@&${roleId}>` : '🟠 Rôle introuvable';
 }
 

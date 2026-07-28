@@ -29,7 +29,7 @@ export async function createReminder(reminderId: number, userId: string, message
             duration_ms: durationMs,
             timestamp: timestamp
         });
-    
+
     if (error) throw error;
 }
 
@@ -40,12 +40,12 @@ export async function getReminder(reminderId: number): Promise<DatabaseReminder 
         .select('*')
         .eq('reminder_id', reminderId)
         .single();
-    
+
     if (error) {
         if (error.code === 'PGRST116') return null; // Pas trouvé
         throw error;
     }
-    
+
     return data;
 }
 
@@ -56,7 +56,7 @@ export async function getUserReminders(userId: string): Promise<DatabaseReminder
         .select('*')
         .eq('user_id', userId)
         .order('timestamp', { ascending: true });
-    
+
     if (error) throw error;
     return data || [];
 }
@@ -67,7 +67,7 @@ export async function deleteReminder(reminderId: number): Promise<void> {
         .from('reminders')
         .delete()
         .eq('reminder_id', reminderId);
-    
+
     if (error) throw error;
 }
 
@@ -80,7 +80,7 @@ export async function getExpiredReminders(): Promise<DatabaseReminder[]> {
             .select('*')
             .lte('timestamp', currentTime)
             .order('timestamp', { ascending: true });
-        
+
         if (error) throw error;
         return data || [];
     }, 'récupération des rappels expirés');
@@ -103,6 +103,8 @@ export interface ServerConfig {
     guild_id: string;
     log_channel_id: string;
     birthday_channel_id?: string;
+    report_channel_id?: string;
+    report_role_id?: string;
     created_at: Date;
     updated_at: Date;
 }
@@ -125,7 +127,7 @@ export async function updateLogChannel(guildId: string, channelId: string): Prom
                 updated_at: new Date().toISOString()
             })
             .eq('guild_id', guildId);
-        
+
         if (error) throw error;
     } else {
         // Créer une nouvelle configuration
@@ -138,7 +140,7 @@ export async function updateLogChannel(guildId: string, channelId: string): Prom
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString()
             });
-        
+
         if (error) throw error;
     }
 }
@@ -161,7 +163,7 @@ export async function updateBirthdayChannel(guildId: string, channelId: string):
                 updated_at: new Date().toISOString()
             })
             .eq('guild_id', guildId);
-        
+
         if (error) throw error;
     } else {
         // Créer une nouvelle configuration
@@ -174,7 +176,7 @@ export async function updateBirthdayChannel(guildId: string, channelId: string):
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString()
             });
-        
+
         if (error) throw error;
     }
 }
@@ -186,12 +188,12 @@ export async function getLogChannel(guildId: string): Promise<string | null> {
         .select('log_channel_id')
         .eq('guild_id', guildId)
         .single();
-    
+
     if (error) {
         if (error.code === 'PGRST116') return null; // Pas trouvé
         throw error;
     }
-    
+
     return data?.log_channel_id || null;
 }
 
@@ -202,12 +204,12 @@ export async function getBirthdayChannel(guildId: string): Promise<string | null
         .select('birthday_channel_id')
         .eq('guild_id', guildId)
         .single();
-    
+
     if (error) {
         if (error.code === 'PGRST116') return null; // Pas trouvé
         throw error;
     }
-    
+
     return data?.birthday_channel_id || null;
 }
 
@@ -225,7 +227,7 @@ export async function setBirthday(guildId: string, userId: string, day: number, 
         }, {
             onConflict: 'guild_id,user_id'
         });
-    
+
     if (error) throw error;
 }
 
@@ -237,12 +239,12 @@ export async function getBirthday(guildId: string, userId: string): Promise<Birt
         .eq('guild_id', guildId)
         .eq('user_id', userId)
         .single();
-    
+
     if (error) {
         if (error.code === 'PGRST116') return null; // Pas trouvé
         throw error;
     }
-    
+
     return data;
 }
 
@@ -255,7 +257,7 @@ export async function getBirthdaysForDate(guildId: string, day: number, month: n
             .eq('guild_id', guildId)
             .eq('birth_day', day)
             .eq('birth_month', month);
-        
+
         if (error) throw error;
         return data || [];
     }, 'récupération des anniversaires');
@@ -268,7 +270,7 @@ export async function deleteBirthday(guildId: string, userId: string): Promise<v
         .delete()
         .eq('guild_id', guildId)
         .eq('user_id', userId);
-    
+
     if (error) throw error;
 }
 
@@ -280,7 +282,7 @@ export async function getAllBirthdays(guildId: string): Promise<Birthday[]> {
         .eq('guild_id', guildId)
         .order('birth_month', { ascending: true })
         .order('birth_day', { ascending: true });
-    
+
     if (error) throw error;
     return data || [];
 }
@@ -303,7 +305,7 @@ export async function updateModerationChannel(guildId: string, channelId: string
                 updated_at: new Date().toISOString()
             })
             .eq('guild_id', guildId);
-        
+
         if (error) throw error;
     } else {
         // Créer une nouvelle configuration
@@ -317,7 +319,7 @@ export async function updateModerationChannel(guildId: string, channelId: string
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString()
             });
-        
+
         if (error) throw error;
     }
 }
@@ -329,13 +331,65 @@ export async function getModerationChannel(guildId: string): Promise<string | nu
         .select('moderation_channel_id')
         .eq('guild_id', guildId)
         .single();
-    
+
     if (error) {
         if (error.code === 'PGRST116') return null; // Pas trouvé
         throw error;
     }
-    
+
     return data?.moderation_channel_id || null;
+}
+
+export async function updateReportChannel(guildId: string, channelId: string): Promise<void> {
+    const { error } = await supabase
+        .from('server_configs')
+        .upsert({
+            guild_id: guildId,
+            report_channel_id: channelId || null,
+            updated_at: new Date().toISOString()
+        }, { onConflict: 'guild_id' });
+
+    if (error) throw error;
+}
+
+export async function getReportChannel(guildId: string): Promise<string | null> {
+    const { data, error } = await supabase
+        .from('server_configs')
+        .select('report_channel_id')
+        .eq('guild_id', guildId)
+        .single();
+
+    if (error) {
+        if (error.code === 'PGRST116') return null;
+        throw error;
+    }
+    return data?.report_channel_id || null;
+}
+
+export async function updateReportRole(guildId: string, roleId: string): Promise<void> {
+    const { error } = await supabase
+        .from('server_configs')
+        .upsert({
+            guild_id: guildId,
+            report_role_id: roleId || null,
+            updated_at: new Date().toISOString()
+        }, { onConflict: 'guild_id' });
+
+    if (error) throw error;
+}
+
+export async function getReportRole(guildId: string): Promise<string | null> {
+    const { data, error } = await supabase
+        .from('server_configs')
+        .select('report_role_id')
+        .eq('guild_id', guildId)
+        .single();
+
+    if (error) {
+        if (error.code === 'PGRST116') return null;
+        throw error;
+    }
+    return data?.report_role_id || null;
 }
 
 // Interface pour les sanctions temporaires
@@ -371,7 +425,7 @@ export async function createTempBan(guildId: string, userId: string, moderatorId
             end_time: endTime.toISOString(),
             created_at: new Date().toISOString()
         });
-    
+
     if (error) throw error;
 }
 
@@ -387,7 +441,7 @@ export async function createTempMute(guildId: string, userId: string, moderatorI
             end_time: endTime.toISOString(),
             created_at: new Date().toISOString()
         });
-    
+
     if (error) throw error;
 }
 
@@ -398,7 +452,7 @@ export async function getExpiredTempBans(): Promise<TempBan[]> {
             .from('temp_bans')
             .select('*')
             .lt('end_time', new Date().toISOString());
-        
+
         if (error) throw error;
         return data || [];
     }, 'récupération des bans temporaires expirés');
@@ -411,7 +465,7 @@ export async function getExpiredTempMutes(): Promise<TempMute[]> {
             .from('temp_mutes')
             .select('*')
             .lt('end_time', new Date().toISOString());
-        
+
         if (error) throw error;
         return data || [];
     }, 'récupération des mutes temporaires expirés');
@@ -423,7 +477,7 @@ export async function removeTempBan(id: number): Promise<void> {
         .from('temp_bans')
         .delete()
         .eq('id', id);
-    
+
     if (error) throw error;
 }
 
@@ -433,7 +487,7 @@ export async function removeTempMute(id: number): Promise<void> {
         .from('temp_mutes')
         .delete()
         .eq('id', id);
-    
+
     if (error) throw error;
 }
 
@@ -465,23 +519,23 @@ export interface Warning {
 export async function getNextSanctionNumber(guildId: string): Promise<number> {
     const { data, error } = await supabase
         .rpc('get_next_sanction_number', { p_guild_id: guildId });
-    
+
     if (error) throw error;
     return data;
 }
 
 // Ajouter une entrée à l'historique de modération avec numéro de sanction
 export async function addModerationHistory(
-    guildId: string, 
-    userId: string, 
-    moderatorId: string, 
-    actionType: string, 
-    reason: string, 
+    guildId: string,
+    userId: string,
+    moderatorId: string,
+    actionType: string,
+    reason: string,
     duration?: string
 ): Promise<number> {
     // Obtenir le numéro de sanction
     const sanctionNumber = await getNextSanctionNumber(guildId);
-    
+
     const { error } = await supabase
         .from('moderation_history')
         .insert({
@@ -494,7 +548,7 @@ export async function addModerationHistory(
             sanction_number: sanctionNumber,
             created_at: new Date().toISOString()
         });
-    
+
     if (error) throw error;
     return sanctionNumber;
 }
@@ -503,7 +557,7 @@ export async function addModerationHistory(
 export async function createWarning(guildId: string, userId: string, moderatorId: string, reason: string): Promise<number> {
     // Obtenir le numéro de sanction
     const sanctionNumber = await getNextSanctionNumber(guildId);
-    
+
     const { error } = await supabase
         .from('warnings')
         .insert({
@@ -514,7 +568,7 @@ export async function createWarning(guildId: string, userId: string, moderatorId
             sanction_number: sanctionNumber,
             created_at: new Date().toISOString()
         });
-    
+
     if (error) throw error;
     return sanctionNumber;
 }
@@ -527,7 +581,7 @@ export async function getUserWarnings(guildId: string, userId: string): Promise<
         .eq('guild_id', guildId)
         .eq('user_id', userId)
         .order('created_at', { ascending: false });
-    
+
     if (error) throw error;
     return data || [];
 }
@@ -539,7 +593,7 @@ export async function removeWarningBySanctionNumber(guildId: string, sanctionNum
         .delete()
         .eq('guild_id', guildId)
         .eq('sanction_number', sanctionNumber);
-    
+
     if (error) throw error;
     return data !== null;
 }
@@ -553,7 +607,7 @@ export async function getModerationHistory(guildId: string, userId: string, limi
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
         .limit(limit);
-    
+
     if (error) throw error;
     return data || [];
 }
@@ -567,7 +621,7 @@ export async function getActiveTempBan(guildId: string, userId: string): Promise
         .eq('user_id', userId)
         .gt('end_time', new Date().toISOString())
         .single();
-    
+
     if (error) {
         if (error.code === 'PGRST116') return null; // Pas trouvé
         throw error;
@@ -584,7 +638,7 @@ export async function getActiveTempMute(guildId: string, userId: string): Promis
         .eq('user_id', userId)
         .gt('end_time', new Date().toISOString())
         .single();
-    
+
     if (error) {
         if (error.code === 'PGRST116') return null; // Pas trouvé
         throw error;
@@ -610,7 +664,7 @@ export async function updateMuteRole(guildId: string, roleId: string): Promise<v
                 updated_at: new Date().toISOString()
             })
             .eq('guild_id', guildId);
-        
+
         if (error) throw error;
     } else {
         // Créer une nouvelle configuration
@@ -625,7 +679,7 @@ export async function updateMuteRole(guildId: string, roleId: string): Promise<v
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString()
             });
-        
+
         if (error) throw error;
     }
 }
@@ -637,12 +691,12 @@ export async function getMuteRole(guildId: string): Promise<string | null> {
         .select('mute_role_id')
         .eq('guild_id', guildId)
         .single();
-    
+
     if (error) {
         if (error.code === 'PGRST116') return null; // Pas trouvé
         throw error;
     }
-    
+
     return data?.mute_role_id || null;
 }
 
@@ -705,7 +759,7 @@ export async function createGiveaway(
             created_at: new Date().toISOString(),
             ended: false
         });
-    
+
     if (error) throw error;
 }
 
@@ -716,12 +770,12 @@ export async function getGiveaway(giveawayId: string): Promise<Giveaway | null> 
         .select('*')
         .eq('id', giveawayId)
         .single();
-    
+
     if (error) {
         if (error.code === 'PGRST116') return null;
         throw error;
     }
-    
+
     return data;
 }
 
@@ -733,7 +787,7 @@ export async function getActiveGiveaways(guildId: string): Promise<Giveaway[]> {
         .eq('guild_id', guildId)
         .eq('ended', false)
         .gt('end_time', new Date().toISOString());
-    
+
     if (error) throw error;
     return data || [];
 }
@@ -746,7 +800,7 @@ export async function getExpiredGiveaways(): Promise<Giveaway[]> {
             .select('*')
             .eq('ended', false)
             .lt('end_time', new Date().toISOString());
-        
+
         if (error) throw error;
         return data || [];
     }, 'récupération des giveaways expirés');
@@ -761,7 +815,7 @@ export async function endGiveaway(giveawayId: string): Promise<void> {
             updated_at: new Date().toISOString()
         })
         .eq('id', giveawayId);
-    
+
     if (error) throw error;
 }
 
@@ -771,7 +825,7 @@ export async function deleteGiveaway(giveawayId: string): Promise<void> {
         .from('giveaways')
         .delete()
         .eq('id', giveawayId);
-    
+
     if (error) throw error;
 }
 
@@ -783,10 +837,10 @@ export async function addGiveawayParticipant(giveawayId: string, userId: string)
         .eq('giveaway_id', giveawayId)
         .eq('user_id', userId)
         .single();
-    
+
     // Si le participant existe déjà, retourner false
     if (existing) return false;
-    
+
     const { error } = await supabase
         .from('giveaway_participants')
         .insert({
@@ -794,7 +848,7 @@ export async function addGiveawayParticipant(giveawayId: string, userId: string)
             user_id: userId,
             created_at: new Date().toISOString()
         });
-    
+
     if (error) throw error;
     return true;
 }
@@ -806,7 +860,7 @@ export async function removeGiveawayParticipant(giveawayId: string, userId: stri
         .delete()
         .eq('giveaway_id', giveawayId)
         .eq('user_id', userId);
-    
+
     if (error) throw error;
     return true;
 }
@@ -819,12 +873,12 @@ export async function isParticipant(giveawayId: string, userId: string): Promise
         .eq('giveaway_id', giveawayId)
         .eq('user_id', userId)
         .single();
-    
+
     if (error) {
         if (error.code === 'PGRST116') return false;
         throw error;
     }
-    
+
     return !!data;
 }
 
@@ -834,7 +888,7 @@ export async function getGiveawayParticipants(giveawayId: string): Promise<Givea
         .from('giveaway_participants')
         .select('*')
         .eq('giveaway_id', giveawayId);
-    
+
     if (error) throw error;
     return data || [];
 }
@@ -845,7 +899,7 @@ export async function getGiveawayParticipantCount(giveawayId: string): Promise<n
         .from('giveaway_participants')
         .select('*', { count: 'exact', head: true })
         .eq('giveaway_id', giveawayId);
-    
+
     if (error) throw error;
     return count || 0;
 }
@@ -859,6 +913,6 @@ export async function updateGiveawayWinnerRole(giveawayId: string, winnerRoleId:
             updated_at: new Date().toISOString()
         })
         .eq('id', giveawayId);
-    
+
     if (error) throw error;
 }
