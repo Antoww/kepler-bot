@@ -8,8 +8,8 @@ import {
     Collection,
     type Message
 } from "discord.js";
-import { formatMessagesForArchive, uploadToPastebin } from "../../utils/moderation/messageArchiver.ts";
-import { storeArchiveUrl } from "../../utils/moderation/archiveCache.ts";
+import { formatMessagesForArchive } from "../../utils/moderation/messageArchiver.ts";
+import { storeArchiveContent } from "../../utils/moderation/archiveCache.ts";
 import { getServerTimezone } from '../../database/db.ts';
 
 export const data = new SlashCommandBuilder()
@@ -47,29 +47,24 @@ export async function execute(interaction: CommandInteraction) {
     const target = interaction.options.getUser('utilisateur');
 
     try {
+        const timezone = await getServerTimezone(interaction.guild.id);
         const messages = target
             ? await deleteUserMessages(textChannel, target.id, amount)
             : await textChannel.bulkDelete(amount, true);
         const messageCount = messages.size;
         const messageText = messageCount === 1 ? 'message' : 'messages';
-        const timezone = await getServerTimezone(interaction.guild.id);
 
         if (messages.size > 0) {
             console.log(`[Clear] Début de l'archivage de ${messageCount} messages supprimés...`);
             const archiveContent = formatMessagesForArchive(messages as any, timezone);
-            const title = `Messages supprimés - ${interaction.guild.name} - ${new Date().toLocaleString('fr-FR', { timeZone: timezone })}`;
-            const pastebinUrl = await uploadToPastebin(archiveContent, title);
-
-            if (pastebinUrl) {
-                storeArchiveUrl(
-                    interaction.guild.id,
-                    textChannel.id,
-                    Array.from(messages.keys()),
-                    pastebinUrl
-                );
-            } else {
-                console.error('[Clear] Échec de la création de l’archive Pastebin');
-            }
+            const timestamp = new Date().toISOString().replaceAll(':', '-').replaceAll('.', '-');
+            storeArchiveContent(
+                interaction.guild.id,
+                textChannel.id,
+                Array.from(messages.keys()),
+                archiveContent,
+                `clear-${textChannel.id}-${timestamp}.txt`
+            );
         }
 
         const targetText = target ? ` de ${target}` : '';

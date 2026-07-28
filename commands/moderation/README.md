@@ -20,6 +20,8 @@ Supprime des messages récents dans le salon courant.
 
 La recherche ciblée parcourt au maximum les 1 000 messages les plus récents.
 Discord ne permet pas la suppression groupée des messages de plus de 14 jours.
+Une archive texte des messages effectivement supprimés est jointe directement
+au log Discord de suppression de masse ; Pastebin n’est pas nécessaire.
 
 **Permissions requises :** Gérer les messages
 

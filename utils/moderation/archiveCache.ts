@@ -1,11 +1,13 @@
 /**
- * Cache temporaire pour stocker les URLs d'archives Pastebin
- * Utilisé pour transmettre les URLs entre la commande clear et l'événement MessageBulkDelete
+ * Cache temporaire pour transmettre les archives de /clear à l'événement
+ * MessageBulkDelete.
  */
 import { logger } from '../logger.ts';
 
-interface ArchiveEntry {
-    url: string;
+export interface ArchiveEntry {
+    url?: string;
+    content?: string;
+    filename?: string;
     timestamp: number;
 }
 
@@ -27,8 +29,9 @@ setInterval(() => {
  * Génère une clé unique pour identifier une suppression de messages
  */
 function generateCacheKey(guildId: string, channelId: string, messageIds: string[]): string {
-    // Utiliser les 3 premiers IDs de messages pour créer une clé unique
-    const ids = messageIds.slice(0, 3).sort().join('-');
+    // Tous les IDs sont triés afin que l'ordre des collections Discord
+    // n'empêche jamais l'événement de retrouver l'archive.
+    const ids = [...messageIds].sort().join('-');
     return `${guildId}:${channelId}:${ids}`;
 }
 
@@ -45,9 +48,36 @@ export function storeArchiveUrl(guildId: string, channelId: string, messageIds: 
 }
 
 /**
+ * Stocke une archive texte destinée au log Discord.
+ */
+export function storeArchiveContent(
+    guildId: string,
+    channelId: string,
+    messageIds: string[],
+    content: string,
+    filename: string
+): void {
+    const key = generateCacheKey(guildId, channelId, messageIds);
+    archiveCache.set(key, {
+        content,
+        filename,
+        timestamp: Date.now()
+    });
+    logger.debug('Archive texte stockée', { key, filename }, 'ArchiveCache');
+}
+
+/**
  * Récupère une URL d'archive depuis le cache
  */
 export function getArchiveUrl(guildId: string, channelId: string, messageIds: string[]): string | null {
+    return getArchive(guildId, channelId, messageIds)?.url ?? null;
+}
+
+export function getArchive(
+    guildId: string,
+    channelId: string,
+    messageIds: string[]
+): ArchiveEntry | null {
     const key = generateCacheKey(guildId, channelId, messageIds);
     const entry = archiveCache.get(key);
     
@@ -55,7 +85,7 @@ export function getArchiveUrl(guildId: string, channelId: string, messageIds: st
         logger.debug('URL archive récupérée', { key }, 'ArchiveCache');
         // Supprimer l'entrée après utilisation
         archiveCache.delete(key);
-        return entry.url;
+        return entry;
     }
     
     logger.debug('URL archive non trouvée', { key }, 'ArchiveCache');

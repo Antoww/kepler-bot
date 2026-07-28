@@ -75,8 +75,8 @@ export async function uploadToPastebin(content: string, title: string): Promise<
     
     const apiKey = Deno.env.get('PASTEBIN_API_KEY');
     
-    if (!apiKey) {
-        logger.error('Clé API Pastebin manquante', undefined, 'Pastebin');
+    if (!apiKey || apiKey.includes('votre_clé') || apiKey.length < 20) {
+        logger.warn('Archivage Pastebin ignoré : clé absente ou invalide', undefined, 'Pastebin');
         return null;
     }
 
@@ -102,7 +102,7 @@ export async function uploadToPastebin(content: string, title: string): Promise<
         
         // Si la réponse contient "Bad API request", c'est une erreur
         if (result.includes('Bad API request')) {
-            logger.error('Erreur API Pastebin', result, 'Pastebin');
+            logger.warn(`Pastebin a refusé l’archive : ${result}`, undefined, 'Pastebin');
             return null;
         }
 
@@ -112,10 +112,10 @@ export async function uploadToPastebin(content: string, title: string): Promise<
             return result;
         }
 
-        logger.error('Réponse inattendue de Pastebin', result, 'Pastebin');
+        logger.warn(`Réponse inattendue de Pastebin : ${result}`, undefined, 'Pastebin');
         return null;
     } catch (error) {
-        logger.error('Exception lors de l\'upload', error, 'Pastebin');
+        logger.warn('Pastebin indisponible, archive externe ignorée', error, 'Pastebin');
         return null;
     }
 }
