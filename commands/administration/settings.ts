@@ -1911,11 +1911,54 @@ async function publishTicketPanel(source: ChatInputCommandInteraction) {
         .setLabel(config.ticket_button_label)
         .setStyle(ticketButtonStyle(config.ticket_button_style));
     if (config.ticket_button_emoji) button.setEmoji(config.ticket_button_emoji);
-    await channel.send({
+    const previousPanel = config.ticket_panel_message_id && config.ticket_panel_published_channel_id
+        ? {
+            messageId: config.ticket_panel_message_id,
+            channelId: config.ticket_panel_published_channel_id
+        }
+        : null;
+    const newPanel = await channel.send({
         embeds: [embed],
         components: [new ActionRowBuilder<ButtonBuilder>().addComponents(button)],
         allowedMentions: { parse: [] }
     });
+
+    try {
+        await updateTicketConfig(guild.id, {
+            ticket_panel_message_id: newPanel.id,
+            ticket_panel_published_channel_id: channel.id
+        });
+    } catch (error) {
+        try {
+            await newPanel.delete();
+        } catch (cleanupError) {
+            logger.warn(
+                `Impossible de supprimer le panneau de tickets non enregistré ${newPanel.id}`,
+                cleanupError,
+                'SettingsPanel'
+            );
+        }
+        throw error;
+    }
+
+    if (previousPanel && previousPanel.messageId !== newPanel.id) {
+        try {
+            const previousChannel = await guild.channels.fetch(previousPanel.channelId);
+            if (
+                previousChannel?.type === ChannelType.GuildText
+                || previousChannel?.type === ChannelType.GuildAnnouncement
+            ) {
+                const previousMessage = await previousChannel.messages.fetch(previousPanel.messageId);
+                await previousMessage.delete();
+            }
+        } catch (error) {
+            logger.warn(
+                `Impossible de supprimer l’ancien panneau de tickets ${previousPanel.messageId}`,
+                error,
+                'SettingsPanel'
+            );
+        }
+    }
 }
 
 function parseTicketStyle(value: string): 'Primary' | 'Secondary' | 'Success' | 'Danger' | null {
