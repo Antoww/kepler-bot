@@ -562,6 +562,7 @@ async function handleComponent(component: MessageComponentInteraction, source: C
 
 async function buildOverview(interaction: ChatInputCommandInteraction, notice?: string) {
     const guild = interaction.guild!;
+    const dashboardUrl = getDashboardUrl(guild.id);
     const [logs, moderation, automod, birthdays, mute, reports, reportRole, tickets, xpSettings, xpRewards, inviteSettings, timezone] = await Promise.all([
         getLogChannel(guild.id),
         getModerationChannel(guild.id),
@@ -584,7 +585,13 @@ async function buildOverview(interaction: ChatInputCommandInteraction, notice?: 
             iconURL: interaction.client.user.displayAvatarURL({ forceStatic: true })
         })
         .setTitle(`Configuration de ${guild.name}`)
-        .setDescription(notice ? `✅ ${notice}` : 'Sélectionnez une catégorie pour modifier sa configuration.')
+        .setDescription(
+            notice
+                ? `✅ ${notice}`
+                : dashboardUrl
+                    ? 'Pour une configuration plus simple et complète, utilisez le **dashboard web**.\nVous pouvez aussi sélectionner une catégorie ci-dessous pour un réglage rapide.'
+                    : 'Sélectionnez une catégorie pour modifier sa configuration.'
+        )
         .addFields(
             { name: '📑 Logs serveur', value: formatChannel(guild, logs), inline: true },
             {
@@ -632,12 +639,36 @@ async function buildOverview(interaction: ChatInputCommandInteraction, notice?: 
         new ButtonBuilder().setCustomId('settings:section:invites').setLabel('Invitations').setEmoji('🔗').setStyle(ButtonStyle.Secondary),
         new ButtonBuilder().setCustomId('settings:section:timezone').setLabel('Fuseau').setEmoji('🌍').setStyle(ButtonStyle.Secondary)
     );
-    const actions = new ActionRowBuilder<ButtonBuilder>().addComponents(
+    const actions = new ActionRowBuilder<ButtonBuilder>();
+    if (dashboardUrl) {
+        actions.addComponents(
+            new ButtonBuilder()
+                .setLabel('Ouvrir le dashboard')
+                .setEmoji('🌐')
+                .setStyle(ButtonStyle.Link)
+                .setURL(dashboardUrl)
+        );
+    }
+    actions.addComponents(
         new ButtonBuilder().setCustomId('settings:refresh').setEmoji('🔄').setStyle(ButtonStyle.Primary),
         new ButtonBuilder().setCustomId('settings:close').setEmoji('✖️').setStyle(ButtonStyle.Secondary)
     );
 
     return { content: '', embeds: [embed], components: [categories, modules, actions] };
+}
+
+function getDashboardUrl(guildId: string): string | null {
+    const configuredUrl = Deno.env.get('DASHBOARD_URL')?.trim();
+    if (!configuredUrl) return null;
+
+    const url = configuredUrl.replaceAll('{guildId}', guildId);
+    try {
+        const parsed = new URL(url);
+        return parsed.protocol === 'https:' || parsed.protocol === 'http:' ? parsed.toString() : null;
+    } catch {
+        logger.warn('DASHBOARD_URL est invalide : le bouton du dashboard est masqué.', undefined, 'SettingsPanel');
+        return null;
+    }
 }
 
 async function buildSection(section: ConfigSection, guild: Guild) {
