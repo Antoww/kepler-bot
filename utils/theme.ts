@@ -1,5 +1,8 @@
 import { EmbedBuilder, type User } from 'discord.js';
 
+const KEPLER_AUTHOR_NAME = 'Kepler';
+let keplerAuthorIconURL: string | undefined;
+
 /**
  * Identité visuelle Kepler
  *
@@ -57,9 +60,22 @@ export const KEPLER_MESSAGES = {
     noData: 'ℹ️ Aucune donnée disponible pour cette période.'
 } as const;
 
+/**
+ * Initialise l'identité commune des embeds avec l'avatar actuel du bot.
+ * Le nom reste fixe afin de préserver la marque, même si le compte Discord
+ * est renommé temporairement.
+ */
+export function configureKeplerEmbedIdentity(user: User): void {
+    keplerAuthorIconURL = user.displayAvatarURL({ forceStatic: true });
+}
+
 export function createKeplerEmbed(tone: KeplerTone = 'primary'): EmbedBuilder {
     return new EmbedBuilder()
         .setColor(KEPLER_COLORS[tone])
+        .setAuthor({
+            name: KEPLER_AUTHOR_NAME,
+            ...(keplerAuthorIconURL ? { iconURL: keplerAuthorIconURL } : {})
+        })
         .setTimestamp();
 }
 

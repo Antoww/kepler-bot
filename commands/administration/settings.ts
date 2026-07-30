@@ -2078,7 +2078,7 @@ function sectionLabel(section: ConfigSection): string {
 
 function sectionDescription(section: ConfigSection): string {
     return ({
-        logs: 'Choisissez le salon qui recevra les événements généraux du serveur.',
+        logs: 'Choisissez le salon qui recevra les logs du serveur.',
         moderation: 'Configurez les protections automatiques, leurs exemptions, sanctions et journaux.',
         birthdays: 'Choisissez le salon dans lequel les anniversaires seront annoncés.',
         mute: 'Sélectionnez un rôle existant, créez-en un automatiquement ou utilisez les timeouts Discord.',
