@@ -1,12 +1,15 @@
 import { type Client } from 'discord.js';
 import { REST, Routes } from 'discord.js';
 import version from '../../version.json' with { type: 'json' };
-import { initializeGiveaways } from './giveawayManager.ts';
+import { initializeGiveaways } from '../../managers/giveawayManager.ts';
 import { logger } from '../../utils/logger.ts';
 import { initDatabase } from '../../database/supabase.ts';
-import { BirthdayManager } from './birthdayManager.ts';
-import { ModerationManager } from './moderationManager.ts';
-import { RGPDManager } from '../core/rgpdManager.ts';
+import { BirthdayManager } from '../../managers/birthdayManager.ts';
+import { ModerationManager } from '../../managers/moderationManager.ts';
+import { RGPDManager } from '../../managers/rgpdManager.ts';
+import { XpManager } from '../../managers/xpManager.ts';
+import { ReminderManager } from '../../managers/reminderManager.ts';
+import { InviteManager } from '../../managers/inviteManager.ts';
 
 export const name = 'ready';
 export const once = true;
@@ -33,13 +36,28 @@ export async function execute(client: Client<true>) {
 
     // Initialiser le gestionnaire de modération
     const moderationManager = new ModerationManager(client);
-    moderationManager.start();
+    client.moderationManager = moderationManager;
+    await moderationManager.start();
     logger.success('Gestionnaire de modération démarré', undefined, 'MANAGER');
 
     // Initialiser le gestionnaire RGPD (purge automatique des données anciennes)
     const rgpdManager = new RGPDManager();
     rgpdManager.start();
     logger.success('Gestionnaire RGPD démarré (90 jours)', undefined, 'MANAGER');
+
+    const xpManager = new XpManager(client);
+    xpManager.start();
+    logger.success('Gestionnaire XP démarré', undefined, 'MANAGER');
+
+    const reminderManager = new ReminderManager(client);
+    client.reminderManager = reminderManager;
+    await reminderManager.start();
+    logger.success('Gestionnaire de rappels démarré', undefined, 'MANAGER');
+
+    const inviteManager = new InviteManager(client);
+    client.inviteManager = inviteManager;
+    await inviteManager.start();
+    logger.success('Gestionnaire d’invitations démarré', undefined, 'MANAGER');
 
     // Enregistrer les commandes slash
     const rest = new REST({ version: '10' }).setToken(Deno.env.get('TOKEN') as string);

@@ -3,7 +3,6 @@ import {
     EmbedBuilder,
     AuditLogEvent,
     TextChannel,
-    Invite,
     GuildEmoji,
     Sticker
 } from 'discord.js';
@@ -39,98 +38,6 @@ async function getAuditLog(guild: any, targetId: string, actionType: AuditLogEve
         console.error('Erreur lors de la récupération de l\'audit log:', error);
         return null;
     }
-}
-
-// Log de création d'invitation
-export async function logInviteCreate(invite: Invite) {
-    if (!invite.guild) return;
-
-    const auditEntry = await getAuditLog(invite.guild, invite.code, AuditLogEvent.InviteCreate);
-    const client = invite.client;
-
-    const fields: any[] = [
-        { name: '📬 Code', value: `\`${invite.code}\``, inline: true },
-        { name: '📢 Canal', value: invite.channel ? `<#${invite.channel.id}>\n\`${invite.channel.id}\`` : 'Inconnu', inline: true },
-        { name: '📅 Date', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: false }
-    ];
-
-    const creator = invite.inviter || auditEntry?.executor;
-    if (creator) {
-        fields.push({ name: '✍️ Créée par', value: `${creator.tag}\n\`${creator.id}\``, inline: true });
-    }
-
-    fields.push(
-        { name: '🔢 Utilisations max', value: invite.maxUses ? `${invite.maxUses}` : 'Illimitée', inline: true },
-        { name: '⏱️ Expiration', value: invite.expiresAt ? `<t:${Math.floor(invite.expiresAt.getTime() / 1000)}:F>` : 'Jamais', inline: true }
-    );
-
-    if (invite.temporary) {
-        fields.push({
-            name: '⚠️ Temporaire',
-            value: 'Oui (expulsion à la déconnexion)',
-            inline: false
-        });
-    }
-
-    const embed = createKeplerEmbed()
-        .setAuthor({
-            name: 'Kepler Bot - Système de Logs',
-            iconURL: client.user?.displayAvatarURL({ forceStatic: false })
-        })
-        .setColor(KEPLER_COLORS.success)
-        .setTitle('📬 Invitation Créée')
-        .setDescription(`### Nouvelle invitation\n> Une invitation a été créée avec le code \`${invite.code}\`.`)
-        .addFields(fields)
-        .setThumbnail(invite.inviter?.displayAvatarURL({ forceStatic: false }) || invite.guild.iconURL({ forceStatic: false }))
-        .setFooter({
-            text: `Logs Invitations`,
-            iconURL: invite.guild.iconURL({ forceStatic: false }) || undefined
-        })
-        .setTimestamp();
-
-    await sendLog(invite.guild, embed);
-}
-
-// Log de suppression d'invitation
-export async function logInviteDelete(invite: Invite) {
-    if (!invite.guild) return;
-
-    const auditEntry = await getAuditLog(invite.guild, invite.code, AuditLogEvent.InviteDelete);
-    const client = invite.client;
-
-    const fields: any[] = [
-        { name: '📬 Code', value: `\`${invite.code}\``, inline: true },
-        { name: '📢 Canal', value: invite.channel ? `<#${invite.channel.id}>\n\`${invite.channel.id}\`` : 'Inconnu', inline: true },
-        { name: '📅 Date', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: false }
-    ];
-
-    if (invite.inviter) {
-        fields.push({ name: '✍️ Créée par', value: `${invite.inviter.tag}\n\`${invite.inviter.id}\``, inline: true });
-    }
-
-    if (auditEntry?.executor) {
-        fields.push({ name: '🗑️ Supprimée par', value: `${auditEntry.executor.tag}\n\`${auditEntry.executor.id}\``, inline: true });
-    }
-
-    fields.push({ name: '📊 Utilisations', value: invite.uses ? `${invite.uses}` : '0', inline: true });
-
-    const embed = createKeplerEmbed()
-        .setAuthor({
-            name: 'Kepler Bot - Système de Logs',
-            iconURL: client.user?.displayAvatarURL({ forceStatic: false })
-        })
-        .setColor(KEPLER_COLORS.danger)
-        .setTitle('🗑️ Invitation Supprimée')
-        .setDescription(`### Invitation supprimée\n> L'invitation \`${invite.code}\` a été supprimée.`)
-        .addFields(fields)
-        .setThumbnail(auditEntry?.executor?.displayAvatarURL({ forceStatic: false }) || invite.guild.iconURL({ forceStatic: false }))
-        .setFooter({
-            text: `Logs Invitations`,
-            iconURL: invite.guild.iconURL({ forceStatic: false }) || undefined
-        })
-        .setTimestamp();
-
-    await sendLog(invite.guild, embed);
 }
 
 // Log de création d'emoji

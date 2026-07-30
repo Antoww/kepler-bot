@@ -1,6 +1,8 @@
 import { supabase } from './supabase.ts';
 import { withNetworkRetry } from '../utils/retryHelper.ts';
 
+const timezoneCache = new Map<string, { value: string; expiresAt: number }>();
+
 // Initialiser la connexion à la base de données avec retry
 export async function initDatabase(): Promise<void> {
     // Pour l'instant, on utilise Supabase, donc pas besoin d'initialiser MySQL
@@ -106,6 +108,8 @@ export interface ServerConfig {
     report_channel_id?: string;
     report_role_id?: string;
     ticket_panel_channel_id?: string;
+    ticket_panel_message_id?: string;
+    ticket_panel_published_channel_id?: string;
     ticket_category_id?: string;
     ticket_log_channel_id?: string;
     ticket_support_role_id?: string;
@@ -121,6 +125,8 @@ export interface ServerConfig {
 export interface TicketConfig {
     guild_id: string;
     ticket_panel_channel_id: string | null;
+    ticket_panel_message_id: string | null;
+    ticket_panel_published_channel_id: string | null;
     ticket_category_id: string | null;
     ticket_log_channel_id: string | null;
     ticket_support_role_id: string | null;
@@ -142,7 +148,7 @@ const DEFAULT_TICKET_CONFIG = {
 export async function getTicketConfig(guildId: string): Promise<TicketConfig> {
     const { data, error } = await supabase
         .from('server_configs')
-        .select('guild_id, ticket_panel_channel_id, ticket_category_id, ticket_log_channel_id, ticket_support_role_id, ticket_panel_title, ticket_panel_message, ticket_button_label, ticket_button_emoji, ticket_button_style')
+        .select('guild_id, ticket_panel_channel_id, ticket_panel_message_id, ticket_panel_published_channel_id, ticket_category_id, ticket_log_channel_id, ticket_support_role_id, ticket_panel_title, ticket_panel_message, ticket_button_label, ticket_button_emoji, ticket_button_style')
         .eq('guild_id', guildId)
         .maybeSingle();
 
@@ -150,6 +156,8 @@ export async function getTicketConfig(guildId: string): Promise<TicketConfig> {
     return {
         guild_id: guildId,
         ticket_panel_channel_id: data?.ticket_panel_channel_id ?? null,
+        ticket_panel_message_id: data?.ticket_panel_message_id ?? null,
+        ticket_panel_published_channel_id: data?.ticket_panel_published_channel_id ?? null,
         ticket_category_id: data?.ticket_category_id ?? null,
         ticket_log_channel_id: data?.ticket_log_channel_id ?? null,
         ticket_support_role_id: data?.ticket_support_role_id ?? null,
@@ -262,6 +270,36 @@ export async function getLogChannel(guildId: string): Promise<string | null> {
     }
 
     return data?.log_channel_id || null;
+}
+
+export async function getServerTimezone(guildId: string): Promise<string> {
+    const cached = timezoneCache.get(guildId);
+    if (cached && cached.expiresAt > Date.now()) return cached.value;
+
+    const { data, error } = await supabase
+        .from('server_configs')
+        .select('timezone')
+        .eq('guild_id', guildId)
+        .maybeSingle();
+    if (error) throw error;
+    const timezone = data?.timezone || 'Europe/Paris';
+    timezoneCache.set(guildId, { value: timezone, expiresAt: Date.now() + 5 * 60 * 1000 });
+    return timezone;
+}
+
+export async function updateServerTimezone(guildId: string, timezone: string): Promise<void> {
+    const { error } = await supabase
+        .from('server_configs')
+        .upsert(
+            {
+                guild_id: guildId,
+                timezone,
+                updated_at: new Date().toISOString()
+            },
+            { onConflict: 'guild_id' }
+        );
+    if (error) throw error;
+    timezoneCache.set(guildId, { value: timezone, expiresAt: Date.now() + 5 * 60 * 1000 });
 }
 
 // Récupérer le canal d'anniversaires d'un serveur

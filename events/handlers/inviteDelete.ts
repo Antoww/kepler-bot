@@ -1,9 +1,13 @@
 import { Events, Invite } from 'discord.js';
-import { logInviteDelete } from '../logs/miscLogs.ts';
+import { logger } from '../../utils/logger.ts';
 
 export const name = Events.InviteDelete;
 export const once = false;
 
 export async function execute(invite: Invite) {
-    await logInviteDelete(invite);
+    try {
+        await invite.client.inviteManager?.handleInviteDelete(invite);
+    } catch (error) {
+        logger.error(`Erreur suppression invitation ${invite.code}`, error, 'INVITES');
+    }
 }

@@ -89,14 +89,16 @@ Variables d'environnement requises :
 
 ```env
 SUPABASE_URL=https://xxx.supabase.co
-SUPABASE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+SUPABASE_SERVICE_ROLE_KEY=clé_service_role_réservée_au_backend
 ```
 
 ---
 
 ## 🔒 Sécurité (RLS)
 
-Toutes les tables ont **Row Level Security** activé avec des policies permettant l'accès via la clé `service_role`.
+Les tables exposées ont **Row Level Security** activé. Le bot utilise la clé
+`service_role`, qui contourne la RLS côté serveur. Cette clé ne doit jamais être
+exposée dans un client, un dépôt Git ou un message.
 
 ---
 

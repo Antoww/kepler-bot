@@ -1,6 +1,6 @@
 {
-  "version": "0.1.5",
+  "version": "1.0.0",
   "codename": "Kepler",
-  "releaseDate": "2026-07-28",
-  "changelog": "Beta 1.5 - Tickets, sécurité et panneaux interactifs"
+  "releaseDate": "2026-07-30",
+  "changelog": "Kepler 1.0.0 - Première version stable : XP, tickets, invitations, auto-modération et configuration centralisée."
 }

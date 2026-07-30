@@ -6,29 +6,23 @@ Ce dossier gère tous les événements Discord et les gestionnaires automatisés
 
 ```
 events/
-├── core/           # Gestionnaires principaux et managers
+├── core/           # Événements principaux (ready, interactions)
 ├── handlers/       # Événements Discord (logs, tracking)
-├── logs/           # Fonctions de logging réutilisables
-├── logEvents.js    # [Legacy] Ancien système
-└── remind.js       # [Legacy] Bouton répéter rappel
+└── logs/           # Fonctions de logging réutilisables
 ```
 
 ---
 
 ## 🔧 Core (`/core/`)
 
-Gestionnaires principaux qui tournent en permanence.
+Points d'entrée événementiels principaux.
 
 | Fichier | Description |
 |---------|-------------|
 | `ready.ts` | Événement de démarrage du bot |
 | `interactionCreate.ts` | Gestion des commandes slash et boutons |
-| `birthdayManager.ts` | Vérification quotidienne des anniversaires |
-| `reminderManager.ts` | Gestion des rappels (déclenchement) |
-| `moderationManager.ts` | Débans/unmutes automatiques |
-| `giveawayManager.ts` | Fin automatique des giveaways |
-| `countingManager.ts` | Jeu de comptage |
-| `rgpdManager.ts` | Purge automatique RGPD (90j stats, 2ans modération) |
+
+Les services persistants sont regroupés dans le dossier racine `managers/`.
 
 ### Cycle de vie
 
@@ -146,4 +140,3 @@ export async function execute(client: Client) {
     console.log(`Connecté en tant que ${client.user?.tag}`);
 }
 ```
-

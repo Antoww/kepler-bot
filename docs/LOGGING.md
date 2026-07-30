@@ -126,23 +126,23 @@ logger.error('Erreur lors du chargement', error, 'LOADER');
 ### Core
 - ✅ `index.ts`
 - ✅ `events/core/ready.ts`
-- ✅ `events/core/rgpdManager.ts`
-- ✅ `events/core/reminderManager.ts`
+- ✅ `managers/rgpdManager.ts`
+- ✅ `managers/reminderManager.ts`
 
 ### Utils
 - ✅ `utils/logger.ts` (nouveau)
-- ✅ `utils/messageArchiver.ts`
-- ✅ `utils/archiveCache.ts`
-- ✅ `utils/statsTracker.ts`
-- ✅ `utils/rgpdManager.ts`
-- ✅ `utils/moderationLogger.ts`
+- ✅ `utils/moderation/messageArchiver.ts`
+- ✅ `utils/moderation/archiveCache.ts`
+- ✅ `utils/stats/tracker.ts`
+- ✅ `utils/privacy/rgpdData.ts`
+- ✅ `utils/moderation/logger.ts`
 
 ### Prochaines mises à jour recommandées
-- `events/core/moderationManager.ts`
+- `managers/moderationManager.ts`
 - `events/core/interactionCreate.ts`
-- `events/core/birthdayManager.ts`
-- `events/core/giveawayManager.ts`
-- `events/core/countingManager.ts`
+- `managers/birthdayManager.ts`
+- `managers/giveawayManager.ts`
+- `managers/countingManager.ts`
 - `commands/*` (toutes les commandes)
 - `events/handlers/*` (tous les handlers)
 - `events/logs/*` (tous les logs d'événements)

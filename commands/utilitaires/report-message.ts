@@ -1,5 +1,5 @@
 import { ApplicationCommandType, ContextMenuCommandBuilder, type MessageContextMenuCommandInteraction } from 'discord.js';
-import { openReportModal } from '../../utils/reporting.ts';
+import { openReportModal } from '../../utils/reports/service.ts';
 
 export const data = new ContextMenuCommandBuilder()
     .setName('Signaler ce message')

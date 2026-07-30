@@ -2,6 +2,7 @@ import { createKeplerEmbed, KEPLER_COLORS } from '../../utils/theme.ts';
 import {
     EmbedBuilder,
     AuditLogEvent,
+    AttachmentBuilder,
     TextChannel,
     Message,
     PartialMessage
@@ -9,7 +10,7 @@ import {
 import { getLogChannel } from '../../database/supabase.ts';
 
 // Fonction utilitaire pour envoyer un log
-async function sendLog(guild: any, embed: EmbedBuilder) {
+async function sendLog(guild: any, embed: EmbedBuilder, files: AttachmentBuilder[] = []) {
     try {
         const logChannelId = await getLogChannel(guild.id);
         if (!logChannelId) return;
@@ -17,7 +18,7 @@ async function sendLog(guild: any, embed: EmbedBuilder) {
         const logChannel = await guild.channels.fetch(logChannelId) as TextChannel;
         if (!logChannel) return;
 
-        await logChannel.send({ embeds: [embed] });
+        await logChannel.send({ embeds: [embed], files });
     } catch (error) {
         console.error('Erreur lors de l\'envoi du log:', error);
     }
@@ -188,6 +189,13 @@ export async function logMessageBulkDelete(messages: any, channel: any) {
             inline: false
         });
     }
+    if (messages.archiveContent) {
+        fields.push({
+            name: '📄 Archive des messages',
+            value: 'L’archive texte complète est jointe à ce log.',
+            inline: false
+        });
+    }
 
     const embed = createKeplerEmbed()
         .setAuthor({
@@ -205,5 +213,11 @@ export async function logMessageBulkDelete(messages: any, channel: any) {
         })
         .setTimestamp();
 
-    await sendLog(channel.guild, embed);
+    const files = messages.archiveContent
+        ? [new AttachmentBuilder(
+            new TextEncoder().encode(messages.archiveContent),
+            { name: messages.archiveFilename || `clear-${channel.id}.txt` }
+        )]
+        : [];
+    await sendLog(channel.guild, embed, files);
 }

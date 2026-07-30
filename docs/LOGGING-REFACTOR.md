@@ -25,14 +25,14 @@ Création de `utils/logger.ts` avec :
 #### ✅ Core (Totalement migré)
 - `index.ts` - Logs de démarrage et chargement
 - `utils/logger.ts` - Nouveau système (créé)
-- `utils/messageArchiver.ts` - Logs Pastebin simplifiés
-- `utils/archiveCache.ts` - Logs cache simplifiés
-- `utils/statsTracker.ts` - Logs tracking simplifiés
-- `utils/rgpdManager.ts` - Logs RGPD simplifiés
-- `utils/moderationLogger.ts` - Logs modération simplifiés
+- `utils/moderation/messageArchiver.ts` - Logs Pastebin simplifiés
+- `utils/moderation/archiveCache.ts` - Logs cache simplifiés
+- `utils/stats/tracker.ts` - Logs tracking simplifiés
+- `utils/privacy/rgpdData.ts` - Logs RGPD simplifiés
+- `utils/moderation/logger.ts` - Logs modération simplifiés
 - `events/core/ready.ts` - Logs démarrage simplifiés
-- `events/core/rgpdManager.ts` - Logs purge RGPD simplifiés
-- `events/core/reminderManager.ts` - Logs rappels simplifiés
+- `managers/rgpdManager.ts` - Logs purge RGPD simplifiés
+- `managers/reminderManager.ts` - Logs rappels simplifiés
 
 ### 3. Documentation
 

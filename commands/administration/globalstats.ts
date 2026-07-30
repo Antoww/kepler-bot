@@ -1,4 +1,4 @@
-import { createKeplerEmbed, KEPLER_COLORS, KEPLER_MESSAGES } from '../../utils/theme.ts';
+import { createKeplerEmbed, KEPLER_CHART_COLORS, KEPLER_COLORS, KEPLER_MESSAGES } from '../../utils/theme.ts';
 import {
     type ChatInputCommandInteraction,
     ActionRowBuilder,
@@ -13,8 +13,8 @@ import {
     getDailyStats,
     getTopCommands,
     getTotalStats
-} from '../../utils/statsTracker.ts';
-import { renderBarChart, renderLineChart } from '../../utils/statsChart.ts';
+} from '../../utils/stats/tracker.ts';
+import { renderBarChart, renderLineChart } from '../../utils/stats/chart.ts';
 
 type GlobalStatsAction = 'overview' | 'commands' | 'messages' | 'trend-commands' | 'trend-messages';
 const PANEL_TIMEOUT = 5 * 60 * 1000;
@@ -79,7 +79,7 @@ function globalButton(action: GlobalStatsAction, label: string, emoji: string) {
 
 function globalPeriodPicker(action: GlobalStatsAction) {
     const select = new StringSelectMenuBuilder().setCustomId(`globalstats:period:${action}`).setPlaceholder('Choisir la période').addOptions(
-        { label: '7 jours', value: '7' }, { label: '30 jours', value: '30', default: true }, { label: '90 jours', value: '90' },
+        { label: '7 jours', value: '7' }, { label: '30 jours', value: '30' }, { label: '90 jours', value: '90' },
         { label: '180 jours', value: '180' }, { label: '360 jours', value: '360' }, { label: 'Depuis toujours', value: 'all' }
     );
     return { content: '', embeds: [createKeplerEmbed('warning').setTitle('📅 Période globale').setDescription('Sélectionnez la période du graphique.')], attachments: [], components: [new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(select), new ActionRowBuilder<ButtonBuilder>().addComponents(globalBackButton())] };
@@ -138,8 +138,8 @@ async function handleOverview(interaction: ChatInputCommandInteraction) {
         'Commandes et messages sur les 30 derniers jours',
         dailyStats30.map(d => formatChartDate(d.date)),
         [
-            { label: 'Messages', color: '#45d7ff', values: dailyStats30.map(d => d.messages) },
-            { label: 'Commandes', color: '#ff6b6b', values: dailyStats30.map(d => d.commands) }
+            { label: 'Messages', color: KEPLER_CHART_COLORS.messages, values: dailyStats30.map(d => d.messages) },
+            { label: 'Commandes', color: KEPLER_CHART_COLORS.commands, values: dailyStats30.map(d => d.commands) }
         ]
     );
     const overviewAttachment = new AttachmentBuilder(overviewBuffer, { name: 'global-overview.webp' });
@@ -211,7 +211,7 @@ async function handleCommandsStats(interaction: ChatInputCommandInteraction) {
         value: c.count
     }));
 
-    const chartBuffer = await renderBarChart('Top des commandes', periodLabel, chartData, '#ff6b6b');
+    const chartBuffer = await renderBarChart('Top des commandes', periodLabel, chartData, KEPLER_CHART_COLORS.commands);
     const chartAttachment = new AttachmentBuilder(chartBuffer, { name: 'global-commands.webp' });
 
 
@@ -271,7 +271,7 @@ async function handleMessagesStats(interaction: ChatInputCommandInteraction) {
             label: formatChartDate(d.date),
             value: d.messages
         })),
-        '#45d7ff'
+        KEPLER_CHART_COLORS.messages
     );
     const topDaysAttachment = new AttachmentBuilder(topDaysBuffer, { name: 'global-messages.webp' });
 
@@ -320,7 +320,7 @@ async function handleTrendStats(interaction: ChatInputCommandInteraction) {
     const min = Math.min(...values, 0);
 
     const title = type === 'commands' ? '📊 Tendance Globale - Commandes' : '💬 Tendance Globale - Messages';
-    const color = type === 'commands' ? '#ff6b6b' : '#45d7ff';
+    const color = type === 'commands' ? KEPLER_CHART_COLORS.commands : KEPLER_CHART_COLORS.messages;
     const trendBuffer = await renderLineChart(
         metricLabel,
         periodLabel,

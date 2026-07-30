@@ -110,7 +110,7 @@ Les graphiques utilisent des caractères ASCII pour une visualisation claire :
 
 ### Fichiers modifiés :
 - **`commands/administration/graph.ts`** : Nouvelle implémentation pour les serveurs
-- **`utils/statsTracker.ts`** : Ajout de la fonction `getTopChannels()`
+- **`utils/stats/tracker.ts`** : Ajout de la fonction `getTopChannels()`
 
 ### Nouveaux fichiers :
 - **`commands/administration/globalstats.ts`** : Commande pour les statistiques globales (owner)

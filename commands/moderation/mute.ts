@@ -1,6 +1,6 @@
 import { createKeplerEmbed, KEPLER_COLORS, KEPLER_MESSAGES } from '../../utils/theme.ts';
 import { type CommandInteraction, SlashCommandBuilder, PermissionFlagsBits, GuildMember, Role } from 'discord.js';
-import { logModeration } from '../../utils/moderationLogger.ts';
+import { logModeration } from '../../utils/moderation/logger.ts';
 import { createTempMute, addModerationHistory, getMuteRole } from '../../database/db.ts';
 
 export const data = new SlashCommandBuilder()
@@ -82,11 +82,11 @@ export async function execute(interaction: CommandInteraction) {
                 if (botMember && muteRole.position < botMember.roles.highest.position) {
                     useRole = true;
                 } else {
-                    await interaction.reply('❌ Je ne peux pas gérer le rôle de mute configuré. Vérifiez la hiérarchie des rôles ou reconfigurez avec `/muteroleconfig`.');
+                    await interaction.reply('❌ Je ne peux pas gérer le rôle de mute configuré. Vérifiez la hiérarchie des rôles ou reconfigurez-le dans `/settings`.');
                     return;
                 }
             } else {
-                await interaction.reply('❌ Le rôle de mute configuré n\'existe plus. Veuillez le reconfigurer avec `/muteroleconfig`.');
+                await interaction.reply('❌ Le rôle de mute configuré n\'existe plus. Veuillez le reconfigurer dans `/settings`.');
                 return;
             }
         }
@@ -110,7 +110,7 @@ export async function execute(interaction: CommandInteraction) {
             // Vérifier la limite de 28 jours pour le timeout Discord
             const maxTimeoutDuration = 28 * 24 * 60 * 60 * 1000; // 28 jours en millisecondes
             if (muteDuration.getTime() - Date.now() > maxTimeoutDuration) {
-                await interaction.reply('❌ La durée du timeout ne peut pas dépasser 28 jours. Utilisez un rôle de mute pour des durées plus longues (`/muteroleconfig`).');
+                await interaction.reply('❌ La durée du timeout ne peut pas dépasser 28 jours. Configurez un rôle de mute dans `/settings` pour des durées plus longues.');
                 return;
             }
 

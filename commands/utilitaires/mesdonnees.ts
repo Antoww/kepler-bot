@@ -13,7 +13,7 @@ import {
     exportCompleteUserData,
     deleteVoluntaryUserData,
     generatePrivacyReport
-} from '../../utils/rgpdManager.ts';
+} from '../../utils/privacy/rgpdData.ts';
 
 export const data = new SlashCommandBuilder()
     .setName('mesdonnees')
@@ -119,6 +119,7 @@ async function handleExportData(interaction: ChatInputCommandInteraction) {
             exportData.personal.reminders.length +
             exportData.moderation.warnings.length +
             exportData.moderation.history.length +
+            exportData.moderation.autoMod.length +
             exportData.participations.giveaways.length;
 
         if (totalItems === 0) {
@@ -149,7 +150,7 @@ async function handleExportData(interaction: ChatInputCommandInteraction) {
                 },
                 {
                     name: '⚖️ Modération',
-                    value: `${exportData.moderation.warnings.length} warnings\n${exportData.moderation.history.length} entrées historique`,
+                    value: `${exportData.moderation.warnings.length} warnings\n${exportData.moderation.history.length} entrées historique\n${exportData.moderation.autoMod.length} détections AutoMod`,
                     inline: true
                 },
                 { name: '📅 Date d\'export', value: new Date().toLocaleDateString('fr-FR'), inline: true }
@@ -201,6 +202,7 @@ async function handleDeleteData(interaction: ChatInputCommandInteraction) {
     const kept: string[] = [];
     if (summary.warningCount > 0) kept.push(`• ${summary.warningCount} avertissement(s)`);
     if (summary.moderationHistoryCount > 0) kept.push(`• ${summary.moderationHistoryCount} entrée(s) de modération`);
+    if (summary.autoModViolationCount > 0) kept.push(`• ${summary.autoModViolationCount} détection(s) AutoMod`);
     if (summary.activeTempBans > 0) kept.push(`• ${summary.activeTempBans} ban(s) temporaire(s)`);
     if (summary.activeTempMutes > 0) kept.push(`• ${summary.activeTempMutes} mute(s) temporaire(s)`);
 

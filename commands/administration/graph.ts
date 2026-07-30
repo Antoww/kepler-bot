@@ -1,4 +1,4 @@
-import { createKeplerEmbed, KEPLER_COLORS, KEPLER_MESSAGES } from '../../utils/theme.ts';
+import { createKeplerEmbed, KEPLER_CHART_COLORS, KEPLER_COLORS, KEPLER_MESSAGES } from '../../utils/theme.ts';
 import {
     type ChatInputCommandInteraction,
     ActionRowBuilder,
@@ -15,8 +15,8 @@ import {
     getTopUsers,
     getTopChannels,
     getTotalStats
-} from '../../utils/statsTracker.ts';
-import { renderBarChart, renderLineChart } from '../../utils/statsChart.ts';
+} from '../../utils/stats/tracker.ts';
+import { renderBarChart, renderLineChart } from '../../utils/stats/chart.ts';
 
 type ServerStatsAction = 'overview' | 'activity' | 'members' | 'channels' | 'users' | 'commands';
 const PANEL_TIMEOUT = 5 * 60 * 1000;
@@ -92,7 +92,7 @@ function serverButton(action: ServerStatsAction, label: string, emoji: string) {
 
 function periodPicker(action: ServerStatsAction) {
     const select = new StringSelectMenuBuilder().setCustomId(`graph:period:${action}`).setPlaceholder('Choisir la période').addOptions(
-        { label: '7 jours', value: '7' }, { label: '30 jours', value: '30', default: true }, { label: '90 jours', value: '90' },
+        { label: '7 jours', value: '7' }, { label: '30 jours', value: '30' }, { label: '90 jours', value: '90' },
         { label: '180 jours', value: '180' }, { label: '360 jours', value: '360' }, { label: 'Depuis toujours', value: 'all' }
     );
     return { content: '', embeds: [createKeplerEmbed('primary').setTitle('📅 Période analysée').setDescription('Sélectionnez la période du graphique.')], attachments: [], components: [new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(select), new ActionRowBuilder<ButtonBuilder>().addComponents(serverBackButton())] };
@@ -100,7 +100,7 @@ function periodPicker(action: ServerStatsAction) {
 
 function limitPicker(action: 'channels' | 'users', period: string) {
     const options = [5, 10, 15, ...(action === 'users' ? [20] : [])]
-        .map(value => ({ label: `Top ${value}`, value: String(value), default: value === 10 }));
+        .map(value => ({ label: `Top ${value}`, value: String(value) }));
     const select = new StringSelectMenuBuilder()
         .setCustomId(`graph:limit:${action}:${period}`)
         .setPlaceholder('Choisir la taille du classement')
@@ -163,8 +163,8 @@ async function handleOverview(interaction: ChatInputCommandInteraction) {
         periodLabel,
         dailyStats.map(d => formatChartDate(d.date)),
         [
-            { label: 'Messages', color: '#45d7ff', values: dailyStats.map(d => d.messages) },
-            { label: 'Commandes', color: '#ff6b6b', values: dailyStats.map(d => d.commands) }
+            { label: 'Messages', color: KEPLER_CHART_COLORS.messages, values: dailyStats.map(d => d.messages) },
+            { label: 'Commandes', color: KEPLER_CHART_COLORS.commands, values: dailyStats.map(d => d.commands) }
         ]
     );
     const overviewAttachment = new AttachmentBuilder(overviewBuffer, { name: 'server-overview.webp' });
@@ -247,8 +247,8 @@ async function handleActivity(interaction: ChatInputCommandInteraction) {
         periodLabel,
         dailyStats.map(d => formatChartDate(d.date)),
         [
-            { label: 'Messages', color: '#45d7ff', values: dailyStats.map(d => d.messages) },
-            { label: 'Commandes', color: '#ff6b6b', values: dailyStats.map(d => d.commands) }
+            { label: 'Messages', color: KEPLER_CHART_COLORS.messages, values: dailyStats.map(d => d.messages) },
+            { label: 'Commandes', color: KEPLER_CHART_COLORS.commands, values: dailyStats.map(d => d.commands) }
         ]
     );
     const activityAttachment = new AttachmentBuilder(activityBuffer, { name: 'server-activity.webp' });
@@ -314,7 +314,7 @@ async function handleMembers(interaction: ChatInputCommandInteraction) {
             { label: 'Bots', value: bots },
             { label: 'En ligne', value: onlineMembers }
         ],
-        '#9d8cff'
+        KEPLER_CHART_COLORS.members
     );
     const membersAttachment = new AttachmentBuilder(membersBuffer, { name: 'server-members.webp' });
 
@@ -391,7 +391,7 @@ async function handleChannels(interaction: ChatInputCommandInteraction) {
         });
     }
 
-    const channelsBuffer = await renderBarChart('Canaux les plus actifs', periodLabel, chartData, '#ff6b6b');
+    const channelsBuffer = await renderBarChart('Canaux les plus actifs', periodLabel, chartData, KEPLER_CHART_COLORS.channels);
     const channelsAttachment = new AttachmentBuilder(channelsBuffer, { name: 'server-channels.webp' });
 
     const embed = createKeplerEmbed()
@@ -443,7 +443,7 @@ async function handleUsers(interaction: ChatInputCommandInteraction) {
         value: user.message_count
     }));
 
-    const usersBuffer = await renderBarChart('Utilisateurs les plus actifs', periodLabel, chartData, '#ff8a5c');
+    const usersBuffer = await renderBarChart('Utilisateurs les plus actifs', periodLabel, chartData, KEPLER_CHART_COLORS.users);
     const usersAttachment = new AttachmentBuilder(usersBuffer, { name: 'server-users.webp' });
 
     const embed = createKeplerEmbed()
@@ -480,7 +480,7 @@ async function handleCommands(interaction: ChatInputCommandInteraction) {
         label: `/${c.command_name}`,
         value: c.count
     }));
-    const commandsBuffer = await renderBarChart('Commandes les plus utilisées', periodLabel, chartData, '#f8c15c');
+    const commandsBuffer = await renderBarChart('Commandes les plus utilisées', periodLabel, chartData, KEPLER_CHART_COLORS.commands);
     const commandsAttachment = new AttachmentBuilder(commandsBuffer, { name: 'server-commands.webp' });
 
 

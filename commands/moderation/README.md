@@ -4,14 +4,26 @@ Ce dossier contient toutes les commandes liées à la modération du serveur Dis
 
 ## Configuration
 
-### `moderationconfig`
-Configure le canal où seront envoyés les logs de modération.
-
-**Utilisation :** `/moderationconfig canal:#logs-moderation`
-
-**Permissions requises :** Administrateur
+La configuration du canal de modération et du rôle de mute est centralisée
+dans `/settings` et nécessite la permission Administrateur.
 
 ## Commandes de Sanction
+
+### `clear`
+Supprime des messages récents dans le salon courant.
+
+**Utilisation :**
+
+- `/clear nombre:25` : supprime les 25 derniers messages ;
+- `/clear nombre:25 utilisateur:@user` : recherche et supprime uniquement
+  jusqu’à 25 messages de cet utilisateur.
+
+La recherche ciblée parcourt au maximum les 1 000 messages les plus récents.
+Discord ne permet pas la suppression groupée des messages de plus de 14 jours.
+Une archive texte des messages effectivement supprimés est jointe directement
+au log Discord de suppression de masse ; Pastebin n’est pas nécessaire.
+
+**Permissions requises :** Gérer les messages
 
 ### `ban`
 Bannit un utilisateur du serveur avec possibilité de ban temporaire.
