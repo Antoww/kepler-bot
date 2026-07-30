@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
   "codename": "Kepler",
-  "releaseDate": "2026-07-28",
-  "changelog": "Release 1.0.0 - Initial release of Kepler Bot with core functionalities and basic commands."
+  "releaseDate": "2026-07-30",
+  "changelog": "Kepler 1.0.0 - Première version stable : XP, tickets, invitations, auto-modération et configuration centralisée."
 }

@@ -1,256 +1,71 @@
-# 🚀 Release Beta 1.3 - Guide
+# Release Kepler 1.0.0
 
-## 📋 Version actuelle : **v0.1.3** (Beta 1.3)
+Ce document décrit la promotion de la branche `v1.0.0` vers la production.
+Dokploy déploie l'environnement de développement depuis `main` et la production
+depuis un tag Git sélectionné manuellement.
 
-### Workflow avec Dokploy
+## Avant le merge
 
-Le bot utilise **Dokploy** pour le déploiement automatisé avec deux environnements :
+- [x] `version.json` annonce `1.0.0` et le canal stable
+- [x] `CHANGELOG.md` et `changelogs/v1.0.0.md` sont à jour
+- [x] La note Discord est prête dans `DISCORD_RELEASE_1.0.0.md`
+- [x] L'ordre des migrations Supabase est documenté
+- [ ] Le type-check Deno passe
+- [ ] L'image Docker se construit
+- [ ] La branche de développement a été testée avec les services externes
+- [ ] La PR `v1.0.0` vers `main` est approuvée et fusionnée
 
-- **DEV** : Auto-deploy sur chaque push vers `main`
-- **PROD** : Deploy manuel ou sur tag Git
+## Préparer Supabase PROD
 
----
+1. Faire une sauvegarde de la base.
+2. Suivre `database/migrations/README.md` et appliquer chaque migration
+   manquante dans l'ordre.
+3. Vérifier que les nouvelles tables ont la RLS activée.
+4. Vérifier que Kepler utilise la clé serveur `SUPABASE_SERVICE_ROLE_KEY`.
 
-## 🔧 Procédure de Release
+## Variables Dokploy PROD
 
-### 1. Développement sur DEV
+Reprendre `.env.example` et vérifier au minimum :
+
+```env
+TOKEN=
+SUPABASE_URL=
+SUPABASE_SERVICE_ROLE_KEY=
+BLAGUES_API_TOKEN=
+LOG_LEVEL=INFO
+DISCORD_ERROR_REPORTER_TEST=false
+```
+
+Variables optionnelles : `PASTEBIN_API_KEY`, `ERROR_CHANNEL_ID` et
+`DASHBOARD_URL`. Ne pas activer `DISCORD_ERROR_REPORTER_TEST` en production.
+
+## Tag et release GitHub
+
+Le tag doit être créé uniquement sur le commit de merge présent dans `main` :
 
 ```bash
-# Faire vos modifications
-git add .
-git commit -m "feat: nouvelle fonctionnalité"
-git push origin main
+git switch main
+git pull --ff-only origin main
+git tag -a v1.0.0 -m "Kepler 1.0.0"
+git push origin v1.0.0
 ```
 
-→ Dokploy **DEV** se met à jour automatiquement
+Créer ensuite la release GitHub `v1.0.0` en copiant le contenu de
+`changelogs/v1.0.0.md`. Ne pas marquer la release comme pre-release.
 
-### 2. Préparer la release
+## Déploiement Dokploy
 
-**Mettre à jour la version manuellement** :
+1. Ouvrir le service Kepler PROD.
+2. Sélectionner le tag `v1.0.0`.
+3. Construire et déployer l'image.
+4. Contrôler les logs de démarrage et la connexion Discord.
+5. Vérifier `/help`, `/settings`, `/xp` et `/invitations` sur un serveur pilote.
+6. Vérifier la création d'un ticket et les logs d'auto-modération.
+7. Publier `DISCORD_RELEASE_1.0.0.md` après validation.
 
-Éditer [version.json](version.json) :
-```json
-{
-  "version": "0.1.3",
-  "codename": "Kepler Beta",
-  "releaseDate": "2026-01-05",
-  "changelog": "Beta 1.3 - Statistiques, RGPD et optimisations"
-}
-```
+## Retour arrière
 
-Éditer [CHANGELOG.md](CHANGELOG.md) : Ajouter la section pour la nouvelle version
-
-### 3. Commit et Tag
-
-```bash
-# Commit la nouvelle version
-git add version.json CHANGELOG.md
-git commit -m "chore: bump version to 0.1.3"
-git push origin main
-
-# Créer le tag Git
-git tag -a v0.1.3 -m "Beta 1.3 - Statistiques, RGPD et optimisations"
-git push origin v0.1.3
-```
-
-### 4. Déployer en PROD sur Dokploy
-
-**Option A : Deploy automatique sur tag** (si configuré dans Dokploy)
-- Le tag `v0.1.3` déclenche automatiquement le deploy PROD
-
-**Option B : Deploy manuel** (recommandé pour contrôle)
-1. Aller sur Dokploy → Projet "Kepler Bot" → Environnement PROD
-2. Sélectionner le tag `v0.1.3` dans la liste des branches/tags
-3. Cliquer sur "Deploy"
-4. Dokploy rebuild et redéploie automatiquement
-
----
-
-## 🏗️ Architecture Dokploy
-
-### Environnements configurés
-
-**🧪 DEV (développement)**
-- **Branch** : `main`
-- **Auto-deploy** : ✅ Oui (sur chaque push)
-- **Variables d'env** : Token test, base de données dev
-- **URL** : Votre URL dev Dokploy
-
-**🚀 PROD (production)**
-- **Branch/Tag** : Tags Git (`v*.*.*`)
-- **Auto-deploy** : ⚠️ Recommandé manuel
-- **Variables d'env** : Token production, base de données prod
-- **URL** : Votre URL prod Dokploy
-
-### Dockerfile utilisé par Dokploy
-
-Le [Dockerfile](Dockerfile) actuel est optimisé pour Dokploy :
-- Base : `denoland/deno:2.1.7`
-- Cache des dépendances
-- Healthcheck intégré
-- Variable `VERSION` injectée
-
----
-
-## 📦 Gestion des versions
-
-### Format Beta : `0.x.y`
-- `x` = version mineure (nouvelles features)
-- `y` = version patch (corrections de bugs)
-
-**Exemples** :
-- `0.1.3` → `0.1.4` : Patch (bug fix)
-- `0.1.3` → `0.2.0` : Minor (nouvelle feature)
-- `0.1.3` → `1.0.0` : Major (release stable)
-
-### Script de bump (optionnel)
-
-Pour automatiser localement :
-```bash
-deno run --allow-read --allow-write bump-version.ts patch
-```
-
-> ⚠️ La version dans `version.json` est affichée dans `/help` et `/botstats`
-
----
-
-## ✅ Checklist de Release
-
-- [x] Version mise à jour dans `version.json` (0.1.3)
-- [x] Changelog mis à jour dans `CHANGELOG.md`
-- [x] Dockerfile optimisé
-- [ ] Tests passés sur environnement DEV
-- [ ] Commit des modifications
-- [ ] Tag Git créé (`v0.1.3`)
-- [ ] Tag poussé vers GitHub
-- [ ] Deploy PROD via Dokploy
-- [ ] Vérification post-déploiement
-
----
-
-## 🔄 Workflow complet
-
-```
-┌─────────────┐
-│   Coding    │
-│   Locally   │
-└──────┬──────┘
-       │
-       │ git push main
-       │
-       ▼
-┌─────────────┐
-│   GitHub    │
-│    main     │
-└──────┬──────┘
-       │
-       │ Auto-deploy
-       │
-       ▼
-┌─────────────┐
-│  Dokploy    │
-│    DEV      │  ← Tests et validation
-└──────┬──────┘
-       │
-       │ Quand prêt
-       │
-       ├─ git tag v0.1.3
-       ├─ git push --tags
-       │
-       ▼
-┌─────────────┐
-│   GitHub    │
-│   v0.1.3    │
-└──────┬──────┘
-       │
-       │ Deploy manuel
-       │
-       ▼
-┌─────────────┐
-│  Dokploy    │
-│    PROD     │  ← En production
-└─────────────┘
-```
-
----
-
-## 🔧 Configuration Dokploy recommandée
-
-### Environnement DEV
-```yaml
-Branch: main
-Auto Deploy: ON
-Build Command: (default - docker build)
-Health Check: ON
-```
-
-### Environnement PROD
-```yaml
-Branch: tags/v*
-Auto Deploy: OFF (recommandé)
-Build Command: (default - docker build)
-Health Check: ON
-```
-
----
-
-## 🆘 Dépannage
-
-### Le deploy DEV ne se déclenche pas
-- Vérifier les webhooks GitHub → Dokploy
-- Vérifier les logs de build dans Dokploy
-- Forcer un rebuild manuel
-
-### Les variables d'environnement ne sont pas prises
-- Vérifier la config dans Dokploy → Environment Variables
-- Redéployer après modification des variables
-
-### Le tag ne s'affiche pas dans Dokploy
-```bash
-# Vérifier que le tag est bien poussé
-git ls-remote --tags origin
-
-# Attendre quelques secondes
-# Rafraîchir la page Dokploy
-```
-
-### Rollback vers une version antérieure
-1. Aller sur Dokploy → PROD
-2. Sélectionner le tag `v0.1.2` dans la liste
-3. Cliquer sur "Deploy"
-4. Dokploy redéploie automatiquement l'ancienne version
-
----
-
-## 📝 Notes importantes
-
-- **Pas besoin de GitHub Actions** : Dokploy gère tout le CI/CD
-- **Le Dockerfile est utilisé directement** par Dokploy
-- **Les tags Git sont la source de vérité** pour les versions
-- **Chaque environnement a ses propres variables** (tokens, DB, etc.)
-- **Le healthcheck permet à Dokploy** de vérifier que le bot est actif
-
----
-
-## 🎯 Pour cette release Beta 1.3
-
-```bash
-# 1. Vérifier que DEV fonctionne bien
-# (déjà déployé automatiquement)
-
-# 2. Créer le tag
-git tag -a v0.1.3 -m "Beta 1.3 - Statistiques, RGPD et optimisations"
-git push origin v0.1.3
-
-# 3. Aller sur Dokploy
-# → Projet "Kepler Bot"
-# → Environnement PROD
-# → Sélectionner tag "v0.1.3"
-# → Cliquer "Deploy"
-
-# 4. Vérifier
-# → Logs de build
-# → Bot en ligne sur Discord
-# → /help affiche "v0.1.3 • Kepler Beta"
-```
-
+En cas d'incident, redéployer le tag stable précédent dans Dokploy. Les
+migrations 1.0.0 sont additives : ne supprimer aucune table ni colonne pendant
+le rollback. Désactiver les nouvelles fonctions dans `/settings` le temps du
+diagnostic.

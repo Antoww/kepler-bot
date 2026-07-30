@@ -7,6 +7,44 @@ et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 
 ---
 
+## [1.0.0] - 2026-07-30 (Stable)
+
+### 🎯 Points clés
+- **Première version stable** de Kepler
+- **XP par serveur** : profils, classement, récompenses, boosts et journaux
+- **Tickets complets** : panneau configurable, suivi, fermeture, réouverture et archivage
+- **Gestion des invitations** : synchronisation, accueil, journaux et classement
+- **Auto-modération** : liens, invitations, spam, doublons, majuscules et mentions
+- **Configuration centralisée** dans `/settings`, avec fuseau horaire par serveur
+- **Exploitation renforcée** : signalement des erreurs Discord, migrations idempotentes et documentation de production
+
+👉 [Voir les notes de version détaillées](changelogs/v1.0.0.md)
+
+### ✨ Ajouté
+- Commandes `/xp`, `/xpadmin` et `/invitations`
+- Commande `/clear` avec filtrage par membre et export des messages supprimés
+- Configuration du dashboard, des tickets, de l'XP, des invitations et de l'auto-modération
+- Fuseaux horaires IANA pour les rappels et fonctions planifiées
+- Suivi durable du panneau de tickets publié
+
+### 🔧 Modifié
+- Regroupement des anciens écrans de configuration dans `/settings`
+- Réorganisation des managers, services de modération, statistiques, rapports et tickets
+- Harmonisation des couleurs et des embeds
+- Amélioration des notifications et archives de modération
+
+### 🔒 Sécurité
+- Isolation des données par serveur
+- RLS activée sur les nouvelles tables Supabase
+- Fonctions sensibles réservées à la clé serveur `service_role`
+- Contrôles de permissions et de hiérarchie renforcés pour la modération
+
+### 📚 Documentation
+- Guides dédiés à l'XP, l'auto-modération, aux invitations et aux fuseaux horaires
+- Procédure de migration et checklist de mise en production 1.0.0
+
+---
+
 ## [0.1.5] - 2026-07-28 (Beta 1.5)
 
 ### 🎯 Points clés
