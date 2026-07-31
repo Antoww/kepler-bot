@@ -31,14 +31,15 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         return;
     }
     await interaction.deferReply();
+    await interaction.client.inviteManager?.synchronizeGuild(interaction.guild);
 
     if (interaction.options.getSubcommand() === 'classement') {
         const leaderboard = await getInviteLeaderboard(interaction.guild.id);
         const description = leaderboard.length
             ? leaderboard.map((entry, index) =>
-                `**${index + 1}.** <@${entry.inviter_id}> — **${entry.invite_count}** arrivée(s)`
+                `**${index + 1}.** <@${entry.inviter_id}> — **${entry.invite_count}** utilisation(s)`
             ).join('\n')
-            : 'Aucune invitation attribuée pour le moment.';
+            : 'Aucune invitation active attribuable pour le moment.';
         const embed = setRequesterFooter(
             createKeplerEmbed('primary')
                 .setTitle('Classement des invitations')
@@ -57,9 +58,10 @@ export async function execute(interaction: ChatInputCommandInteraction) {
             .setTitle(`Invitations de ${user.username}`)
             .setThumbnail(user.displayAvatarURL({ forceStatic: false }))
             .addFields(
-                { name: 'Arrivées attribuées', value: String(stats.total_invites), inline: true },
+                { name: 'Utilisations attribuées', value: String(stats.total_invites), inline: true },
+                { name: 'Arrivées suivies', value: String(stats.tracked_invites), inline: true },
                 { name: 'Toujours présentes', value: String(stats.active_members), inline: true },
-                { name: 'Départs', value: String(stats.total_invites - stats.active_members), inline: true }
+                { name: 'Départs suivis', value: String(stats.tracked_invites - stats.active_members), inline: true }
             ),
         interaction.user,
         interaction.guild.name

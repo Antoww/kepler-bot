@@ -34,6 +34,10 @@ export class InviteManager {
         await this.refreshGuild(guild);
     }
 
+    async synchronizeGuild(guild: Guild): Promise<void> {
+        await this.refreshGuild(guild);
+    }
+
     async handleInviteCreate(invite: Invite): Promise<void> {
         if (!invite.guild || !('members' in invite.guild)) return;
         const guild = invite.guild;
