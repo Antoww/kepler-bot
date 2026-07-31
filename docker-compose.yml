@@ -1,7 +1,7 @@
 services:
   deno:
     build: .
-    container_name: kepler-bot
+    container_name: kepler-bot-prod
     restart: always
     environment:
       TOKEN: ${TOKEN}
