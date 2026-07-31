@@ -138,29 +138,74 @@ export async function getInviteLeaderboard(
     guildId: string,
     limit = 10
 ): Promise<Array<{ inviter_id: string; invite_count: number }>> {
-    const { data, error } = await supabase.rpc('get_guild_invite_leaderboard', {
-        p_guild_id: guildId,
-        p_limit: limit
-    });
-    if (error) throw new Error(`Classement des invitations impossible : ${error.message}`);
-    return (data ?? []).map((row: { inviter_id: string; invite_count: number | string }) => ({
-        inviter_id: row.inviter_id,
-        invite_count: Number(row.invite_count)
-    }));
+    const [{ data: trackedData, error: trackedError }, { data: inviteData, error: inviteError }] = await Promise.all([
+        supabase.rpc('get_guild_invite_leaderboard', {
+            p_guild_id: guildId,
+            p_limit: 25
+        }),
+        supabase
+            .from('guild_invites')
+            .select('inviter_id, uses')
+            .eq('guild_id', guildId)
+            .is('deleted_at', null)
+            .not('inviter_id', 'is', null)
+    ]);
+    if (trackedError) throw new Error(`Classement des invitations impossible : ${trackedError.message}`);
+    if (inviteError) throw new Error(`Lecture des invitations Discord impossible : ${inviteError.message}`);
+
+    const totals = new Map<string, { tracked: number; discord: number }>();
+    for (const row of trackedData ?? []) {
+        if (!row.inviter_id) continue;
+        totals.set(row.inviter_id, {
+            tracked: Number(row.invite_count ?? 0),
+            discord: totals.get(row.inviter_id)?.discord ?? 0
+        });
+    }
+    for (const row of inviteData ?? []) {
+        if (!row.inviter_id) continue;
+        const current = totals.get(row.inviter_id) ?? { tracked: 0, discord: 0 };
+        current.discord += Number(row.uses ?? 0);
+        totals.set(row.inviter_id, current);
+    }
+
+    return [...totals.entries()]
+        .map(([inviter_id, counts]) => ({
+            inviter_id,
+            // Les arrivées suivies font déjà partie du compteur Discord.
+            invite_count: Math.max(counts.tracked, counts.discord)
+        }))
+        .sort((a, b) => b.invite_count - a.invite_count)
+        .slice(0, Math.max(1, Math.min(limit, 25)));
 }
 
 export async function getInviteMemberStats(
     guildId: string,
     userId: string
-): Promise<{ total_invites: number; active_members: number }> {
-    const { data, error } = await supabase.rpc('get_guild_invite_member_stats', {
-        p_guild_id: guildId,
-        p_user_id: userId
-    });
-    if (error) throw new Error(`Statistiques d'invitations impossibles : ${error.message}`);
-    const row = data?.[0];
+): Promise<{ total_invites: number; tracked_invites: number; active_members: number }> {
+    const [{ data: trackedData, error: trackedError }, { data: inviteData, error: inviteError }] = await Promise.all([
+        supabase.rpc('get_guild_invite_member_stats', {
+            p_guild_id: guildId,
+            p_user_id: userId
+        }),
+        supabase
+            .from('guild_invites')
+            .select('uses')
+            .eq('guild_id', guildId)
+            .eq('inviter_id', userId)
+            .is('deleted_at', null)
+    ]);
+    if (trackedError) throw new Error(`Statistiques d'invitations impossibles : ${trackedError.message}`);
+    if (inviteError) throw new Error(`Lecture des invitations Discord impossible : ${inviteError.message}`);
+
+    const row = trackedData?.[0];
+    const trackedInvites = Number(row?.total_invites ?? 0);
+    const discordUses = (inviteData ?? []).reduce(
+        (total: number, invite: { uses: number | string | null }) => total + Number(invite.uses ?? 0),
+        0
+    );
     return {
-        total_invites: Number(row?.total_invites ?? 0),
+        total_invites: Math.max(trackedInvites, discordUses),
+        tracked_invites: trackedInvites,
         active_members: Number(row?.active_members ?? 0)
     };
 }

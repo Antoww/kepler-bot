@@ -10,11 +10,14 @@ import { RGPDManager } from '../../managers/rgpdManager.ts';
 import { XpManager } from '../../managers/xpManager.ts';
 import { ReminderManager } from '../../managers/reminderManager.ts';
 import { InviteManager } from '../../managers/inviteManager.ts';
+import { configureKeplerEmbedIdentity } from '../../utils/theme.ts';
 
 export const name = 'ready';
 export const once = true;
 
 export async function execute(client: Client<true>) {
+    configureKeplerEmbedIdentity(client.user);
+
     logger.success(`Bot connecté: ${client.user.tag}`, undefined, 'BOT');
     logger.info(`Prêt sur ${client.guilds.cache.size} serveur(s)`, undefined, 'BOT');
     

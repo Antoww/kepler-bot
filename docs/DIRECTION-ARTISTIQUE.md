@@ -29,6 +29,9 @@ couleur produite par un utilisateur, un rôle Discord ou un contenu externe.
 ## Embeds et messages
 
 - Un embed standard est créé avec `createKeplerEmbed(tone)`.
+- L'auteur par défaut affiche `Kepler` avec l'avatar actuel du bot. Un auteur
+  contextuel peut le remplacer lorsqu'il identifie réellement un membre, un
+  serveur ou une source externe.
 - `primary` sert aux informations normales, `success` aux confirmations,
   `warning` aux avertissements, `danger` aux erreurs et actions destructives.
 - Un titre décrit le résultat ou l'action, sans ponctuation superflue.
@@ -40,6 +43,8 @@ couleur produite par un utilisateur, un rôle Discord ou un contenu externe.
   `✅` succès, `⚠️` avertissement, `❌` erreur, `ℹ️` information.
 - Les footers utilisent `setRequesterFooter` quand une action est liée à un
   utilisateur.
+- Les footers informatifs existants sont conservés : pagination, nombre
+  d'éléments, version, durée de validité ou nom du serveur.
 
 ## Graphiques
 
