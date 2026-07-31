@@ -7,6 +7,32 @@ et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 
 ---
 
+## [1.0.1] - 2026-07-31 (Stable)
+
+### 🎯 Points clés
+- **Invitations existantes restaurées** dans le classement et les statistiques
+- **Synchronisation à la demande** avant l'affichage de `/invitations`
+- **Identité des embeds harmonisée** avec l'auteur et l'avatar de Kepler
+
+👉 [Voir les notes de version détaillées](changelogs/v1.0.1.md)
+
+### 🐛 Corrigé
+- Le classement des invitations pouvait rester vide lorsque les liens avaient
+  été créés avant l'activation du suivi
+- Les compteurs Discord et les arrivées suivies sont désormais fusionnés sans
+  double comptage
+- Les invitations actives sans utilisation apparaissent également dans le
+  classement
+
+### 🔧 Modifié
+- Les statistiques distinguent les utilisations Discord, les arrivées suivies,
+  les membres encore présents et les départs suivis
+- Les embeds standards affichent l'identité de Kepler tout en conservant leurs
+  footers informatifs
+- Le nom du conteneur Docker est harmonisé avec celui du projet
+
+---
+
 ## [1.0.0] - 2026-07-30 (Stable)
 
 ### 🎯 Points clés

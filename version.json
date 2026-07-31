@@ -1,6 +1,6 @@
 {
-  "version": "1.0.0",
+  "version": "1.0.1",
   "codename": "Kepler",
-  "releaseDate": "2026-07-30",
-  "changelog": "Kepler 1.0.0 - Première version stable : XP, tickets, invitations, auto-modération et configuration centralisée."
+  "releaseDate": "2026-07-31",
+  "changelog": "Kepler 1.0.1 - Correction de la synchronisation et de l'affichage des invitations existantes."
 }

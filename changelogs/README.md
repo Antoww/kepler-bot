@@ -14,12 +14,21 @@ Chaque version a son propre fichier markdown avec :
 
 ## 🗂️ Index des versions
 
+### Stable
+- [v1.0.1](v1.0.1.md) - 31 juillet 2026 - **Correctif 1.0.1** ✅ Actuelle
+  - Récupération des invitations déjà présentes
+  - Classement et statistiques corrigés sans double comptage
+  - Identité visuelle des embeds harmonisée
+- [v1.0.0](v1.0.0.md) - 30 juillet 2026 - **Première version stable**
+  - XP, tickets, invitations et auto-modération
+  - Configuration centralisée avec `/settings`
+
 ### Beta
-- [v0.1.5](v0.1.5.md) - 28 juillet 2026 - **Beta 1.5** ✅ Actuelle
+- [v0.1.5](v0.1.5.md) - 28 juillet 2026 - **Beta 1.5**
   - Système complet de tickets
   - Archives et logs d’état
   - Sécurité et panneaux `/settings` renforcés
-- [v0.1.3](v0.1.3.md) - 5 janvier 2026 - **Beta 1.3** ✅ Actuelle
+- [v0.1.3](v0.1.3.md) - 5 janvier 2026 - **Beta 1.3**
   - Statistiques avancées (`/graph`)
   - RGPD complet (`/mesdonnees`)
   - Optimisations images WebP
