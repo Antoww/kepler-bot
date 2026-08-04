@@ -1,7 +1,14 @@
 import { supabase } from '../../database/supabase.ts';
 
-export type AutoModRule = 'link' | 'invite' | 'spam' | 'duplicate' | 'caps' | 'mentions';
+export type AutoModRule = 'link' | 'invite' | 'spam' | 'duplicate' | 'caps' | 'mentions' | 'keyword';
 export type AutoModAction = 'delete' | 'warn' | 'timeout';
+export type AutoModSource = 'message_create' | 'message_update' | 'native';
+
+export interface AutoModEscalationStep {
+    strikes: number;
+    action: AutoModAction;
+    timeout_seconds?: number;
+}
 
 export interface AutoModSettings {
     guild_id: string;
@@ -28,6 +35,18 @@ export interface AutoModSettings {
     strike_window_seconds: number;
     timeout_seconds: number;
     notify_user: boolean;
+    observation_mode: boolean;
+    anti_keyword_enabled: boolean;
+    blocked_keywords: string[];
+    allowed_keywords: string[];
+    regex_patterns: string[];
+    rule_actions: Partial<Record<AutoModRule, AutoModAction>>;
+    escalation_steps: AutoModEscalationStep[];
+    anti_raid_enabled: boolean;
+    raid_join_count: number;
+    raid_interval_seconds: number;
+    raid_account_age_hours: number;
+    raid_mode_seconds: number;
 }
 
 const DEFAULTS: Omit<AutoModSettings, 'guild_id'> = {
@@ -53,7 +72,19 @@ const DEFAULTS: Omit<AutoModSettings, 'guild_id'> = {
     strike_threshold: 3,
     strike_window_seconds: 3600,
     timeout_seconds: 600,
-    notify_user: true
+    notify_user: true,
+    observation_mode: false,
+    anti_keyword_enabled: false,
+    blocked_keywords: [],
+    allowed_keywords: [],
+    regex_patterns: [],
+    rule_actions: {},
+    escalation_steps: [],
+    anti_raid_enabled: false,
+    raid_join_count: 8,
+    raid_interval_seconds: 20,
+    raid_account_age_hours: 24,
+    raid_mode_seconds: 600
 };
 
 const cache = new Map<string, { settings: AutoModSettings; expiresAt: number }>();
@@ -92,7 +123,9 @@ export async function recordAutoModViolation(
     messageId: string,
     rule: AutoModRule,
     actionTaken: string,
-    excerpt: string
+    excerpt: string,
+    source: AutoModSource = 'message_create',
+    observed = false
 ): Promise<void> {
     const { error } = await supabase.from('guild_automod_violations').insert({
         guild_id: guildId,
@@ -101,9 +134,37 @@ export async function recordAutoModViolation(
         message_id: messageId,
         rule,
         action_taken: actionTaken,
-        excerpt: excerpt.slice(0, 500)
+        excerpt: excerpt.slice(0, 500),
+        source,
+        observed
     });
     if (error) throw new Error(`Enregistrement auto-modération impossible : ${error.message}`);
+}
+
+export interface AutoModStats {
+    total: number;
+    observed: number;
+    byRule: Partial<Record<AutoModRule, number>>;
+}
+
+export async function getAutoModStats(guildId: string, days = 7): Promise<AutoModStats> {
+    const since = new Date(Date.now() - days * 86_400_000).toISOString();
+    const { data, error } = await supabase
+        .from('guild_automod_violations')
+        .select('rule, observed')
+        .eq('guild_id', guildId)
+        .gte('created_at', since)
+        .limit(5000);
+    if (error) throw new Error(`Statistiques auto-modération impossibles : ${error.message}`);
+    const rows = (data ?? []) as Array<{ rule: AutoModRule; observed: boolean }>;
+    return {
+        total: rows.length,
+        observed: rows.filter(row => row.observed).length,
+        byRule: rows.reduce<Partial<Record<AutoModRule, number>>>((counts, row) => {
+            counts[row.rule] = (counts[row.rule] ?? 0) + 1;
+            return counts;
+        }, {})
+    };
 }
 
 export async function getAutoModStrikeCount(guildId: string, userId: string): Promise<number> {

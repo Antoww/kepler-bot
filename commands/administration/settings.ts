@@ -59,7 +59,9 @@ import {
 } from '../../utils/invites/service.ts';
 import {
     getAutoModSettings,
-    updateAutoModSettings
+    getAutoModStats,
+    updateAutoModSettings,
+    type AutoModEscalationStep
 } from '../../utils/moderation/automodService.ts';
 
 type ConfigSection = 'logs' | 'moderation' | 'birthdays' | 'mute' | 'reports' | 'tickets' | 'xp' | 'invites' | 'timezone';
@@ -76,7 +78,9 @@ type AutoModRuleKey =
     | 'anti_spam_enabled'
     | 'anti_duplicate_enabled'
     | 'anti_caps_enabled'
-    | 'anti_mention_enabled';
+    | 'anti_mention_enabled'
+    | 'anti_keyword_enabled'
+    | 'anti_raid_enabled';
 
 const PANEL_COLOR = KEPLER_COLORS.primary;
 const PANEL_TIMEOUT = 5 * 60 * 1000;
@@ -264,6 +268,13 @@ async function handleComponent(component: MessageComponentInteraction, source: C
             await component.editReply(await buildAutoModHome(guild));
             return;
         }
+        if (component.customId === 'settings:automod:observation') {
+            const settings = await getAutoModSettings(guild.id);
+            await component.deferUpdate();
+            await updateAutoModSettings(guild.id, { observation_mode: !settings.observation_mode });
+            await component.editReply(await buildAutoModHome(guild));
+            return;
+        }
         if (component.customId === 'settings:automod:thresholds') {
             await showAutoModThresholdsModal(component, source);
             return;
@@ -272,8 +283,16 @@ async function handleComponent(component: MessageComponentInteraction, source: C
             await showAutoModActionModal(component, source);
             return;
         }
+        if (component.customId === 'settings:automod:rule-actions') {
+            await showAutoModRuleActionsModal(component, source);
+            return;
+        }
         if (component.customId === 'settings:automod:domains') {
             await showAutoModDomainsModal(component, source);
+            return;
+        }
+        if (component.customId === 'settings:automod:keywords') {
+            await showAutoModKeywordsModal(component, source);
             return;
         }
         if (component.customId === 'settings:automod:exemptions') {
@@ -973,9 +992,10 @@ async function buildInviteFields(guild: Guild) {
 }
 
 async function buildAutoModHome(guild: Guild) {
-    const [settings, logChannelId] = await Promise.all([
+    const [settings, logChannelId, stats] = await Promise.all([
         getAutoModSettings(guild.id),
-        getModerationChannel(guild.id)
+        getModerationChannel(guild.id),
+        getAutoModStats(guild.id).catch(() => ({ total: 0, observed: 0, byRule: {} }))
     ]);
     const activeRules = [
         settings.anti_link_enabled,
@@ -983,7 +1003,9 @@ async function buildAutoModHome(guild: Guild) {
         settings.anti_spam_enabled,
         settings.anti_duplicate_enabled,
         settings.anti_caps_enabled,
-        settings.anti_mention_enabled
+        settings.anti_mention_enabled,
+        settings.anti_keyword_enabled,
+        settings.anti_raid_enabled
     ].filter(Boolean).length;
     const logSelect = new ChannelSelectMenuBuilder()
         .setCustomId('settings:automod:log-channel')
@@ -999,7 +1021,7 @@ async function buildAutoModHome(guild: Guild) {
         )
         .addFields(
             { name: 'Moteur', value: settings.enabled ? '🟢 Actif' : '⚪ Désactivé', inline: true },
-            { name: 'Protections', value: `${activeRules}/6 actives`, inline: true },
+            { name: 'Protections', value: `${activeRules}/8 actives`, inline: true },
             { name: 'Logs', value: formatChannel(guild, logChannelId), inline: true },
             {
                 name: 'Réponse',
@@ -1012,6 +1034,11 @@ async function buildAutoModHome(guild: Guild) {
                 name: 'Tolérances',
                 value: `${settings.allowed_domains.length} domaine(s) · ` +
                     `${settings.excluded_channel_ids.length} salon(s) · ${settings.excluded_role_ids.length} rôle(s)`,
+                inline: false
+            },
+            {
+                name: '7 derniers jours',
+                value: `${stats.total} détection(s) · ${stats.observed} observée(s) sans sanction`,
                 inline: false
             }
         )
@@ -1033,10 +1060,15 @@ async function buildAutoModHome(guild: Guild) {
             ),
             new ActionRowBuilder<ButtonBuilder>().addComponents(
                 new ButtonBuilder().setCustomId('settings:automod:domains').setLabel('Domaines autorisés').setEmoji('🌐').setStyle(ButtonStyle.Secondary),
+                new ButtonBuilder().setCustomId('settings:automod:keywords').setLabel('Mots et regex').setEmoji('📝').setStyle(ButtonStyle.Secondary),
                 new ButtonBuilder()
                     .setCustomId('settings:automod:own-invites')
                     .setLabel(settings.allow_own_invites ? 'Invitations du serveur autorisées' : 'Toutes les invitations bloquées')
                     .setStyle(settings.allow_own_invites ? ButtonStyle.Success : ButtonStyle.Secondary),
+                new ButtonBuilder()
+                    .setCustomId('settings:automod:observation')
+                    .setLabel(settings.observation_mode ? 'Observation active' : 'Mode observation')
+                    .setStyle(settings.observation_mode ? ButtonStyle.Success : ButtonStyle.Secondary),
                 backButton()
             )
         ]
@@ -1051,7 +1083,9 @@ async function buildAutoModRules(guild: Guild) {
         ['anti_spam_enabled', 'Rafales', '⚡'],
         ['anti_duplicate_enabled', 'Doublons', '📋'],
         ['anti_caps_enabled', 'Majuscules', '🔠'],
-        ['anti_mention_enabled', 'Mentions', '📣']
+        ['anti_mention_enabled', 'Mentions', '📣'],
+        ['anti_keyword_enabled', 'Mots interdits', '📝'],
+        ['anti_raid_enabled', 'Anti-raid', '🚨']
     ];
     const makeButton = ([key, label, emoji]: [AutoModRuleKey, string, string]) =>
         new ButtonBuilder()
@@ -1074,6 +1108,7 @@ async function buildAutoModRules(guild: Guild) {
             new ActionRowBuilder<ButtonBuilder>().addComponents(...rules.slice(0, 3).map(makeButton)),
             new ActionRowBuilder<ButtonBuilder>().addComponents(...rules.slice(3).map(makeButton)),
             new ActionRowBuilder<ButtonBuilder>().addComponents(
+                new ButtonBuilder().setCustomId('settings:automod:rule-actions').setLabel('Actions par règle').setEmoji('⚖️').setStyle(ButtonStyle.Primary),
                 new ButtonBuilder().setCustomId('settings:automod:home').setLabel('Retour à l’AutoMod').setEmoji('↩️').setStyle(ButtonStyle.Secondary)
             )
         ]
@@ -1505,7 +1540,14 @@ async function showAutoModActionModal(component: ButtonInteraction, source: Chat
             settingsTextInput('action', 'Action : delete, warn ou timeout', settings.action, 'timeout'),
             settingsTextInput('strikes', 'Infractions / fenêtre en secondes', `${settings.strike_threshold}/${settings.strike_window_seconds}`, '3/3600'),
             settingsTextInput('timeout', 'Durée du timeout en secondes', String(settings.timeout_seconds), '600'),
-            settingsTextInput('notify', 'Notifier l’utilisateur en MP ? oui/non', settings.notify_user ? 'oui' : 'non', 'oui')
+            settingsTextInput('notify', 'Notifier l’utilisateur en MP ? oui/non', settings.notify_user ? 'oui' : 'non', 'oui'),
+            settingsTextInput(
+                'policy',
+                'Paliers : seuil=action[:secondes]',
+                settings.escalation_steps.map(step => `${step.strikes}=${step.action}${step.timeout_seconds ? `:${step.timeout_seconds}` : ''}`).join(','),
+                '1=delete,2=warn,3=timeout:600',
+                false
+            )
         );
     await component.showModal(modal);
     const submission = await awaitSettingsModal(component, source, modalId);
@@ -1514,14 +1556,15 @@ async function showAutoModActionModal(component: ButtonInteraction, source: Chat
     const strikes = parseNumberPair(submission.fields.getTextInputValue('strikes'));
     const timeout = Number(submission.fields.getTextInputValue('timeout'));
     const notify = submission.fields.getTextInputValue('notify').trim().toLowerCase();
+    const policy = parseEscalationPolicy(submission.fields.getTextInputValue('policy'));
     if (
         !['delete', 'warn', 'timeout'].includes(action) ||
         !strikes || strikes[0] < 1 || strikes[0] > 20 || strikes[1] < 60 || strikes[1] > 604800 ||
         !Number.isInteger(timeout) || timeout < 10 || timeout > 2419200 ||
-        !['oui', 'non'].includes(notify)
+        !['oui', 'non'].includes(notify) || policy === null
     ) {
         await submission.reply({
-            content: '❌ Utilisez `delete`, `warn` ou `timeout`, une progression `1-20/60-604800`, un timeout de 10 à 2419200 secondes et `oui`/`non`.',
+            content: '❌ Paramètres invalides. Exemple de paliers : `1=delete,2=warn,3=timeout:600`.',
             ephemeral: true
         });
         return;
@@ -1532,9 +1575,112 @@ async function showAutoModActionModal(component: ButtonInteraction, source: Chat
         strike_threshold: strikes[0],
         strike_window_seconds: strikes[1],
         timeout_seconds: timeout,
-        notify_user: notify === 'oui'
+        notify_user: notify === 'oui',
+        escalation_steps: policy
     });
     await submission.editReply(await buildAutoModHome(source.guild!));
+}
+
+async function showAutoModKeywordsModal(component: ButtonInteraction, source: ChatInputCommandInteraction) {
+    const settings = await getAutoModSettings(source.guildId!);
+    const modalId = `settings:automod:keywords-modal:${source.id}`;
+    const paragraph = (id: string, label: string, values: string[], placeholder: string) =>
+        new ActionRowBuilder<TextInputBuilder>().addComponents(
+            new TextInputBuilder()
+                .setCustomId(id)
+                .setLabel(label)
+                .setPlaceholder(placeholder)
+                .setStyle(TextInputStyle.Paragraph)
+                .setValue(values.join('\n').slice(0, 4000))
+                .setMaxLength(4000)
+                .setRequired(false)
+        );
+    const modal = new ModalBuilder()
+        .setCustomId(modalId)
+        .setTitle('Filtres personnalisés')
+        .addComponents(
+            paragraph('blocked', 'Termes interdits, un par ligne', settings.blocked_keywords, 'terme interdit'),
+            paragraph('allowed', 'Exceptions, une par ligne', settings.allowed_keywords, 'expression autorisée'),
+            paragraph('regex', 'Expressions régulières, une par ligne', settings.regex_patterns, '^exemple\\d+$')
+        );
+    await component.showModal(modal);
+    const submission = await awaitSettingsModal(component, source, modalId);
+    if (!submission) return;
+    const lines = (id: string) => [...new Set(submission.fields.getTextInputValue(id)
+        .split('\n').map(value => value.trim()).filter(Boolean))];
+    const blocked = lines('blocked');
+    const allowed = lines('allowed');
+    const regex = lines('regex');
+    if (blocked.length > 250 || allowed.length > 100 || regex.length > 10 || regex.some(pattern => {
+        try { new RegExp(pattern, 'iu'); return false; } catch { return true; }
+    })) {
+        await submission.reply({ content: '❌ Maximum : 250 termes, 100 exceptions et 10 expressions régulières valides.', ephemeral: true });
+        return;
+    }
+    await submission.deferUpdate();
+    await updateAutoModSettings(source.guildId!, {
+        blocked_keywords: blocked,
+        allowed_keywords: allowed,
+        regex_patterns: regex
+    });
+    await submission.editReply(await buildAutoModHome(source.guild!));
+}
+
+function parseEscalationPolicy(value: string): AutoModEscalationStep[] | null {
+    if (!value.trim()) return [];
+    const steps: AutoModEscalationStep[] = [];
+    for (const raw of value.split(',')) {
+        const match = raw.trim().match(/^(\d+)=(delete|warn|timeout)(?::(\d+))?$/i);
+        if (!match) return null;
+        const strikes = Number(match[1]);
+        const action = match[2].toLowerCase() as 'delete' | 'warn' | 'timeout';
+        const timeout_seconds = match[3] ? Number(match[3]) : undefined;
+        if (strikes < 1 || strikes > 20 || (action === 'timeout' && timeout_seconds !== undefined && (timeout_seconds < 10 || timeout_seconds > 2419200))) return null;
+        steps.push({ strikes, action, ...(timeout_seconds ? { timeout_seconds } : {}) });
+    }
+    return steps;
+}
+
+async function showAutoModRuleActionsModal(component: ButtonInteraction, source: ChatInputCommandInteraction) {
+    const settings = await getAutoModSettings(source.guildId!);
+    const modalId = `settings:automod:rule-actions-modal:${source.id}`;
+    const value = Object.entries(settings.rule_actions).map(([rule, action]) => `${rule}=${action}`).join(',');
+    const modal = new ModalBuilder()
+        .setCustomId(modalId)
+        .setTitle('Actions par règle')
+        .addComponents(settingsTextInput(
+            'actions',
+            'règle=action, séparées par virgule',
+            value,
+            'link=delete,spam=warn,mentions=timeout',
+            false
+        ));
+    await component.showModal(modal);
+    const submission = await awaitSettingsModal(component, source, modalId);
+    if (!submission) return;
+    const parsed = parseRuleActions(submission.fields.getTextInputValue('actions'));
+    if (!parsed) {
+        await submission.reply({
+            content: '❌ Règles : `link`, `invite`, `spam`, `duplicate`, `caps`, `mentions`, `keyword`. Actions : `delete`, `warn`, `timeout`.',
+            ephemeral: true
+        });
+        return;
+    }
+    await submission.deferUpdate();
+    await updateAutoModSettings(source.guildId!, { rule_actions: parsed });
+    await submission.editReply(await buildAutoModRules(source.guild!));
+}
+
+function parseRuleActions(value: string) {
+    const result: Record<string, 'delete' | 'warn' | 'timeout'> = {};
+    if (!value.trim()) return result;
+    const validRules = new Set(['link', 'invite', 'spam', 'duplicate', 'caps', 'mentions', 'keyword']);
+    for (const raw of value.split(',')) {
+        const match = raw.trim().match(/^(\w+)=(delete|warn|timeout)$/i);
+        if (!match || !validRules.has(match[1].toLowerCase())) return null;
+        result[match[1].toLowerCase()] = match[2].toLowerCase() as 'delete' | 'warn' | 'timeout';
+    }
+    return result;
 }
 
 async function showAutoModDomainsModal(component: ButtonInteraction, source: ChatInputCommandInteraction) {
@@ -1574,16 +1720,15 @@ async function showAutoModDomainsModal(component: ButtonInteraction, source: Cha
     await submission.editReply(await buildAutoModHome(source.guild!));
 }
 
-function settingsTextInput(customId: string, label: string, value: string, placeholder: string) {
-    return new ActionRowBuilder<TextInputBuilder>().addComponents(
-        new TextInputBuilder()
-            .setCustomId(customId)
-            .setLabel(label)
-            .setStyle(TextInputStyle.Short)
-            .setValue(value)
-            .setPlaceholder(placeholder)
-            .setRequired(true)
-    );
+function settingsTextInput(customId: string, label: string, value: string, placeholder: string, required = true) {
+    const input = new TextInputBuilder()
+        .setCustomId(customId)
+        .setLabel(label)
+        .setStyle(TextInputStyle.Short)
+        .setPlaceholder(placeholder)
+        .setRequired(required);
+    if (value) input.setValue(value);
+    return new ActionRowBuilder<TextInputBuilder>().addComponents(input);
 }
 
 function parseNumberPair(value: string): [number, number] | null {

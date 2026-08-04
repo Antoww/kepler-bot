@@ -26,6 +26,12 @@ salon de modération, y envoyer des messages et intégrer des liens.
 - **Majuscules** : pourcentage configurable, appliqué uniquement après un
   nombre minimal de lettres.
 - **Mentions massives** : utilisateurs, rôles, `@everyone` et `@here`.
+- **Mots et expressions** : termes personnalisés, exceptions et expressions
+  régulières, avec normalisation des accents et caractères invisibles.
+- **Messages modifiés** : une édition repasse dans les filtres de contenu sans
+  être comptée comme un nouveau message dans les seuils de spam.
+- **Anti-raid** : une rafale d’arrivées active temporairement une protection
+  renforcée des comptes très récents.
 
 Les administrateurs et les membres possédant **Gérer les messages** sont
 toujours exemptés. Des rôles, salons et catégories supplémentaires peuvent
@@ -38,6 +44,15 @@ toujours exemptés. Des rôles, salons et catégories supplémentaires peuvent
 - `timeout` : suppression puis timeout après un nombre configurable
   d’infractions dans une fenêtre glissante.
 
+Les actions peuvent être définies par règle. Une progression peut ensuite les
+remplacer selon le nombre d’infractions, par exemple
+`1=delete,2=warn,3=timeout:600`. Le **mode observation** enregistre et journalise
+les détections sans supprimer le message ni sanctionner le membre.
+
+Le panneau affiche le volume des détections des sept derniers jours. Les
+déclenchements des règles AutoMod natives de Discord sont également intégrés à
+l’historique Kepler lorsque les intents correspondants sont disponibles.
+
 Chaque détection est conservée dans `guild_automod_violations` et envoyée dans
 le salon de modération configuré. Si le bot ne peut pas appliquer un timeout,
 le message reste supprimé et l’échec n’empêche pas le traitement des messages
@@ -48,3 +63,9 @@ embed en message privé. Aucun avertissement public n’est envoyé dans le salo
 si les messages privés sont fermés, seule l’équipe voit le log de modération.
 Les MP sont limités à un toutes les 15 secondes par utilisateur afin qu’une
 rafale ne soit pas remplacée par une rafale de notifications du bot.
+
+## Mise à niveau V1.1
+
+Après la migration initiale, exécuter
+`database/migrations/20260804_extend_automod_v1_1.sql` dans Supabase. La
+migration est additive et conserve les réglages existants.

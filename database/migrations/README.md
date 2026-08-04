@@ -13,6 +13,7 @@ chronologique du nom de fichier.
 5. `20260728_add_xp_logs.sql`
 6. `20260728_add_invite_manager.sql`
 7. `20260728_add_automod_system.sql`
+8. `20260804_extend_automod_v1_1.sql`
 8. `20260729_track_ticket_panel_message.sql`
 
 La migration XP principale contient déjà la structure finale, la RLS et la
