@@ -7,11 +7,16 @@ import {
     ChannelSelectMenuBuilder,
     ChannelType,
     type ChatInputCommandInteraction,
+    ContainerBuilder,
+    type EmbedBuilder,
+    MessageFlags,
     ModalBuilder,
     PermissionFlagsBits,
     RoleSelectMenuBuilder,
     SlashCommandBuilder,
     StringSelectMenuBuilder,
+    SeparatorBuilder,
+    TextDisplayBuilder,
     TextInputBuilder,
     TextInputStyle,
     type Guild,
@@ -85,6 +90,51 @@ type AutoModRuleKey =
 const PANEL_COLOR = KEPLER_COLORS.primary;
 const PANEL_TIMEOUT = 5 * 60 * 1000;
 
+type LegacySettingsView = {
+    content?: string;
+    embeds?: EmbedBuilder[];
+    components?: ActionRowBuilder<any>[];
+};
+
+function toComponentsV2(view: LegacySettingsView) {
+    const embed = view.embeds?.[0]?.toJSON();
+    const container = new ContainerBuilder().setAccentColor(embed?.color ?? PANEL_COLOR);
+    const heading = [
+        embed?.author?.name ? `-# ${embed.author.name.toUpperCase()}` : null,
+        embed?.title ? `## ${embed.title}` : null,
+        embed?.description || view.content || null
+    ].filter(Boolean).join('\n');
+
+    if (heading) container.addTextDisplayComponents(new TextDisplayBuilder().setContent(heading));
+
+    if (embed?.fields?.length) {
+        if (heading) container.addSeparatorComponents(new SeparatorBuilder().setDivider(true));
+        container.addTextDisplayComponents(
+            new TextDisplayBuilder().setContent(
+                embed.fields.map(field => `**${field.name}**\n${field.value}`).join('\n\n')
+            )
+        );
+    }
+
+    if (view.components?.length) {
+        if (heading || embed?.fields?.length) {
+            container.addSeparatorComponents(new SeparatorBuilder().setDivider(true));
+        }
+        container.addActionRowComponents(...view.components);
+    }
+
+    const footer = embed?.footer?.text;
+    if (footer) {
+        container.addSeparatorComponents(new SeparatorBuilder().setDivider(false));
+        container.addTextDisplayComponents(new TextDisplayBuilder().setContent(`-# ${footer}`));
+    }
+
+    return {
+        components: [container],
+        flags: MessageFlags.IsComponentsV2 as MessageFlags.IsComponentsV2
+    };
+}
+
 export const data = new SlashCommandBuilder()
     .setName('settings')
     .setDescription('Ouvre le panneau de configuration du serveur')
@@ -102,7 +152,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
     const response = await interaction.reply({
         ...(await buildOverview(interaction)),
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2,
         fetchReply: true
     });
 
@@ -136,7 +186,9 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
     collector.on('end', async () => {
         try {
-            await interaction.editReply({ components: [] });
+            await interaction.editReply(toComponentsV2({
+                content: '⌛ Ce panneau de configuration a expiré. Relancez `/settings` pour continuer.'
+            }));
         } catch {
             // Le message éphémère peut déjà avoir été fermé.
         }
@@ -152,7 +204,7 @@ async function handleComponent(component: MessageComponentInteraction, source: C
             return;
         }
         if (component.customId === 'settings:close') {
-            await component.update({ content: 'Panneau de configuration fermé.', embeds: [], components: [] });
+            await component.update(toComponentsV2({ content: '✅ Panneau de configuration fermé.' }));
             return;
         }
         if (component.customId.startsWith('settings:section:')) {
@@ -629,7 +681,7 @@ async function handleComponent(component: MessageComponentInteraction, source: C
     }
 }
 
-async function buildOverview(interaction: ChatInputCommandInteraction, notice?: string) {
+async function buildOverviewLegacy(interaction: ChatInputCommandInteraction, notice?: string) {
     const guild = interaction.guild!;
     const dashboardUrl = getDashboardUrl(guild.id);
     const [logs, moderation, automod, birthdays, mute, reports, reportRole, tickets, xpSettings, xpRewards, inviteSettings, timezone] = await Promise.all([
@@ -737,7 +789,7 @@ function getDashboardUrl(guildId: string): string | null {
     }
 }
 
-async function buildTicketHome(guild: Guild) {
+async function buildTicketHomeLegacy(guild: Guild) {
     const config = await getTicketConfig(guild.id);
     const ready = Boolean(
         config.ticket_panel_channel_id && config.ticket_category_id &&
@@ -771,12 +823,12 @@ async function buildTicketHome(guild: Guild) {
     };
 }
 
-async function buildSection(section: ConfigSection, guild: Guild) {
-    if (section === 'xp') return buildXpHome(guild);
-    if (section === 'invites') return buildInviteSection(guild);
-    if (section === 'timezone') return buildTimezoneSection(guild);
-    if (section === 'moderation') return buildModerationHub(guild);
-    if (section === 'tickets') return buildTicketHome(guild);
+async function buildSectionLegacy(section: ConfigSection, guild: Guild) {
+    if (section === 'xp') return buildXpHomeLegacy(guild);
+    if (section === 'invites') return buildInviteSectionLegacy(guild);
+    if (section === 'timezone') return buildTimezoneSectionLegacy(guild);
+    if (section === 'moderation') return buildModerationHubLegacy(guild);
+    if (section === 'tickets') return buildTicketHomeLegacy(guild);
     const embed = createKeplerEmbed()
         .setColor(PANEL_COLOR)
         .setTitle(sectionLabel(section))
@@ -921,7 +973,7 @@ async function buildSection(section: ConfigSection, guild: Guild) {
     };
 }
 
-async function buildTimezoneSection(guild: Guild) {
+async function buildTimezoneSectionLegacy(guild: Guild) {
     const timezone = await getServerTimezone(guild.id);
     const now = new Date();
     const select = new StringSelectMenuBuilder()
@@ -958,7 +1010,7 @@ async function buildTimezoneSection(guild: Guild) {
     };
 }
 
-async function buildInviteSection(guild: Guild) {
+async function buildInviteSectionLegacy(guild: Guild) {
     const settings = await getInviteSettings(guild.id);
     return {
         content: '',
@@ -989,7 +1041,7 @@ async function buildInviteSection(guild: Guild) {
     };
 }
 
-async function buildInviteGeneral(guild: Guild) {
+async function buildInviteGeneralLegacy(guild: Guild) {
     const settings = await getInviteSettings(guild.id);
     return {
         content: '',
@@ -1005,7 +1057,7 @@ async function buildInviteGeneral(guild: Guild) {
     };
 }
 
-async function buildInviteChannels(guild: Guild) {
+async function buildInviteChannelsLegacy(guild: Guild) {
     const settings = await getInviteSettings(guild.id);
     const logChannel = new ChannelSelectMenuBuilder().setCustomId('settings:invites:log-channel')
         .setPlaceholder('Salon du journal d’invitations').addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement).setMinValues(1).setMaxValues(1);
@@ -1030,7 +1082,7 @@ async function buildInviteChannels(guild: Guild) {
     };
 }
 
-async function buildInviteLogs(guild: Guild) {
+async function buildInviteLogsLegacy(guild: Guild) {
     const settings = await getInviteSettings(guild.id);
     return {
         content: '',
@@ -1046,7 +1098,7 @@ async function buildInviteLogs(guild: Guild) {
     };
 }
 
-async function buildInviteWelcome(guild: Guild) {
+async function buildInviteWelcomeLegacy(guild: Guild) {
     const settings = await getInviteSettings(guild.id);
     return {
         content: '',
@@ -1064,7 +1116,7 @@ async function buildInviteWelcome(guild: Guild) {
     };
 }
 
-async function buildInviteFields(guild: Guild) {
+async function buildInviteFieldsLegacy(guild: Guild) {
     const settings = await getInviteSettings(guild.id);
     const choices: Array<[InviteDisplayKey, string, string]> = [
         ['show_invite_code', 'Fin du lien', '🔗'],
@@ -1101,7 +1153,7 @@ async function buildInviteFields(guild: Guild) {
     };
 }
 
-async function buildModerationHub(guild: Guild) {
+async function buildModerationHubLegacy(guild: Guild) {
     const [settings, moderationChannelId, muteRoleId, reportChannelId, reportRoleId] = await Promise.all([
         getAutoModSettings(guild.id),
         getModerationChannel(guild.id),
@@ -1148,7 +1200,7 @@ async function buildModerationHub(guild: Guild) {
     };
 }
 
-async function buildModerationLogs(guild: Guild) {
+async function buildModerationLogsLegacy(guild: Guild) {
     const channelId = await getModerationChannel(guild.id);
     const select = new ChannelSelectMenuBuilder()
         .setCustomId('settings:automod:log-channel')
@@ -1179,7 +1231,7 @@ async function buildModerationLogs(guild: Guild) {
     };
 }
 
-async function buildAutoModHome(guild: Guild) {
+async function buildAutoModHomeLegacy(guild: Guild) {
     const [settings, logChannelId, stats] = await Promise.all([
         getAutoModSettings(guild.id),
         getModerationChannel(guild.id),
@@ -1241,7 +1293,7 @@ async function buildAutoModHome(guild: Guild) {
     };
 }
 
-async function buildAutoModGeneral(guild: Guild) {
+async function buildAutoModGeneralLegacy(guild: Guild) {
     const settings = await getAutoModSettings(guild.id);
     return {
         content: '',
@@ -1280,7 +1332,7 @@ async function buildAutoModGeneral(guild: Guild) {
     };
 }
 
-async function buildAutoModFilters(guild: Guild) {
+async function buildAutoModFiltersLegacy(guild: Guild) {
     const settings = await getAutoModSettings(guild.id);
     return {
         content: '',
@@ -1306,7 +1358,7 @@ async function buildAutoModFilters(guild: Guild) {
     };
 }
 
-async function buildAutoModSanctions(guild: Guild) {
+async function buildAutoModSanctionsLegacy(guild: Guild) {
     const settings = await getAutoModSettings(guild.id);
     return {
         content: '',
@@ -1331,7 +1383,7 @@ async function buildAutoModSanctions(guild: Guild) {
     };
 }
 
-async function buildAutoModRules(guild: Guild) {
+async function buildAutoModRulesLegacy(guild: Guild) {
     const settings = await getAutoModSettings(guild.id);
     const rules: Array<[AutoModRuleKey, string, string]> = [
         ['anti_link_enabled', 'Liens externes', '🌐'],
@@ -1371,7 +1423,7 @@ async function buildAutoModRules(guild: Guild) {
     };
 }
 
-async function buildAutoModExemptions(guild: Guild) {
+async function buildAutoModExemptionsLegacy(guild: Guild) {
     const settings = await getAutoModSettings(guild.id);
     const channels = new ChannelSelectMenuBuilder()
         .setCustomId('settings:automod:excluded-channels')
@@ -1412,7 +1464,7 @@ async function buildAutoModExemptions(guild: Guild) {
     };
 }
 
-async function buildXpHome(guild: Guild) {
+async function buildXpHomeLegacy(guild: Guild) {
     const [settings, rewards, boosts] = await Promise.all([
         getXpSettings(guild.id),
         getXpRewards(guild.id),
@@ -1453,7 +1505,7 @@ async function buildXpHome(guild: Guild) {
     };
 }
 
-async function buildXpGeneral(guild: Guild) {
+async function buildXpGeneralLegacy(guild: Guild) {
     const settings = await getXpSettings(guild.id);
     const levelChannelSelect = new ChannelSelectMenuBuilder()
         .setCustomId('settings:xp:level-channel')
@@ -1501,7 +1553,7 @@ async function buildXpGeneral(guild: Guild) {
     };
 }
 
-async function buildXpBoosts(guild: Guild) {
+async function buildXpBoostsLegacy(guild: Guild) {
     const [settings, boosts] = await Promise.all([
         getXpSettings(guild.id),
         getXpRoleBoosts(guild.id)
@@ -1549,7 +1601,7 @@ async function buildXpBoosts(guild: Guild) {
     };
 }
 
-async function buildXpRewards(guild: Guild) {
+async function buildXpRewardsLegacy(guild: Guild) {
     const rewards = await getXpRewards(guild.id);
     const components: ActionRowBuilder<any>[] = [
         new ActionRowBuilder<RoleSelectMenuBuilder>().addComponents(
@@ -1587,7 +1639,7 @@ async function buildXpRewards(guild: Guild) {
     };
 }
 
-async function buildXpExclusions(guild: Guild) {
+async function buildXpExclusionsLegacy(guild: Guild) {
     const settings = await getXpSettings(guild.id);
     const channelSelect = new ChannelSelectMenuBuilder()
         .setCustomId('settings:xp:excluded-channels')
@@ -1628,7 +1680,7 @@ async function buildXpExclusions(guild: Guild) {
     };
 }
 
-async function buildXpLogs(guild: Guild) {
+async function buildXpLogsLegacy(guild: Guild) {
     const settings = await getXpSettings(guild.id);
     const select = new ChannelSelectMenuBuilder()
         .setCustomId('settings:xp:log-channel')
@@ -1662,7 +1714,7 @@ async function buildXpLogs(guild: Guild) {
     };
 }
 
-function buildDisableConfirmation(section: ConfigSection) {
+function buildDisableConfirmationLegacy(section: ConfigSection) {
     const embed = createKeplerEmbed()
         .setColor(KEPLER_COLORS.danger)
         .setTitle('Confirmer la désactivation')
@@ -1674,7 +1726,7 @@ function buildDisableConfirmation(section: ConfigSection) {
     return { content: '', embeds: [embed], components: [row] };
 }
 
-function buildMuteCreationConfirmation() {
+function buildMuteCreationConfirmationLegacy() {
     const embed = createKeplerEmbed()
         .setColor(KEPLER_COLORS.warning)
         .setTitle('Créer un rôle de mute')
@@ -1684,6 +1736,110 @@ function buildMuteCreationConfirmation() {
         new ButtonBuilder().setCustomId('settings:section:mute').setLabel('Annuler').setStyle(ButtonStyle.Secondary)
     );
     return { content: '', embeds: [embed], components: [row] };
+}
+
+async function buildOverview(interaction: ChatInputCommandInteraction, notice?: string) {
+    return toComponentsV2(await buildOverviewLegacy(interaction, notice));
+}
+
+async function buildTicketHome(guild: Guild) {
+    return toComponentsV2(await buildTicketHomeLegacy(guild));
+}
+
+async function buildSection(section: ConfigSection, guild: Guild) {
+    return toComponentsV2(await buildSectionLegacy(section, guild));
+}
+
+async function buildTimezoneSection(guild: Guild) {
+    return toComponentsV2(await buildTimezoneSectionLegacy(guild));
+}
+
+async function buildInviteSection(guild: Guild) {
+    return toComponentsV2(await buildInviteSectionLegacy(guild));
+}
+
+async function buildInviteGeneral(guild: Guild) {
+    return toComponentsV2(await buildInviteGeneralLegacy(guild));
+}
+
+async function buildInviteChannels(guild: Guild) {
+    return toComponentsV2(await buildInviteChannelsLegacy(guild));
+}
+
+async function buildInviteLogs(guild: Guild) {
+    return toComponentsV2(await buildInviteLogsLegacy(guild));
+}
+
+async function buildInviteWelcome(guild: Guild) {
+    return toComponentsV2(await buildInviteWelcomeLegacy(guild));
+}
+
+async function buildInviteFields(guild: Guild) {
+    return toComponentsV2(await buildInviteFieldsLegacy(guild));
+}
+
+async function buildModerationHub(guild: Guild) {
+    return toComponentsV2(await buildModerationHubLegacy(guild));
+}
+
+async function buildModerationLogs(guild: Guild) {
+    return toComponentsV2(await buildModerationLogsLegacy(guild));
+}
+
+async function buildAutoModHome(guild: Guild) {
+    return toComponentsV2(await buildAutoModHomeLegacy(guild));
+}
+
+async function buildAutoModGeneral(guild: Guild) {
+    return toComponentsV2(await buildAutoModGeneralLegacy(guild));
+}
+
+async function buildAutoModFilters(guild: Guild) {
+    return toComponentsV2(await buildAutoModFiltersLegacy(guild));
+}
+
+async function buildAutoModSanctions(guild: Guild) {
+    return toComponentsV2(await buildAutoModSanctionsLegacy(guild));
+}
+
+async function buildAutoModRules(guild: Guild) {
+    return toComponentsV2(await buildAutoModRulesLegacy(guild));
+}
+
+async function buildAutoModExemptions(guild: Guild) {
+    return toComponentsV2(await buildAutoModExemptionsLegacy(guild));
+}
+
+async function buildXpHome(guild: Guild) {
+    return toComponentsV2(await buildXpHomeLegacy(guild));
+}
+
+async function buildXpGeneral(guild: Guild) {
+    return toComponentsV2(await buildXpGeneralLegacy(guild));
+}
+
+async function buildXpBoosts(guild: Guild) {
+    return toComponentsV2(await buildXpBoostsLegacy(guild));
+}
+
+async function buildXpRewards(guild: Guild) {
+    return toComponentsV2(await buildXpRewardsLegacy(guild));
+}
+
+async function buildXpExclusions(guild: Guild) {
+    return toComponentsV2(await buildXpExclusionsLegacy(guild));
+}
+
+async function buildXpLogs(guild: Guild) {
+    return toComponentsV2(await buildXpLogsLegacy(guild));
+}
+
+function buildDisableConfirmation(section: ConfigSection) {
+    return toComponentsV2(buildDisableConfirmationLegacy(section));
+}
+
+function buildMuteCreationConfirmation() {
+    return toComponentsV2(buildMuteCreationConfirmationLegacy());
 }
 
 async function updateChannelSection(section: ConfigSection, guildId: string, channelId: string) {
