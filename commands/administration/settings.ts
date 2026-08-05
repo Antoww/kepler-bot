@@ -94,6 +94,7 @@ type LegacySettingsView = {
     content?: string;
     embeds?: EmbedBuilder[];
     components?: ActionRowBuilder<any>[];
+    groupFieldsWithComponents?: boolean;
 };
 
 function toComponentsV2(view: LegacySettingsView) {
@@ -107,7 +108,19 @@ function toComponentsV2(view: LegacySettingsView) {
 
     if (heading) container.addTextDisplayComponents(new TextDisplayBuilder().setContent(heading));
 
-    if (embed?.fields?.length) {
+    if (embed?.fields?.length && view.groupFieldsWithComponents) {
+        if (heading) container.addSeparatorComponents(new SeparatorBuilder().setDivider(true));
+        embed.fields.forEach((field, index) => {
+            container.addTextDisplayComponents(
+                new TextDisplayBuilder().setContent(`### ${field.name}\n${field.value}`)
+            );
+            const row = view.components?.[index];
+            if (row) container.addActionRowComponents(row);
+            if (index < embed.fields!.length - 1) {
+                container.addSeparatorComponents(new SeparatorBuilder().setDivider(true));
+            }
+        });
+    } else if (embed?.fields?.length) {
         if (heading) container.addSeparatorComponents(new SeparatorBuilder().setDivider(true));
         container.addTextDisplayComponents(
             new TextDisplayBuilder().setContent(
@@ -116,11 +129,14 @@ function toComponentsV2(view: LegacySettingsView) {
         );
     }
 
-    if (view.components?.length) {
+    const remainingComponents = view.groupFieldsWithComponents
+        ? view.components?.slice(embed?.fields?.length ?? 0)
+        : view.components;
+    if (remainingComponents?.length) {
         if (heading || embed?.fields?.length) {
             container.addSeparatorComponents(new SeparatorBuilder().setDivider(true));
         }
-        container.addActionRowComponents(...view.components);
+        container.addActionRowComponents(...remainingComponents);
     }
 
     const footer = embed?.footer?.text;
@@ -668,7 +684,9 @@ async function handleComponent(component: MessageComponentInteraction, source: C
 
     if (component.isStringSelectMenu()) {
         await component.deferUpdate();
-        if (component.customId === 'settings:timezone:common') {
+        if (component.customId.startsWith('settings:navigate:')) {
+            await component.editReply(await buildSection(component.values[0] as ConfigSection, guild));
+        } else if (component.customId === 'settings:timezone:common') {
             await updateServerTimezone(guild.id, component.values[0]);
             await component.editReply(await buildTimezoneSection(guild));
         } else if (component.customId === 'settings:xp:remove-boost') {
@@ -684,14 +702,13 @@ async function handleComponent(component: MessageComponentInteraction, source: C
 async function buildOverviewLegacy(interaction: ChatInputCommandInteraction, notice?: string) {
     const guild = interaction.guild!;
     const dashboardUrl = getDashboardUrl(guild.id);
-    const [logs, moderation, automod, birthdays, mute, reports, reportRole, tickets, xpSettings, xpRewards, inviteSettings, timezone] = await Promise.all([
+    const [logs, moderation, automod, birthdays, mute, reports, tickets, xpSettings, xpRewards, inviteSettings, timezone] = await Promise.all([
         getLogChannel(guild.id),
         getModerationChannel(guild.id),
         getAutoModSettings(guild.id),
         getBirthdayChannel(guild.id),
         getMuteRole(guild.id),
         getReportChannel(guild.id),
-        getReportRole(guild.id),
         getTicketConfig(guild.id),
         getXpSettings(guild.id),
         getXpRewards(guild.id),
@@ -714,48 +731,61 @@ async function buildOverviewLegacy(interaction: ChatInputCommandInteraction, not
                     : 'Sélectionnez une catégorie pour modifier sa configuration.'
         )
         .addFields(
-            { name: '📑 Logs serveur', value: formatChannel(guild, logs), inline: true },
             {
-                name: '🛡️ Modération',
-                value: `${automod.enabled ? '🟢 AutoMod actif' : '⚪ AutoMod désactivé'} · ` +
-                    `journal ${formatChannel(guild, moderation)} · reports ${formatChannel(guild, reports)} · ` +
-                    `mute ${formatRole(guild, mute)}`,
+                name: '🛡️ Modération et sécurité',
+                value:
+                    `${statusIcon(automod.enabled)} AutoMod  ·  📑 Logs ${formatCompactChannel(guild, logs)}\n` +
+                    `🧾 Journal ${formatCompactChannel(guild, moderation)}  ·  🚩 Signalements ${formatCompactChannel(guild, reports)}\n` +
+                    `🔇 Mute ${formatCompactRole(guild, mute)}`,
                 inline: false
             },
-            { name: '🎂 Anniversaires', value: formatChannel(guild, birthdays), inline: true },
-            { name: '🎫 Panneau de tickets', value: formatChannel(guild, tickets.ticket_panel_channel_id), inline: true },
-            { name: '📁 Catégorie des tickets', value: formatChannel(guild, tickets.ticket_category_id), inline: true },
-            { name: '🧾 Logs des tickets', value: formatChannel(guild, tickets.ticket_log_channel_id), inline: true },
-            { name: '🧑‍💻 Rôle support', value: formatOptionalRole(guild, tickets.ticket_support_role_id), inline: true },
             {
-                name: '✨ Expérience',
-                value: xpSettings.enabled
-                    ? `🟢 Actif · ${xpSettings.cooldown_seconds}s · ${xpRewards.length} récompense(s)`
-                    : '⚪ Désactivé',
-                inline: true
+                name: '👥 Communauté et engagement',
+                value:
+                    `🎂 Anniversaires ${formatCompactChannel(guild, birthdays)}\n` +
+                    `${statusIcon(xpSettings.enabled)} XP ${xpSettings.enabled ? `· ${xpSettings.cooldown_seconds}s · ${xpRewards.length} récompense(s)` : 'désactivée'}\n` +
+                    `${statusIcon(inviteSettings.enabled)} Invitations ${inviteSettings.enabled ? `· ${formatCompactChannel(guild, inviteSettings.log_channel_id)}` : 'désactivées'}`,
+                inline: false
             },
             {
-                name: '🔗 Invitations',
-                value: inviteSettings.enabled
-                    ? `🟢 Actif · logs ${formatChannel(guild, inviteSettings.log_channel_id)}`
-                    : '⚪ Désactivé',
-                inline: true
+                name: '🧰 Gestion du serveur',
+                value:
+                    `🎫 Tickets ${formatCompactChannel(guild, tickets.ticket_panel_channel_id)}  ·  📁 ${formatCompactChannel(guild, tickets.ticket_category_id)}\n` +
+                    `🧾 Journal ${formatCompactChannel(guild, tickets.ticket_log_channel_id)}  ·  🧑‍💻 ${formatCompactOptionalRole(guild, tickets.ticket_support_role_id)}\n` +
+                    `🌍 Fuseau \`${timezone}\``,
+                inline: false
             },
-            { name: '🌍 Fuseau horaire', value: `\`${timezone}\``, inline: true }
         )
         .setFooter({ text: 'Panneau privé • expiration dans 5 minutes' })
         .setTimestamp();
 
-    const categories = new ActionRowBuilder<ButtonBuilder>().addComponents(
-        new ButtonBuilder().setCustomId('settings:section:logs').setLabel('Logs').setEmoji('📑').setStyle(ButtonStyle.Secondary),
-        new ButtonBuilder().setCustomId('settings:section:moderation').setLabel('Modération').setEmoji('🛡️').setStyle(ButtonStyle.Secondary),
-        new ButtonBuilder().setCustomId('settings:section:birthdays').setLabel('Anniversaires').setEmoji('🎂').setStyle(ButtonStyle.Secondary)
+    const moderationMenu = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
+        new StringSelectMenuBuilder()
+            .setCustomId('settings:navigate:moderation')
+            .setPlaceholder('Configurer la modération et la sécurité')
+            .addOptions(
+                { label: 'Modération', description: 'AutoMod, journaux, mute et signalements', value: 'moderation', emoji: '🛡️' },
+                { label: 'Logs du serveur', description: 'Événements généraux du serveur', value: 'logs', emoji: '📑' }
+            )
     );
-    const modules = new ActionRowBuilder<ButtonBuilder>().addComponents(
-        new ButtonBuilder().setCustomId('settings:section:tickets').setLabel('Tickets').setEmoji('🎫').setStyle(ButtonStyle.Secondary),
-        new ButtonBuilder().setCustomId('settings:section:xp').setLabel('Expérience').setEmoji('✨').setStyle(ButtonStyle.Secondary),
-        new ButtonBuilder().setCustomId('settings:section:invites').setLabel('Invitations').setEmoji('🔗').setStyle(ButtonStyle.Secondary),
-        new ButtonBuilder().setCustomId('settings:section:timezone').setLabel('Fuseau').setEmoji('🌍').setStyle(ButtonStyle.Secondary)
+    const communityMenu = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
+        new StringSelectMenuBuilder()
+            .setCustomId('settings:navigate:community')
+            .setPlaceholder('Configurer la communauté et l’engagement')
+            .addOptions(
+                { label: 'Anniversaires', description: 'Salon des annonces d’anniversaire', value: 'birthdays', emoji: '🎂' },
+                { label: 'Expérience', description: 'Niveaux, récompenses et boosts', value: 'xp', emoji: '✨' },
+                { label: 'Invitations', description: 'Suivi des liens et arrivées', value: 'invites', emoji: '🔗' }
+            )
+    );
+    const serverMenu = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
+        new StringSelectMenuBuilder()
+            .setCustomId('settings:navigate:server')
+            .setPlaceholder('Configurer les outils du serveur')
+            .addOptions(
+                { label: 'Tickets', description: 'Panneau, accès et apparence', value: 'tickets', emoji: '🎫' },
+                { label: 'Fuseau horaire', description: 'Dates et planifications', value: 'timezone', emoji: '🌍' }
+            )
     );
     const actions = new ActionRowBuilder<ButtonBuilder>();
     if (dashboardUrl) {
@@ -772,7 +802,12 @@ async function buildOverviewLegacy(interaction: ChatInputCommandInteraction, not
         new ButtonBuilder().setCustomId('settings:close').setEmoji('✖️').setStyle(ButtonStyle.Secondary)
     );
 
-    return { content: '', embeds: [embed], components: [categories, modules, actions] };
+    return {
+        content: '',
+        embeds: [embed],
+        components: [moderationMenu, communityMenu, serverMenu, actions],
+        groupFieldsWithComponents: true
+    };
 }
 
 function getDashboardUrl(guildId: string): string | null {
@@ -2662,6 +2697,25 @@ function formatRole(guild: Guild, roleId: string | null): string {
 function formatOptionalRole(guild: Guild, roleId: string | null): string {
     if (!roleId) return '⚪ Aucun rôle';
     return guild.roles.cache.has(roleId) ? `🟢 <@&${roleId}>` : '🟠 Rôle introuvable';
+}
+
+function statusIcon(enabled: boolean): string {
+    return enabled ? '✅' : '❌';
+}
+
+function formatCompactChannel(guild: Guild, channelId: string | null): string {
+    if (!channelId) return '❌ Non configuré';
+    return guild.channels.cache.has(channelId) ? `✅ <#${channelId}>` : '⚠️ Introuvable';
+}
+
+function formatCompactRole(guild: Guild, roleId: string | null): string {
+    if (!roleId) return '◽ Timeouts Discord';
+    return guild.roles.cache.has(roleId) ? `✅ <@&${roleId}>` : '⚠️ Introuvable';
+}
+
+function formatCompactOptionalRole(guild: Guild, roleId: string | null): string {
+    if (!roleId) return '❌ Aucun rôle';
+    return guild.roles.cache.has(roleId) ? `✅ <@&${roleId}>` : '⚠️ Introuvable';
 }
 
 function formatSeconds(totalSeconds: number): string {
