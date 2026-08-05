@@ -45,6 +45,8 @@ export const KEPLER_CHART_COLORS = {
     members: KEPLER_HEX.deepBlue,
     channels: KEPLER_HEX.success,
     users: KEPLER_HEX.warning,
+    joins: KEPLER_HEX.success,
+    leaves: KEPLER_HEX.danger,
     neutral: KEPLER_HEX.silver
 } as const;
 

@@ -24,7 +24,7 @@ Commandes réservées aux administrateurs du serveur ou à l'owner du bot.
 | `/annonce` | Envoyer une annonce dans un canal | Admin |
 | `/audit` | Consulter les logs d'audit | Admin |
 | `/giveaway` | Créer et gérer des giveaways | Admin |
-| `/graph` | Statistiques d'utilisation du bot | Owner |
+| `/graph` | Statistiques publiques du serveur et graphiques d’évolution | Administrateur |
 | `/settings` | Configurer les modules du serveur | Admin |
 
 ---

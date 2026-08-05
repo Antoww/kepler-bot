@@ -118,7 +118,7 @@ export async function renderBarChart(
     title: string,
     subtitle: string,
     data: ChartDatum[],
-    color = KEPLER_CHART_COLORS.messages
+    color: string = KEPLER_CHART_COLORS.messages
 ): Promise<Buffer> {
     const items = data.slice(0, 15);
     const maxValue = Math.max(...items.map(item => item.value), 1);

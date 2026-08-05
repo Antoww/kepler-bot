@@ -209,3 +209,31 @@ export async function getInviteMemberStats(
         active_members: Number(row?.active_members ?? 0)
     };
 }
+
+export interface DailyMemberFlow {
+    date: string;
+    joins: number;
+    leaves: number;
+}
+
+export async function getMemberFlowStats(guildId: string, days: number | null = 30): Promise<DailyMemberFlow[]> {
+    const since = days === null ? null : new Date(Date.now() - days * 86_400_000).toISOString();
+    const { data, error } = await supabase.rpc('get_guild_member_flow', {
+        p_guild_id: guildId,
+        p_since: since
+    });
+    if (error) throw new Error(`Évolution des membres impossible : ${error.message}`);
+
+    const values = new Map<string, DailyMemberFlow>((data ?? []).map((row: any) => [
+        String(row.stat_date),
+        { date: String(row.stat_date), joins: Number(row.joins ?? 0), leaves: Number(row.leaves ?? 0) }
+    ]));
+    if (days === null) return [...values.values()];
+
+    const result: DailyMemberFlow[] = [];
+    for (let offset = days - 1; offset >= 0; offset--) {
+        const date = new Date(Date.now() - offset * 86_400_000).toISOString().slice(0, 10);
+        result.push(values.get(date) ?? { date, joins: 0, leaves: 0 });
+    }
+    return result;
+}
