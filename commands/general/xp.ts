@@ -143,17 +143,22 @@ async function showLeaderboard(interaction: ChatInputCommandInteraction) {
         return `${marker} <@${profile.user_id}> — niveau **${profile.level}** · ${profile.xp.toLocaleString('fr-FR')} XP`;
     });
 
-    const heading = new SectionBuilder()
-        .addTextDisplayComponents(
-            new TextDisplayBuilder().setContent(
-                `-# KEPLER • CLASSEMENT XP\n## ${interaction.guild!.name}\n` +
-                'Les dix membres ayant accumulé le plus d’expérience.'
-            )
-        );
+    const headingContent = new TextDisplayBuilder().setContent(
+        `-# KEPLER • CLASSEMENT XP\n## ${interaction.guild!.name}\n` +
+        'Les dix membres ayant accumulé le plus d’expérience.'
+    );
     const iconUrl = interaction.guild!.iconURL({ forceStatic: true });
-    if (iconUrl) heading.setThumbnailAccessory(new ThumbnailBuilder().setURL(iconUrl));
-    const container = xpContainer('primary')
-        .addSectionComponents(heading)
+    const container = xpContainer('primary');
+    if (iconUrl) {
+        container.addSectionComponents(
+            new SectionBuilder()
+                .addTextDisplayComponents(headingContent)
+                .setThumbnailAccessory(new ThumbnailBuilder().setURL(iconUrl))
+        );
+    } else {
+        container.addTextDisplayComponents(headingContent);
+    }
+    container
         .addSeparatorComponents(new SeparatorBuilder().setDivider(true))
         .addTextDisplayComponents(
             new TextDisplayBuilder().setContent(rows.join('\n') || KEPLER_MESSAGES.noData)
