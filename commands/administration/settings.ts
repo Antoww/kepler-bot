@@ -64,7 +64,7 @@ import {
     type AutoModEscalationStep
 } from '../../utils/moderation/automodService.ts';
 
-type ConfigSection = 'logs' | 'moderation' | 'birthdays' | 'mute' | 'reports' | 'tickets' | 'xp' | 'invites' | 'timezone';
+type ConfigSection = 'logs' | 'moderation' | 'birthdays' | 'mute' | 'reports' | 'tickets' | 'tickets-placement' | 'xp' | 'invites' | 'timezone';
 type InviteDisplayKey =
     | 'show_invite_code'
     | 'show_inviter'
@@ -345,35 +345,35 @@ async function handleComponent(component: MessageComponentInteraction, source: C
             const settings = await getInviteSettings(guild.id);
             await component.deferUpdate();
             await updateInviteSettings(guild.id, { enabled: !settings.enabled });
-            await component.editReply(await buildInviteSection(guild));
+            await component.editReply(await buildInviteGeneral(guild));
             return;
         }
         if (component.customId === 'settings:invites:welcome-toggle') {
             const settings = await getInviteSettings(guild.id);
             await component.deferUpdate();
             await updateInviteSettings(guild.id, { welcome_enabled: !settings.welcome_enabled });
-            await component.editReply(await buildInviteSection(guild));
+            await component.editReply(await buildInviteWelcome(guild));
             return;
         }
         if (component.customId === 'settings:invites:create-log-toggle') {
             const settings = await getInviteSettings(guild.id);
             await component.deferUpdate();
             await updateInviteSettings(guild.id, { log_invite_create: !settings.log_invite_create });
-            await component.editReply(await buildInviteSection(guild));
+            await component.editReply(await buildInviteLogs(guild));
             return;
         }
         if (component.customId === 'settings:invites:delete-log-toggle') {
             const settings = await getInviteSettings(guild.id);
             await component.deferUpdate();
             await updateInviteSettings(guild.id, { log_invite_delete: !settings.log_invite_delete });
-            await component.editReply(await buildInviteSection(guild));
+            await component.editReply(await buildInviteLogs(guild));
             return;
         }
         if (component.customId === 'settings:invites:use-log-toggle') {
             const settings = await getInviteSettings(guild.id);
             await component.deferUpdate();
             await updateInviteSettings(guild.id, { log_invite_use: !settings.log_invite_use });
-            await component.editReply(await buildInviteSection(guild));
+            await component.editReply(await buildInviteLogs(guild));
             return;
         }
         if (component.customId === 'settings:invites:customize') {
@@ -382,6 +382,22 @@ async function handleComponent(component: MessageComponentInteraction, source: C
         }
         if (component.customId === 'settings:invites:fields') {
             await component.update(await buildInviteFields(guild));
+            return;
+        }
+        if (component.customId === 'settings:invites:general') {
+            await component.update(await buildInviteGeneral(guild));
+            return;
+        }
+        if (component.customId === 'settings:invites:channels') {
+            await component.update(await buildInviteChannels(guild));
+            return;
+        }
+        if (component.customId === 'settings:invites:logs') {
+            await component.update(await buildInviteLogs(guild));
+            return;
+        }
+        if (component.customId === 'settings:invites:welcome') {
+            await component.update(await buildInviteWelcome(guild));
             return;
         }
         if (component.customId === 'settings:invites:home') {
@@ -403,7 +419,7 @@ async function handleComponent(component: MessageComponentInteraction, source: C
                 welcome_channel_id: null,
                 welcome_enabled: false
             });
-            await component.editReply(await buildInviteSection(guild));
+            await component.editReply(await buildInviteChannels(guild));
             return;
         }
         if (component.customId.startsWith('settings:disable:')) {
@@ -424,6 +440,10 @@ async function handleComponent(component: MessageComponentInteraction, source: C
         }
         if (component.customId === 'settings:tickets:customize') {
             await customizeTicketPanel(component, source);
+            return;
+        }
+        if (component.customId === 'settings:tickets:placement') {
+            await component.update(await buildSection('tickets-placement', guild));
             return;
         }
         if (component.customId === 'settings:tickets:publish') {
@@ -479,7 +499,7 @@ async function handleComponent(component: MessageComponentInteraction, source: C
         if (component.customId === 'settings:invites:log-channel') {
             await component.deferUpdate();
             await updateInviteSettings(guild.id, { log_channel_id: channelId });
-            await component.editReply(await buildInviteSection(guild));
+            await component.editReply(await buildInviteChannels(guild));
             return;
         }
         if (component.customId === 'settings:invites:welcome-channel') {
@@ -488,7 +508,7 @@ async function handleComponent(component: MessageComponentInteraction, source: C
                 welcome_channel_id: channelId,
                 welcome_enabled: true
             });
-            await component.editReply(await buildInviteSection(guild));
+            await component.editReply(await buildInviteChannels(guild));
             return;
         }
         if (component.customId === 'settings:automod:log-channel') {
@@ -506,17 +526,17 @@ async function handleComponent(component: MessageComponentInteraction, source: C
         await component.deferUpdate();
         if (component.customId === 'settings:select:tickets-category') {
             await updateTicketConfig(guild.id, { ticket_category_id: channelId });
-            await confirmSettingChange(component, source, 'tickets', `Catégorie des tickets configurée sur <#${channelId}>.`);
+            await component.editReply(await buildSection('tickets-placement', guild));
             return;
         }
         if (component.customId === 'settings:select:tickets-logs') {
             await updateTicketConfig(guild.id, { ticket_log_channel_id: channelId });
-            await confirmSettingChange(component, source, 'tickets', `Salon des logs de tickets configuré sur <#${channelId}>.`);
+            await component.editReply(await buildSection('tickets-placement', guild));
             return;
         }
         if (component.customId === 'settings:select:tickets-channel') {
             await updateTicketConfig(guild.id, { ticket_panel_channel_id: channelId });
-            await confirmSettingChange(component, source, 'tickets', `Salon du panneau configuré sur <#${channelId}>.`);
+            await component.editReply(await buildSection('tickets-placement', guild));
             return;
         }
         if (component.customId === 'settings:select:reports-channel') {
@@ -567,7 +587,7 @@ async function handleComponent(component: MessageComponentInteraction, source: C
             }
             await component.deferUpdate();
             await updateTicketConfig(guild.id, { ticket_support_role_id: role.id });
-            await confirmSettingChange(component, source, 'tickets', `Rôle support configuré sur ${role}.`);
+            await component.editReply(await buildSection('tickets-placement', guild));
             return;
         }
         if (component.customId === 'settings:select:reports-role') {
@@ -717,18 +737,53 @@ function getDashboardUrl(guildId: string): string | null {
     }
 }
 
+async function buildTicketHome(guild: Guild) {
+    const config = await getTicketConfig(guild.id);
+    const ready = Boolean(
+        config.ticket_panel_channel_id && config.ticket_category_id &&
+        config.ticket_log_channel_id && config.ticket_support_role_id
+    );
+    return {
+        content: '',
+        embeds: [
+            createKeplerEmbed(ready ? 'primary' : 'neutral')
+                .setTitle('Tickets')
+                .setDescription('Préparez les emplacements et l’apparence du panneau, puis publiez-le lorsqu’il est prêt.')
+                .addFields(
+                    { name: 'État', value: ready ? '🟢 Configuration complète' : '🟠 Configuration incomplète', inline: false },
+                    { name: 'Panneau', value: formatChannel(guild, config.ticket_panel_channel_id), inline: true },
+                    { name: 'Catégorie', value: formatChannel(guild, config.ticket_category_id), inline: true },
+                    { name: 'Journal', value: formatChannel(guild, config.ticket_log_channel_id), inline: true },
+                    { name: 'Rôle support', value: formatOptionalRole(guild, config.ticket_support_role_id), inline: true },
+                    { name: 'Titre du panneau', value: config.ticket_panel_title, inline: false }
+                )
+                .setFooter({ text: guild.name })
+        ],
+        components: [
+            new ActionRowBuilder<ButtonBuilder>().addComponents(
+                new ButtonBuilder().setCustomId('settings:tickets:placement').setLabel('Emplacements et accès').setEmoji('📍').setStyle(ButtonStyle.Primary),
+                new ButtonBuilder().setCustomId('settings:tickets:customize').setLabel('Apparence du panneau').setEmoji('✏️').setStyle(ButtonStyle.Secondary),
+                new ButtonBuilder().setCustomId('settings:tickets:publish').setLabel('Publier le panneau').setEmoji('📨').setStyle(ButtonStyle.Success),
+                new ButtonBuilder().setCustomId('settings:disable:tickets').setLabel('Désactiver').setStyle(ButtonStyle.Danger)
+            ),
+            new ActionRowBuilder<ButtonBuilder>().addComponents(backButton())
+        ]
+    };
+}
+
 async function buildSection(section: ConfigSection, guild: Guild) {
     if (section === 'xp') return buildXpHome(guild);
     if (section === 'invites') return buildInviteSection(guild);
     if (section === 'timezone') return buildTimezoneSection(guild);
     if (section === 'moderation') return buildModerationHub(guild);
+    if (section === 'tickets') return buildTicketHome(guild);
     const embed = createKeplerEmbed()
         .setColor(PANEL_COLOR)
         .setTitle(sectionLabel(section))
         .setDescription(sectionDescription(section))
         .setFooter({ text: guild.name });
 
-    if (section === 'tickets') {
+    if (section === 'tickets-placement') {
         const config = await getTicketConfig(guild.id);
         const channelSelect = new ChannelSelectMenuBuilder()
             .setCustomId('settings:select:tickets-channel')
@@ -774,10 +829,7 @@ async function buildSection(section: ConfigSection, guild: Guild) {
                 new ActionRowBuilder<RoleSelectMenuBuilder>().addComponents(roleSelect),
                 new ActionRowBuilder<ChannelSelectMenuBuilder>().addComponents(logChannelSelect),
                 new ActionRowBuilder<ButtonBuilder>().addComponents(
-                    new ButtonBuilder().setCustomId('settings:tickets:customize').setLabel('Personnaliser').setEmoji('✏️').setStyle(ButtonStyle.Primary),
-                    new ButtonBuilder().setCustomId('settings:tickets:publish').setLabel('Publier').setEmoji('📨').setStyle(ButtonStyle.Success),
-                    new ButtonBuilder().setCustomId('settings:disable:tickets').setLabel('Désactiver').setStyle(ButtonStyle.Danger),
-                    backButton()
+                    ticketBackButton()
                 )
             ]
         };
@@ -908,74 +960,107 @@ async function buildTimezoneSection(guild: Guild) {
 
 async function buildInviteSection(guild: Guild) {
     const settings = await getInviteSettings(guild.id);
-    const logChannel = new ChannelSelectMenuBuilder()
-        .setCustomId('settings:invites:log-channel')
-        .setPlaceholder('Choisir le salon des logs d’invitations')
-        .addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement)
-        .setMinValues(1)
-        .setMaxValues(1);
-    const welcomeChannel = new ChannelSelectMenuBuilder()
-        .setCustomId('settings:invites:welcome-channel')
-        .setPlaceholder('Choisir le salon des messages d’arrivée')
-        .addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement)
-        .setMinValues(1)
-        .setMaxValues(1);
-    const embed = createKeplerEmbed(settings.enabled ? 'primary' : 'neutral')
-        .setTitle('Manager d’invitations')
-        .setDescription(
-            'Kepler compare les utilisations des liens lors de chaque arrivée. ' +
-            'Il faut lui accorder la permission **Gérer le serveur** pour consulter les invitations.\n\n' +
-            'Variables du message : `{membre}`, `{membre_nom}`, `{serveur}`, `{code}`, `{inviteur}`, ' +
-            '`{utilisations}`, `{membres}`, `{canal}`.'
-        )
-        .addFields(
-            { name: 'Système', value: settings.enabled ? '🟢 Actif' : '⚪ Désactivé', inline: true },
-            { name: 'Logs', value: formatChannel(guild, settings.log_channel_id), inline: true },
-            {
-                name: 'Annonce d’arrivée',
-                value: settings.welcome_enabled
-                    ? formatChannel(guild, settings.welcome_channel_id)
-                    : '⚪ Désactivée',
-                inline: true
-            },
-            { name: 'Message', value: settings.welcome_message.slice(0, 1024), inline: false }
-        )
-        .setFooter({ text: guild.name });
     return {
         content: '',
-        embeds: [embed],
+        embeds: [
+            createKeplerEmbed(settings.enabled ? 'primary' : 'neutral')
+                .setTitle('Invitations')
+                .setDescription('Configurez le suivi des liens et les annonces d’arrivée depuis les rubriques ci-dessous.')
+                .addFields(
+                    { name: 'Système', value: settings.enabled ? '🟢 Actif' : '⚪ Désactivé', inline: true },
+                    { name: 'Journal', value: formatChannel(guild, settings.log_channel_id), inline: true },
+                    {
+                        name: 'Annonce d’arrivée',
+                        value: settings.welcome_enabled ? formatChannel(guild, settings.welcome_channel_id) : '⚪ Désactivée',
+                        inline: true
+                    }
+                )
+                .setFooter({ text: guild.name })
+        ],
+        components: [
+            new ActionRowBuilder<ButtonBuilder>().addComponents(
+                new ButtonBuilder().setCustomId('settings:invites:general').setLabel('Général').setEmoji('⚙️').setStyle(ButtonStyle.Primary),
+                new ButtonBuilder().setCustomId('settings:invites:channels').setLabel('Salons').setEmoji('📍').setStyle(ButtonStyle.Secondary),
+                new ButtonBuilder().setCustomId('settings:invites:logs').setLabel('Événements journalisés').setEmoji('🧾').setStyle(ButtonStyle.Secondary),
+                new ButtonBuilder().setCustomId('settings:invites:welcome').setLabel('Annonce d’arrivée').setEmoji('👋').setStyle(ButtonStyle.Secondary)
+            ),
+            new ActionRowBuilder<ButtonBuilder>().addComponents(backButton())
+        ]
+    };
+}
+
+async function buildInviteGeneral(guild: Guild) {
+    const settings = await getInviteSettings(guild.id);
+    return {
+        content: '',
+        embeds: [createKeplerEmbed(settings.enabled ? 'primary' : 'neutral')
+            .setTitle('Invitations · Général')
+            .setDescription('Le bot doit disposer de la permission **Gérer le serveur** pour comparer les utilisations des liens.')
+            .addFields({ name: 'Manager', value: settings.enabled ? '🟢 Actif' : '⚪ Désactivé', inline: true })
+            .setFooter({ text: guild.name })],
+        components: [new ActionRowBuilder<ButtonBuilder>().addComponents(
+            new ButtonBuilder().setCustomId('settings:invites:toggle').setLabel(settings.enabled ? 'Désactiver' : 'Activer').setStyle(settings.enabled ? ButtonStyle.Danger : ButtonStyle.Success),
+            inviteBackButton()
+        )]
+    };
+}
+
+async function buildInviteChannels(guild: Guild) {
+    const settings = await getInviteSettings(guild.id);
+    const logChannel = new ChannelSelectMenuBuilder().setCustomId('settings:invites:log-channel')
+        .setPlaceholder('Salon du journal d’invitations').addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement).setMinValues(1).setMaxValues(1);
+    const welcomeChannel = new ChannelSelectMenuBuilder().setCustomId('settings:invites:welcome-channel')
+        .setPlaceholder('Salon des annonces d’arrivée').addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement).setMinValues(1).setMaxValues(1);
+    if (settings.log_channel_id && guild.channels.cache.has(settings.log_channel_id)) logChannel.setDefaultChannels(settings.log_channel_id);
+    if (settings.welcome_channel_id && guild.channels.cache.has(settings.welcome_channel_id)) welcomeChannel.setDefaultChannels(settings.welcome_channel_id);
+    return {
+        content: '',
+        embeds: [createKeplerEmbed('primary').setTitle('Invitations · Salons').addFields(
+            { name: 'Journal', value: formatChannel(guild, settings.log_channel_id), inline: true },
+            { name: 'Annonces', value: formatChannel(guild, settings.welcome_channel_id), inline: true }
+        ).setFooter({ text: guild.name })],
         components: [
             new ActionRowBuilder<ChannelSelectMenuBuilder>().addComponents(logChannel),
             new ActionRowBuilder<ChannelSelectMenuBuilder>().addComponents(welcomeChannel),
             new ActionRowBuilder<ButtonBuilder>().addComponents(
-                new ButtonBuilder()
-                    .setCustomId('settings:invites:toggle')
-                    .setLabel(settings.enabled ? 'Désactiver le manager' : 'Activer le manager')
-                    .setStyle(settings.enabled ? ButtonStyle.Danger : ButtonStyle.Success),
-                new ButtonBuilder()
-                    .setCustomId('settings:invites:welcome-toggle')
-                    .setLabel(settings.welcome_enabled ? 'Couper les annonces' : 'Activer les annonces')
-                    .setStyle(settings.welcome_enabled ? ButtonStyle.Secondary : ButtonStyle.Success),
-                new ButtonBuilder()
-                    .setCustomId('settings:invites:create-log-toggle')
-                    .setLabel('Logs création')
-                    .setStyle(settings.log_invite_create ? ButtonStyle.Success : ButtonStyle.Secondary),
-                new ButtonBuilder()
-                    .setCustomId('settings:invites:delete-log-toggle')
-                    .setLabel('Logs suppression')
-                    .setStyle(settings.log_invite_delete ? ButtonStyle.Success : ButtonStyle.Secondary),
-                new ButtonBuilder()
-                    .setCustomId('settings:invites:use-log-toggle')
-                    .setLabel('Logs arrivée')
-                    .setStyle(settings.log_invite_use ? ButtonStyle.Success : ButtonStyle.Secondary)
-            ),
-            new ActionRowBuilder<ButtonBuilder>().addComponents(
-                new ButtonBuilder().setCustomId('settings:invites:customize').setLabel('Personnaliser').setEmoji('✏️').setStyle(ButtonStyle.Primary),
-                new ButtonBuilder().setCustomId('settings:invites:fields').setLabel('Informations affichées').setEmoji('🧩').setStyle(ButtonStyle.Secondary),
-                new ButtonBuilder().setCustomId('settings:invites:clear-channels').setLabel('Retirer les salons').setStyle(ButtonStyle.Danger)
-            ),
-            new ActionRowBuilder<ButtonBuilder>().addComponents(backButton())
+                new ButtonBuilder().setCustomId('settings:invites:clear-channels').setLabel('Retirer les salons').setStyle(ButtonStyle.Danger),
+                inviteBackButton()
+            )
         ]
+    };
+}
+
+async function buildInviteLogs(guild: Guild) {
+    const settings = await getInviteSettings(guild.id);
+    return {
+        content: '',
+        embeds: [createKeplerEmbed('primary').setTitle('Invitations · Événements journalisés')
+            .setDescription('Choisissez précisément les événements envoyés dans le journal d’invitations.')
+            .setFooter({ text: guild.name })],
+        components: [new ActionRowBuilder<ButtonBuilder>().addComponents(
+            new ButtonBuilder().setCustomId('settings:invites:create-log-toggle').setLabel('Création de lien').setStyle(settings.log_invite_create ? ButtonStyle.Success : ButtonStyle.Secondary),
+            new ButtonBuilder().setCustomId('settings:invites:delete-log-toggle').setLabel('Suppression de lien').setStyle(settings.log_invite_delete ? ButtonStyle.Success : ButtonStyle.Secondary),
+            new ButtonBuilder().setCustomId('settings:invites:use-log-toggle').setLabel('Arrivée détectée').setStyle(settings.log_invite_use ? ButtonStyle.Success : ButtonStyle.Secondary),
+            inviteBackButton()
+        )]
+    };
+}
+
+async function buildInviteWelcome(guild: Guild) {
+    const settings = await getInviteSettings(guild.id);
+    return {
+        content: '',
+        embeds: [createKeplerEmbed(settings.welcome_enabled ? 'primary' : 'neutral').setTitle('Invitations · Annonce d’arrivée')
+            .setDescription(settings.welcome_message.slice(0, 1500)).addFields(
+                { name: 'État', value: settings.welcome_enabled ? '🟢 Active' : '⚪ Désactivée', inline: true },
+                { name: 'Salon', value: formatChannel(guild, settings.welcome_channel_id), inline: true }
+            ).setFooter({ text: guild.name })],
+        components: [new ActionRowBuilder<ButtonBuilder>().addComponents(
+            new ButtonBuilder().setCustomId('settings:invites:welcome-toggle').setLabel(settings.welcome_enabled ? 'Désactiver' : 'Activer').setStyle(settings.welcome_enabled ? ButtonStyle.Danger : ButtonStyle.Success),
+            new ButtonBuilder().setCustomId('settings:invites:customize').setLabel('Modifier le message').setEmoji('✏️').setStyle(ButtonStyle.Primary),
+            new ButtonBuilder().setCustomId('settings:invites:fields').setLabel('Informations affichées').setEmoji('🧩').setStyle(ButtonStyle.Secondary),
+            inviteBackButton()
+        )]
     };
 }
 
@@ -1010,7 +1095,7 @@ async function buildInviteFields(guild: Guild) {
             new ActionRowBuilder<ButtonBuilder>().addComponents(...choices.slice(0, 3).map(button)),
             new ActionRowBuilder<ButtonBuilder>().addComponents(...choices.slice(3).map(button)),
             new ActionRowBuilder<ButtonBuilder>().addComponents(
-                new ButtonBuilder().setCustomId('settings:invites:home').setLabel('Retour aux invitations').setEmoji('↩️').setStyle(ButtonStyle.Secondary)
+                new ButtonBuilder().setCustomId('settings:invites:welcome').setLabel('Retour à l’annonce').setEmoji('↩️').setStyle(ButtonStyle.Secondary)
             )
         ]
     };
@@ -1932,7 +2017,7 @@ async function showInviteMessageModal(component: ButtonInteraction, source: Chat
     const message = submission.fields.getTextInputValue('message').trim();
     await submission.deferUpdate();
     await updateInviteSettings(source.guildId!, { welcome_message: message });
-    await submission.editReply(await buildInviteSection(source.guild!));
+    await submission.editReply(await buildInviteWelcome(source.guild!));
 }
 
 async function showXpGeneralModal(component: ButtonInteraction, source: ChatInputCommandInteraction) {
@@ -2386,6 +2471,7 @@ function sectionLabel(section: ConfigSection): string {
         mute: 'Rôle de mute',
         reports: 'Signalements',
         tickets: 'Tickets',
+        'tickets-placement': 'Tickets · Emplacements et accès',
         xp: 'Expérience et niveaux',
         invites: 'Manager d’invitations',
         timezone: 'Fuseau horaire'
@@ -2400,6 +2486,7 @@ function sectionDescription(section: ConfigSection): string {
         mute: 'Sélectionnez un rôle existant, créez-en un automatiquement ou utilisez les timeouts Discord.',
         reports: 'Choisissez le salon qui recevra les signalements et, si nécessaire, le rôle de modération à mentionner.',
         tickets: 'Choisissez où publier le panneau, le rôle support, puis personnalisez son message et son bouton.',
+        'tickets-placement': 'Choisissez les salons, la catégorie et le rôle autorisé à traiter les tickets.',
         xp: 'Configurez la progression, les boosts, les récompenses et les exclusions du serveur.',
         invites: 'Configurez le suivi des liens, les journaux et les annonces d’arrivée.',
         timezone: 'Choisissez le fuseau utilisé pour les dates et planifications du serveur.'
@@ -2444,6 +2531,22 @@ function autoModBackButton(): ButtonBuilder {
     return new ButtonBuilder()
         .setCustomId('settings:automod:home')
         .setLabel('Retour à l’AutoMod')
+        .setEmoji('↩️')
+        .setStyle(ButtonStyle.Secondary);
+}
+
+function inviteBackButton(): ButtonBuilder {
+    return new ButtonBuilder()
+        .setCustomId('settings:invites:home')
+        .setLabel('Retour aux invitations')
+        .setEmoji('↩️')
+        .setStyle(ButtonStyle.Secondary);
+}
+
+function ticketBackButton(): ButtonBuilder {
+    return new ButtonBuilder()
+        .setCustomId('settings:section:tickets')
+        .setLabel('Retour aux tickets')
         .setEmoji('↩️')
         .setStyle(ButtonStyle.Secondary);
 }

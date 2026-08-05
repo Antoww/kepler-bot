@@ -61,6 +61,17 @@ est lui-même divisé en cinq écrans : **Général**, **Protections**, **Filtre
 seuils**, **Sanctions** et **Exemptions**. Chaque sauvegarde ramène dans son
 écran d’origine afin d’éviter de recommencer la navigation.
 
+Les autres modules suivent la même convention :
+
+- **Invitations** : Général, Salons, Événements journalisés et Annonce
+  d’arrivée ;
+- **Tickets** : résumé, Emplacements et accès, Apparence du panneau et
+  Publication ;
+- **Expérience** : Général, Boosts, Récompenses, Exclusions et Journal.
+
+Les écrans simples, comme les logs serveur, les anniversaires et le fuseau
+horaire, restent accessibles directement depuis l’accueil.
+
 Chaque détection est conservée dans `guild_automod_violations` et envoyée dans
 le salon de modération configuré. Si le bot ne peut pas appliquer un timeout,
 le message reste supprimé et l’échec n’empêche pas le traitement des messages
