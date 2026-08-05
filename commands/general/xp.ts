@@ -32,7 +32,18 @@ function xpContainer(tone: keyof typeof KEPLER_COLORS = 'primary') {
 }
 
 function requesterFooter(interaction: ChatInputCommandInteraction) {
-    return new TextDisplayBuilder().setContent(`-# Demandé par ${interaction.user.username}`);
+    const timestamp = Math.floor(Date.now() / 1000);
+    return new SectionBuilder()
+        .addTextDisplayComponents(
+            new TextDisplayBuilder().setContent(
+                `-# Demandé par ${interaction.user.username} • <t:${timestamp}:R>`
+            )
+        )
+        .setThumbnailAccessory(
+            new ThumbnailBuilder()
+                .setURL(interaction.user.displayAvatarURL({ forceStatic: true }))
+                .setDescription(`Avatar de ${interaction.user.username}`)
+        );
 }
 
 export const data = new SlashCommandBuilder()
@@ -90,7 +101,7 @@ async function showProfile(interaction: ChatInputCommandInteraction) {
             xpContainer('neutral')
                 .addSectionComponents(section)
                 .addSeparatorComponents(new SeparatorBuilder().setDivider(false))
-                .addTextDisplayComponents(requesterFooter(interaction))
+                .addSectionComponents(requesterFooter(interaction))
         ));
         return;
     }
@@ -126,7 +137,7 @@ async function showProfile(interaction: ChatInputCommandInteraction) {
             )
         )
         .addSeparatorComponents(new SeparatorBuilder().setDivider(false))
-        .addTextDisplayComponents(
+        .addSectionComponents(
             requesterFooter(interaction)
         );
     await interaction.editReply(xpMessage(container));
@@ -156,7 +167,7 @@ async function showLeaderboard(interaction: ChatInputCommandInteraction) {
             new TextDisplayBuilder().setContent(rows.join('\n') || KEPLER_MESSAGES.noData)
         )
         .addSeparatorComponents(new SeparatorBuilder().setDivider(false))
-        .addTextDisplayComponents(
+        .addSectionComponents(
             requesterFooter(interaction)
         );
     await interaction.editReply(xpMessage(container));

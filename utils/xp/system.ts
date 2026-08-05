@@ -331,6 +331,7 @@ export async function awardMessageXp(message: Message): Promise<void> {
         ? `\n🎁 Récompense obtenue : ${addedRoles.map((id: string) => `<@&${id}>`).join(', ')}`
         : '';
     if (!settings.announce_level_up) return;
+    const announcementTimestamp = Math.floor(Date.now() / 1000);
     const section = new SectionBuilder()
         .addTextDisplayComponents(
             new TextDisplayBuilder().setContent(
@@ -347,7 +348,9 @@ export async function awardMessageXp(message: Message): Promise<void> {
                 .setAccentColor(KEPLER_COLORS.success)
                 .addSectionComponents(section)
                 .addTextDisplayComponents(
-                    new TextDisplayBuilder().setContent('-# Progression Kepler')
+                    new TextDisplayBuilder().setContent(
+                        `-# Progression Kepler • <t:${announcementTimestamp}:R>`
+                    )
                 )
         ],
         flags: MessageFlags.IsComponentsV2 as MessageFlags.IsComponentsV2,

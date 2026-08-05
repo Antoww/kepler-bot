@@ -44,13 +44,16 @@ export async function sendXpLog(
         const details = fields.length
             ? `\n\n${fields.map(field => `**${field.name}** — ${field.value}`).join('\n')}`
             : '';
+        const timestamp = Math.floor(Date.now() / 1000);
         const container = new ContainerBuilder()
             .setAccentColor(KEPLER_COLORS[tone])
             .addTextDisplayComponents(
                 new TextDisplayBuilder().setContent(
                     `-# KEPLER • JOURNAL XP\n## ${title}\n${description}${details}`
                 ),
-                new TextDisplayBuilder().setContent(`-# Journal XP • ${guild.name}`)
+                new TextDisplayBuilder().setContent(
+                    `-# Journal XP • ${guild.name} • <t:${timestamp}:R>`
+                )
             );
         await channel.send({
             components: [container],
