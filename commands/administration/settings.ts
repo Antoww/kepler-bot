@@ -702,7 +702,7 @@ async function handleComponent(component: MessageComponentInteraction, source: C
 async function buildOverviewLegacy(interaction: ChatInputCommandInteraction, notice?: string) {
     const guild = interaction.guild!;
     const dashboardUrl = getDashboardUrl(guild.id);
-    const [logs, moderation, automod, birthdays, mute, reports, tickets, xpSettings, xpRewards, inviteSettings, timezone] = await Promise.all([
+    const [logs, moderation, automod, birthdays, mute, reports, tickets, xpSettings, inviteSettings, timezone] = await Promise.all([
         getLogChannel(guild.id),
         getModerationChannel(guild.id),
         getAutoModSettings(guild.id),
@@ -711,7 +711,6 @@ async function buildOverviewLegacy(interaction: ChatInputCommandInteraction, not
         getReportChannel(guild.id),
         getTicketConfig(guild.id),
         getXpSettings(guild.id),
-        getXpRewards(guild.id),
         getInviteSettings(guild.id),
         getServerTimezone(guild.id)
     ]);
@@ -734,25 +733,26 @@ async function buildOverviewLegacy(interaction: ChatInputCommandInteraction, not
             {
                 name: '🛡️ Modération et sécurité',
                 value:
-                    `${statusIcon(automod.enabled)} AutoMod  ·  📑 Logs ${formatCompactChannel(guild, logs)}\n` +
-                    `🧾 Journal ${formatCompactChannel(guild, moderation)}  ·  🚩 Signalements ${formatCompactChannel(guild, reports)}\n` +
-                    `🔇 Mute ${formatCompactRole(guild, mute)}`,
+                    `${statusIcon(automod.enabled)} **AutoMod** — ${enabledLabel(automod.enabled)}\n` +
+                    `${configurationIcon(logs)} **Logs du serveur** — ${configurationLabel(logs)}\n` +
+                    `${configurationIcon(moderation)} **Journal de modération** — ${configurationLabel(moderation)}\n` +
+                    `${configurationIcon(reports)} **Signalements** — ${configurationLabel(reports)}\n` +
+                    `${mute ? '✅' : '◽'} **Sanctions longues** — ${mute ? 'Rôle configuré' : 'Timeouts Discord'}`,
                 inline: false
             },
             {
                 name: '👥 Communauté et engagement',
                 value:
-                    `🎂 Anniversaires ${formatCompactChannel(guild, birthdays)}\n` +
-                    `${statusIcon(xpSettings.enabled)} XP ${xpSettings.enabled ? `· ${xpSettings.cooldown_seconds}s · ${xpRewards.length} récompense(s)` : 'désactivée'}\n` +
-                    `${statusIcon(inviteSettings.enabled)} Invitations ${inviteSettings.enabled ? `· ${formatCompactChannel(guild, inviteSettings.log_channel_id)}` : 'désactivées'}`,
+                    `${configurationIcon(birthdays)} **Anniversaires** — ${configurationLabel(birthdays)}\n` +
+                    `${statusIcon(xpSettings.enabled)} **Expérience** — ${enabledLabel(xpSettings.enabled)}\n` +
+                    `${statusIcon(inviteSettings.enabled)} **Invitations** — ${enabledLabel(inviteSettings.enabled)}`,
                 inline: false
             },
             {
                 name: '🧰 Gestion du serveur',
                 value:
-                    `🎫 Tickets ${formatCompactChannel(guild, tickets.ticket_panel_channel_id)}  ·  📁 ${formatCompactChannel(guild, tickets.ticket_category_id)}\n` +
-                    `🧾 Journal ${formatCompactChannel(guild, tickets.ticket_log_channel_id)}  ·  🧑‍💻 ${formatCompactOptionalRole(guild, tickets.ticket_support_role_id)}\n` +
-                    `🌍 Fuseau \`${timezone}\``,
+                    `${ticketConfigurationIcon(tickets)} **Tickets** — ${ticketConfigurationLabel(tickets)}\n` +
+                    `✅ **Fuseau horaire** — \`${timezone}\``,
                 inline: false
             },
         )
@@ -2703,19 +2703,33 @@ function statusIcon(enabled: boolean): string {
     return enabled ? '✅' : '❌';
 }
 
-function formatCompactChannel(guild: Guild, channelId: string | null): string {
-    if (!channelId) return '❌ Non configuré';
-    return guild.channels.cache.has(channelId) ? `✅ <#${channelId}>` : '⚠️ Introuvable';
+function enabledLabel(enabled: boolean): string {
+    return enabled ? 'Activé' : 'Désactivé';
 }
 
-function formatCompactRole(guild: Guild, roleId: string | null): string {
-    if (!roleId) return '◽ Timeouts Discord';
-    return guild.roles.cache.has(roleId) ? `✅ <@&${roleId}>` : '⚠️ Introuvable';
+function configurationIcon(value: string | null): string {
+    return value ? '✅' : '❌';
 }
 
-function formatCompactOptionalRole(guild: Guild, roleId: string | null): string {
-    if (!roleId) return '❌ Aucun rôle';
-    return guild.roles.cache.has(roleId) ? `✅ <@&${roleId}>` : '⚠️ Introuvable';
+function configurationLabel(value: string | null): string {
+    return value ? 'Configuré' : 'Non configuré';
+}
+
+function isTicketConfigurationComplete(config: Awaited<ReturnType<typeof getTicketConfig>>): boolean {
+    return Boolean(
+        config.ticket_panel_channel_id &&
+        config.ticket_category_id &&
+        config.ticket_log_channel_id &&
+        config.ticket_support_role_id
+    );
+}
+
+function ticketConfigurationIcon(config: Awaited<ReturnType<typeof getTicketConfig>>): string {
+    return isTicketConfigurationComplete(config) ? '✅' : '⚠️';
+}
+
+function ticketConfigurationLabel(config: Awaited<ReturnType<typeof getTicketConfig>>): string {
+    return isTicketConfigurationComplete(config) ? 'Système prêt' : 'Configuration incomplète';
 }
 
 function formatSeconds(totalSeconds: number): string {
