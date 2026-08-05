@@ -9,7 +9,7 @@ import { createKeplerEmbed, setRequesterFooter } from '../theme.ts';
 import { logger } from '../logger.ts';
 import { sendXpLog } from './logger.ts';
 
-export const XP_COOLDOWN_SECONDS = 60;
+export const XP_COOLDOWN_SECONDS = 5;
 export const XP_MIN_GAIN = 15;
 export const XP_MAX_GAIN = 25;
 const SETTINGS_CACHE_TTL = 60_000;
