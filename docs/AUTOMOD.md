@@ -53,6 +53,14 @@ Le panneau affiche le volume des détections des sept derniers jours. Les
 déclenchements des règles AutoMod natives de Discord sont également intégrés à
 l’historique Kepler lorsque les intents correspondants sont disponibles.
 
+## Navigation dans `/settings`
+
+La rubrique **Modération** centralise désormais l’AutoMod, les sanctions et le
+rôle de mute, les signalements ainsi que le journal de modération. L’AutoMod
+est lui-même divisé en cinq écrans : **Général**, **Protections**, **Filtres et
+seuils**, **Sanctions** et **Exemptions**. Chaque sauvegarde ramène dans son
+écran d’origine afin d’éviter de recommencer la navigation.
+
 Chaque détection est conservée dans `guild_automod_violations` et envoyée dans
 le salon de modération configuré. Si le bot ne peut pas appliquer un timeout,
 le message reste supprimé et l’échec n’empêche pas le traitement des messages
