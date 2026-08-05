@@ -1,5 +1,8 @@
 import {
+    type ActionRowBuilder,
+    type ButtonBuilder,
     ContainerBuilder,
+    type InteractionEditReplyOptions,
     MessageFlags,
     SeparatorBuilder,
     SectionBuilder,
@@ -19,11 +22,20 @@ import {
     KEPLER_COLORS,
     KEPLER_MESSAGES,
 } from '../../utils/theme.ts';
+import {
+    attachLeaderboardPagination,
+    leaderboardControls,
+    LEADERBOARD_PAGE_SIZE
+} from '../../utils/leaderboardPagination.ts';
 
-function xpMessage(container: ContainerBuilder) {
+function xpMessage(
+    container: ContainerBuilder,
+    controls?: ActionRowBuilder<ButtonBuilder>
+): InteractionEditReplyOptions {
     return {
-        components: [container],
-        flags: MessageFlags.IsComponentsV2 as MessageFlags.IsComponentsV2
+        components: controls ? [container, controls] : [container],
+        flags: MessageFlags.IsComponentsV2,
+        allowedMentions: { parse: [] }
     };
 }
 
@@ -136,36 +148,45 @@ async function showProfile(interaction: ChatInputCommandInteraction) {
 }
 
 async function showLeaderboard(interaction: ChatInputCommandInteraction) {
-    const profiles = await getXpLeaderboard(interaction.guildId!, 10);
+    const profiles = await getXpLeaderboard(interaction.guildId!, 100);
     const medals = ['🥇', '🥈', '🥉'];
-    const rows = profiles.map((profile, index) => {
-        const marker = medals[index] ?? `**${index + 1}.**`;
-        return `${marker} <@${profile.user_id}> — niveau **${profile.level}** · ${profile.xp.toLocaleString('fr-FR')} XP`;
-    });
-
-    const headingContent = new TextDisplayBuilder().setContent(
-        `-# KEPLER • CLASSEMENT XP\n## ${interaction.guild!.name}\n` +
-        'Les dix membres ayant accumulé le plus d’expérience.'
-    );
-    const iconUrl = interaction.guild!.iconURL({ forceStatic: true });
-    const container = xpContainer('primary');
-    if (iconUrl) {
-        container.addSectionComponents(
-            new SectionBuilder()
-                .addTextDisplayComponents(headingContent)
-                .setThumbnailAccessory(new ThumbnailBuilder().setURL(iconUrl))
+    const totalPages = Math.max(1, Math.ceil(profiles.length / LEADERBOARD_PAGE_SIZE));
+    const renderPage = (page: number, disabled = false) => {
+        const start = page * LEADERBOARD_PAGE_SIZE;
+        const rows = profiles.slice(start, start + LEADERBOARD_PAGE_SIZE).map((profile, index) => {
+            const position = start + index;
+            const marker = medals[position] ?? `**${position + 1}.**`;
+            return `${marker} <@${profile.user_id}> — niveau **${profile.level}** · ${profile.xp.toLocaleString('fr-FR')} XP`;
+        });
+        const headingContent = new TextDisplayBuilder().setContent(
+            `-# KEPLER • CLASSEMENT XP\n## ${interaction.guild!.name}\n` +
+            `${profiles.length} membre(s) classé(s).`
         );
-    } else {
-        container.addTextDisplayComponents(headingContent);
-    }
-    container
-        .addSeparatorComponents(new SeparatorBuilder().setDivider(true))
-        .addTextDisplayComponents(
-            new TextDisplayBuilder().setContent(rows.join('\n') || KEPLER_MESSAGES.noData)
-        )
-        .addSeparatorComponents(new SeparatorBuilder().setDivider(false))
-        .addTextDisplayComponents(
-            requesterFooter(interaction)
+        const iconUrl = interaction.guild!.iconURL({ forceStatic: true });
+        const container = xpContainer('primary');
+        if (iconUrl) {
+            container.addSectionComponents(
+                new SectionBuilder()
+                    .addTextDisplayComponents(headingContent)
+                    .setThumbnailAccessory(new ThumbnailBuilder().setURL(iconUrl))
+            );
+        } else {
+            container.addTextDisplayComponents(headingContent);
+        }
+        container
+            .addSeparatorComponents(new SeparatorBuilder().setDivider(true))
+            .addTextDisplayComponents(
+                new TextDisplayBuilder().setContent(rows.join('\n') || KEPLER_MESSAGES.noData)
+            )
+            .addSeparatorComponents(new SeparatorBuilder().setDivider(false))
+            .addTextDisplayComponents(requesterFooter(interaction));
+        return xpMessage(
+            container,
+            totalPages > 1
+                ? leaderboardControls('xp:leaderboard', page, totalPages, disabled)
+                : undefined
         );
-    await interaction.editReply(xpMessage(container));
+    };
+    const response = await interaction.editReply(renderPage(0));
+    attachLeaderboardPagination(interaction, response, 'xp:leaderboard', totalPages, renderPage);
 }
