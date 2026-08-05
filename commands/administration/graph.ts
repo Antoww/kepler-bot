@@ -437,7 +437,7 @@ async function handleChannels(interaction: ChatInputCommandInteraction) {
         const channel = interaction.guild!.channels.cache.get(channelStat.channel_id);
         const name = channel ? `#${channel.name}` : 'Canal supprimé';
         chartData.push({
-            label: name.slice(0, 15),
+            label: name,
             value: channelStat.message_count
         });
     }
@@ -490,7 +490,7 @@ async function handleUsers(interaction: ChatInputCommandInteraction) {
         return `${medal} **${user.username}** - ${user.message_count.toLocaleString()} messages`;
     });
     const chartData = resolvedUsers.map(user => ({
-        label: user.username.slice(0, 24),
+        label: user.username,
         value: user.message_count
     }));
 

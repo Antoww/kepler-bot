@@ -7,7 +7,7 @@ ENV FONTCONFIG_FILE=/etc/fonts/fonts.conf
 ENV FONTCONFIG_PATH=/etc/fonts
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends fontconfig fonts-dejavu-core \
+    && apt-get install -y --no-install-recommends fontconfig fonts-dejavu-core fonts-noto-color-emoji \
     && rm -rf /var/lib/apt/lists/* \
     && fc-cache -f
 
