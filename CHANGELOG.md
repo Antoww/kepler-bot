@@ -7,6 +7,45 @@ et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 
 ---
 
+## [1.1.0] - 2026-08-07 (Stable)
+
+### 🎯 Points clés
+- **AutoMod enrichi** avec observation, filtres, seuils, exemptions et actions par règle
+- **Centre `/settings` modernisé** et migré vers Discord Components V2
+- **Statistiques serveur étoffées**, dont la courbe des arrivées et départs
+- **XP plus dynamique** avec cooldown par défaut de 5 secondes et interfaces V2
+- **Invitations modernisées** et classements XP/invitations paginés
+
+👉 [Voir les notes de version détaillées](changelogs/v1.1.0.md)
+
+### ✨ Ajouté
+- Mode observation et protection anti-raid pour l'AutoMod
+- Domaines et mots interdits personnalisables
+- Seuils et sanctions progressives configurables
+- Suivi quotidien des arrivées et départs
+- Navigation directe vers une page des classements XP et invitations
+- Timestamps relatifs dans les interfaces XP
+
+### 🔧 Modifié
+- Réorganisation complète des menus `/settings`
+- Migration de `/settings`, `/xp` et `/invitations` vers Components V2
+- Nouvelle barre de progression XP monospace
+- Graphiques clarifiés avec couleurs, légendes, dates et libellés distincts
+- Discord.js mis à niveau vers la version 14.23.2
+
+### 🐛 Corrigé
+- Sections V2 invalides sur les serveurs dépourvus d'icône
+- Chevauchements de dates et séries trop proches dans les graphiques
+- Rendu des emojis dans les images du conteneur Docker
+- Mentions silencieuses dans les classements Components V2
+
+### 📚 Documentation
+- Documentation AutoMod et graphiques mise à jour
+- Nouvelle roadmap publique jusqu'à Kepler 2.0
+- Procédure de publication et notes Discord pour la V1.1
+
+---
+
 ## [1.0.1] - 2026-07-31 (Stable)
 
 ### 🎯 Points clés

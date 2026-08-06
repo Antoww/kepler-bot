@@ -1,149 +1,160 @@
-# Kepler - Votre compagnon Discord polyvalent 🚀
+# Kepler — Centre de contrôle Discord 🚀
 
-**WARN : Bot actuellement en beta. Des instabilités et des redémarrages intempestifs sont à prévoir !**
+> **Beta publique :** Kepler est en développement actif. Des changements
+> d'interface et des interruptions ponctuelles peuvent encore survenir.
 
-Kepler est un bot Discord polyvalent en **développement actif**, conçu pour enrichir vos serveurs avec un système de modération avancé, des outils d'administration, la gestion d'anniversaires, et une variété de commandes fun. Écrit en TypeScript avec Deno et utilisant Supabase comme base de données, Kepler offre des performances optimales et une fiabilité accrue.
+Kepler est un bot Discord polyvalent conçu pour administrer, automatiser et
+analyser des communautés. Il réunit les outils courants d'un bot tout-en-un et
+des fonctions de gestion plus spécialisées dans une interface centralisée.
 
-## 🌟 Points Forts
+Version actuelle : **1.1.0**
 
-- **🛡️ Modération Professionnelle** : Système complet avec sanctions numérotées et logs automatiques
-- **🎂 Gestion d'Anniversaires** : Notifications automatiques et configuration flexible  
-- **⚙️ Administration Avancée** : Configuration granulaire et outils d'administration
-- **🎮 Divertissement** : Large gamme de jeux et commandes interactives
-- **🔧 TypeScript + Deno** : Code moderne, performant et sécurisé
+## Points forts
 
----
+- 🛡️ Modération complète et auto-modération configurable.
+- ⚙️ Centre de configuration interactif avec Discord Components V2.
+- 📊 Statistiques serveur et graphiques historiques.
+- ✨ Expérience, niveaux, récompenses et boosts.
+- 🔗 Suivi des invitations et statistiques d'arrivée.
+- 🎫 Tickets privés avec cycle de vie et archives.
+- 🎂 Anniversaires, rappels, jeux et outils communautaires.
+- 🔒 Isolation des données par serveur et contrôles de permissions renforcés.
 
-## 🚀 Fonctionnalités
+## Fonctionnalités
 
-### 🛡️ Système de Modération Avancé
-- **Commandes de base** : `/ban`, `/unban`, `/kick`, `/mute`, `/unmute`, `/timeout`, `/untimeout`
-- **Système d'avertissements** : `/warn`, `/warnings`
-- **Gestion des sanctions** : Numérotation automatique, historique complet avec `/modinfo`
-- **Gestion personnalisée** : `/sanctions voir` et `/sanctions supprimer` pour gérer les historiques
-- **Système de mute hybride** : Timeout Discord (≤28j) ou rôles personnalisés (>28j)
-- **Configuration flexible** : panneau centralisé `/settings`
-- **Logs automatiques** : suivi complet configurable depuis `/settings`
-- **Auto-modération intelligente** : anti-liens, invitations, spam, doublons, majuscules et mentions massives
-- **Expirations automatiques** : Débannissement et démute automatiques
-- **Audit serveur** : `/audit` pour vérifier la configuration des canaux et rôles
+### Modération et sécurité
 
-### 📌 Commandes Utilitaires
-- **Informations serveur** : `/serverinfo`, `/channelinfo`, `/roleinfo`, `/rolelist`
-- **Informations utilisateur** : `/userinfo`
-- **Outils pratiques** : `/genpass`, `/minecraft-uuid`
-- **Système de rappels** : `/reminder`, `/reminders` pour ne rien oublier
+- `/ban`, `/unban`, `/kick`, `/mute`, `/unmute`, `/timeout` et `/untimeout`.
+- Avertissements, historique des sanctions et consultation avec `/modinfo`.
+- Mute hybride : timeout Discord ou rôle dédié.
+- AutoMod contre les liens, invitations, rafales, doublons, majuscules,
+  mentions, mots interdits et raids.
+- Mode observation, seuils, exemptions et sanctions propres à chaque règle.
+- Journaux et archives configurables.
+- Signalement d'un message ou d'un membre à l'équipe de modération.
 
-### 🎂 Système d'Anniversaires
-- **Gestion complète** : Ajout, modification, suppression d'anniversaires
-- **Notifications automatiques** : Souhaits d'anniversaire dans un canal dédié
-- **Configuration flexible** : Canal personnalisable par serveur
+### Configuration
 
-### 🎉 Commandes Fun & Jeux
-- **Jeux classiques** : `/coinflip`, `/chifoumi`, `/8ball`
-- **Jeux avancés** : `/puissance4`, `/golem`
-- **Jeu de comptage** : `/count` pour un mini-jeu collaboratif
-- **Divertissement** : `/blague`, `/meme`
+- Panneau `/settings` réservé aux administrateurs.
+- Navigation par domaines : sécurité, communauté et gestion du serveur.
+- Interfaces Discord Components V2.
+- Configuration des logs, tickets, anniversaires, XP, invitations, fuseau
+  horaire, signalements et modération.
+- Accès optionnel au dashboard web.
 
-### ⚙️ Administration & Configuration
-- **Configuration centralisée** : logs, anniversaires, mute, modération, tickets, XP et invitations via `/settings`
-- **Annonces** : `/annonce` pour communiquer avec votre communauté
-- **Audit serveur** : `/audit` pour vérifier la configuration complète
-- **Gestion des anniversaires** : `/birthday` pour ajouter/modifier/supprimer des anniversaires
-- **Système de permissions** avancé pour une administration sécurisée
+### Expérience
 
----
+- Profils XP par serveur et classement paginé.
+- Gain aléatoire de 15 à 25 XP par message admissible.
+- Cooldown configurable, fixé à 5 secondes pour les nouvelles configurations.
+- Récompenses de niveau et annonces automatiques.
+- Boosts temporaires et boosts par rôle.
+- Exclusions par salon et rôle.
+- Journaux dédiés et interfaces Components V2.
 
-## 🛠️ Roadmap
+### Invitations
 
-### ✅ Alpha (Terminé)
-- **Passage en TypeScript** : ✅ Refonte complète du bot en TypeScript
-- **Système de modération avancé** : ✅ Commandes complètes avec sanctions numérotées
-- **Base de données Supabase** : ✅ Migration vers PostgreSQL
-- **Système d'anniversaires** : ✅ Gestion complète des anniversaires
-- **Logs de modération** : ✅ Système de journalisation configurable
+- Synchronisation des invitations Discord existantes.
+- Attribution des arrivées à leur inviteur.
+- Classement paginé et statistiques individuelles.
+- Annonces d'arrivée personnalisables.
+- Suivi des créations, suppressions et utilisations de liens.
+- Distinction entre arrivées suivies, membres présents et départs.
 
-### 🔄 Beta 1.3 (En cours - Janvier 2026)
-- **Audit serveur avancé** : ✅ Vérification automatique de la configuration
-- **Gestion personnalisée des sanctions** : ✅ Suppression et visualisation des sanctions
-- **Jeu de comptage collaboratif** : ✅ Mini-jeu `/count` pour les serveurs
-- **Timeout Discord** : ✅ Support complet de la nouvelle fonctionnalité de timeout Discord
-- **Historique détaillé** : ✅ `/modinfo` avec suivi complet des sanctions
-- **Optimisations performances** : 🔧 Amélioration de la vitesse et stabilité
-- **Nouvelles commandes fun** : 🔧 Extension du catalogue de jeux
-- **Gestion des événements serveur** : 🔧 Logs enrichis pour tous les événements
+### Statistiques
 
-### 🚀 Release (Janvier/Février 2026)
-- **Lancement officiel** de Kepler v1.0
-- **Site web dédié** avec documentation complète
-- **Système de niveaux** : XP et rangs pour les utilisateurs
+- Résumé de l'activité du serveur.
+- Courbes des messages, commandes, arrivées et départs.
+- Classements des salons, membres et commandes les plus actifs.
+- Périodes de 7 à 360 jours ou depuis toujours.
+- Graphiques WebP mis en cache et adaptés à l'identité Kepler.
 
----
+### Tickets et communauté
 
-## 🎯 Commandes Principales
+- Panneau de tickets personnalisable.
+- Salons privés, rôle support, fermeture, réouverture et archivage.
+- Export texte des conversations.
+- Gestion et annonces d'anniversaires.
+- Rappels personnels et fuseaux horaires IANA.
+- Giveaways, quiz et jeux interactifs.
 
-### Modération
-```
-/ban <utilisateur> [durée] [raison]     # Bannir un utilisateur
-/unban <user_id> [raison]               # Débannir un utilisateur
-/kick <utilisateur> [raison]            # Expulser un utilisateur  
-/mute <utilisateur> <durée> [raison]    # Rendre muet un utilisateur
-/unmute <utilisateur> [raison]          # Annuler le mute
-/timeout <utilisateur> <durée> [raison] # Timeout Discord
-/untimeout <utilisateur> [raison]       # Retirer le timeout
-/warn <utilisateur> <raison>            # Avertir un utilisateur
-/warnings <utilisateur>                 # Voir les avertissements
-/modinfo <utilisateur>                  # Infos complètes de modération
-/sanctions voir <utilisateur>           # Voir toutes les sanctions
-/sanctions supprimer <numero>           # Supprimer une sanction
-```
+### Vie privée et exploitation
 
-### Administration
-```
-/settings                               # Ouvrir toute la configuration du serveur
-/annonce <message>                      # Faire une annonce
-/audit channel                          # Auditer les canaux configurés
-/audit roles                            # Auditer les rôles configurés
+- Export et suppression des données personnelles avec `/mesdonnees`.
+- RLS Supabase et fonctions sensibles réservées au service backend.
+- Signalement centralisé des erreurs Discord.
+- Déploiement Docker avec Deno et Discord.js.
+
+## Commandes principales
+
+### Administration et modération
+
+```text
+/settings                           Configuration complète du serveur
+/graph                              Statistiques et graphiques serveur
+/audit                              Vérification de la configuration
+/ban, /kick, /mute, /timeout        Sanctions
+/warn, /warnings, /modinfo          Avertissements et historique
+/sanctions                          Gestion des sanctions enregistrées
+/clear                              Suppression filtrée de messages
 ```
 
-### Utilitaires
-```
-/userinfo <utilisateur>                # Informations utilisateur
-/serverinfo                            # Informations serveur
-/channelinfo <canal>                   # Informations canal
-/roleinfo <rôle>                       # Informations rôle
-/rolelist                              # Liste des rôles du serveur
-/reminder <durée> <message>            # Créer un rappel personnel
-/reminders                             # Voir vos rappels
-/invitations classement               # Classement des inviteurs
-/invitations membre [utilisateur]      # Statistiques d'invitations
-/birthday add <date> [notes]           # Ajouter un anniversaire
-/birthday remove <utilisateur>         # Retirer un anniversaire
-/birthday list                         # Voir tous les anniversaires
-/genpass [longueur]                    # Générer un mot de passe
-/minecraft-uuid <pseudo>               # Obtenir l'UUID Minecraft
+### Communauté et utilitaires
+
+```text
+/xp profil [membre]                 Profil et progression XP
+/xp classement                      Classement XP paginé
+/invitations membre [utilisateur]   Statistiques d'invitations
+/invitations classement             Classement des inviteurs
+/birthday                           Gestion des anniversaires
+/reminder, /reminders               Rappels personnels
+/userinfo, /serverinfo              Informations Discord
+/channelinfo, /roleinfo, /rolelist  Informations du serveur
+/report                             Signalement à la modération
 ```
 
+Utilisez `/help` pour consulter les commandes disponibles sur votre instance.
+
+## Roadmap
+
+La roadmap publique couvre les versions V1.2 à V1.5 prévues entre août et
+octobre 2026, les éventuelles versions intermédiaires et l'objectif Kepler 2.0
+avec sharding en fin d'année.
+
+➡️ [Consulter la roadmap détaillée](ROADMAP.md)
+
+## Installation
+
+Ajoutez Kepler à votre serveur depuis
+[l'App Directory Discord](https://discord.com/application-directory/1208555753502412868).
+
+Le bot doit disposer des permissions nécessaires aux modules activés. Le suivi
+des invitations nécessite notamment **Gérer le serveur**.
+
+## Technologies
+
+- **Runtime :** Deno et TypeScript.
+- **API Discord :** Discord.js 14.23.2.
+- **Base de données :** Supabase/PostgreSQL.
+- **Images :** Sharp, SVG et WebP.
+- **Déploiement :** Docker et Dokploy.
+
+## Documentation
+
+- [Architecture](docs/ARCHITECTURE.md)
+- [Auto-modération](docs/AUTOMOD.md)
+- [Graphiques](docs/GRAPH_COMMAND.md)
+- [Invitations](docs/INVITE-MANAGER.md)
+- [Système XP](docs/XP-SYSTEM.md)
+- [Direction artistique](docs/DIRECTION-ARTISTIQUE.md)
+- [Changelog](CHANGELOG.md)
+- [Procédure de release](RELEASE.md)
+
+## Contribution et retours
+
+Les retours, propositions et rapports de bugs sont les bienvenus sur le
+[serveur Discord](https://discord.gg/GbavRtUwad) ou dans les issues GitHub.
+
 ---
 
-## 🤝 Contribution
-Votre avis compte ! Partagez vos retours, idées ou rapports de bugs en rejoignant notre serveur [Discord](https://discord.gg/GbavRtUwad) ou en créant une issue sur GitHub.
-
----
-
-## 📥 Installation
-Ajoutez Kepler à votre serveur en suivant [ce lien](https://discord.com/application-directory/1208555753502412868).
-
----
-
-## 🔧 Technologies
-
-- **Runtime** : Deno (TypeScript natif)
-- **Framework** : Discord.js v14
-- **Base de données** : Supabase (PostgreSQL)
-- **Déploiement** : Docker
-- **CI/CD** : GitHub Actions
-
----
-
-*Kepler est développé avec ❤️ pour la communauté Discord française*
+Kepler est développé avec ❤️ pour la communauté Discord française.

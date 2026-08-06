@@ -1,6 +1,6 @@
 {
-  "version": "1.0.1",
+  "version": "1.1.0",
   "codename": "Kepler",
-  "releaseDate": "2026-07-31",
-  "changelog": "Kepler 1.0.1 - Correction de la synchronisation et de l'affichage des invitations existantes."
+  "releaseDate": "2026-08-07",
+  "changelog": "Kepler 1.1.0 - AutoMod enrichi, Components V2, statistiques serveur, XP et invitations améliorés."
 }
