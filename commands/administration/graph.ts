@@ -17,8 +17,9 @@ import {
     getTotalStats
 } from '../../utils/stats/tracker.ts';
 import { renderBarChart, renderLineChart } from '../../utils/stats/chart.ts';
+import { getMemberFlowStats } from '../../utils/invites/service.ts';
 
-type ServerStatsAction = 'overview' | 'activity' | 'members' | 'channels' | 'users' | 'commands';
+type ServerStatsAction = 'overview' | 'activity' | 'growth' | 'members' | 'channels' | 'users' | 'commands';
 const PANEL_TIMEOUT = 5 * 60 * 1000;
 
 export const data = new SlashCommandBuilder()
@@ -31,7 +32,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     if (!interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)) {
         return void await interaction.reply({ content: KEPLER_MESSAGES.administratorOnly, ephemeral: true });
     }
-    const response = await interaction.reply({ ...serverHome(interaction), ephemeral: true, fetchReply: true });
+    const response = await interaction.reply({ ...serverHome(interaction), fetchReply: true });
     const collector = response.createMessageComponentCollector({ time: PANEL_TIMEOUT });
     collector.on('collect', async component => {
         if (component.user.id !== interaction.user.id) return void await component.reply({ content: KEPLER_MESSAGES.unauthorizedComponent, ephemeral: true });
@@ -78,10 +79,20 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
 function serverHome(interaction: ChatInputCommandInteraction) {
     const embed = createKeplerEmbed('primary').setTitle(`📊 Statistiques de ${interaction.guild!.name}`)
-        .setDescription('Choisissez une vue, puis la période à analyser.').setThumbnail(interaction.guild!.iconURL({ forceStatic: true }))
-        .setFooter({ text: 'Panneau privé • expiration dans 5 minutes' });
-    const row1 = new ActionRowBuilder<ButtonBuilder>().addComponents(serverButton('overview', 'Vue d’ensemble', '📊'), serverButton('activity', 'Activité', '📈'), serverButton('members', 'Membres', '👥'));
-    const row2 = new ActionRowBuilder<ButtonBuilder>().addComponents(serverButton('channels', 'Canaux', '📺'), serverButton('users', 'Utilisateurs', '👑'), serverButton('commands', 'Commandes', '⚡'));
+        .setDescription('Choisissez une statistique. Les vues historiques proposent ensuite une période.')
+        .setThumbnail(interaction.guild!.iconURL({ forceStatic: true }))
+        .setFooter({ text: 'Statistiques publiques • panneau disponible pendant 5 minutes' });
+    const row1 = new ActionRowBuilder<ButtonBuilder>().addComponents(
+        serverButton('overview', 'Résumé de l’activité', '📊'),
+        serverButton('activity', 'Messages et commandes', '💬'),
+        serverButton('growth', 'Arrivées et départs', '📈'),
+        serverButton('members', 'État actuel', '👥')
+    );
+    const row2 = new ActionRowBuilder<ButtonBuilder>().addComponents(
+        serverButton('channels', 'Salons actifs', '📺'),
+        serverButton('users', 'Membres actifs', '👑'),
+        serverButton('commands', 'Commandes utilisées', '⚡')
+    );
     const controls = new ActionRowBuilder<ButtonBuilder>().addComponents(new ButtonBuilder().setCustomId('graph:home').setEmoji('🔄').setStyle(ButtonStyle.Secondary), new ButtonBuilder().setCustomId('graph:close').setEmoji('✖️').setStyle(ButtonStyle.Secondary));
     return { content: '', embeds: [embed], components: [row1, row2, controls], attachments: [] };
 }
@@ -121,7 +132,7 @@ async function runServerAction(source: ChatInputCommandInteraction, component: a
     await component.editReply({ content: '', attachments: [], components: [], embeds: [createKeplerEmbed('neutral').setTitle('Génération du graphique').setDescription('⏳ Préparation des statistiques…')] });
     const interaction = statsAdapter(source, component, days, limit);
     if (action === 'overview') await handleOverview(interaction); else if (action === 'activity') await handleActivity(interaction);
-    else if (action === 'members') await handleMembers(interaction); else if (action === 'channels') await handleChannels(interaction);
+    else if (action === 'growth') await handleGrowth(interaction); else if (action === 'members') await handleMembers(interaction); else if (action === 'channels') await handleChannels(interaction);
     else if (action === 'users') await handleUsers(interaction); else await handleCommands(interaction);
 }
 
@@ -159,7 +170,7 @@ async function handleOverview(interaction: ChatInputCommandInteraction) {
 
 
     const overviewBuffer = await renderLineChart(
-        `Activité de ${interaction.guild!.name}`,
+        `Messages et commandes · ${interaction.guild!.name}`,
         periodLabel,
         dailyStats.map(d => formatChartDate(d.date)),
         [
@@ -184,7 +195,7 @@ async function handleOverview(interaction: ChatInputCommandInteraction) {
 
     const embed = createKeplerEmbed()
         .setColor(KEPLER_COLORS.primary)
-        .setTitle(`📊 Vue d'ensemble - ${guild.name}`)
+        .setTitle(`📊 Résumé de l’activité · ${guild.name}`)
         .setThumbnail(guild.iconURL() || null)
         .setDescription(`Statistiques sur **${periodLabel}**`)
         .addFields(
@@ -243,7 +254,7 @@ async function handleActivity(interaction: ChatInputCommandInteraction) {
         : null;
 
     const activityBuffer = await renderLineChart(
-        'Activité du serveur',
+        'Messages et commandes',
         periodLabel,
         dailyStats.map(d => formatChartDate(d.date)),
         [
@@ -256,8 +267,8 @@ async function handleActivity(interaction: ChatInputCommandInteraction) {
 
     const embed = createKeplerEmbed()
         .setColor(KEPLER_COLORS.primary)
-        .setTitle(`📈 Activité du serveur`)
-        .setDescription(`Période: **${periodLabel}**`)
+        .setTitle('💬 Messages et commandes')
+        .setDescription(`Activité enregistrée sur **${periodLabel}**.`)
         .addFields(
             {
                 name: '💬 Messages',
@@ -278,8 +289,8 @@ async function handleActivity(interaction: ChatInputCommandInteraction) {
             },
             { name: '\u200b', value: '\u200b', inline: true },
             {
-                name: '📊 Tendance des messages',
-                value: 'Graphique détaillé ci-dessous.',
+                name: 'Lecture du graphique',
+                value: 'Chaque point représente le nombre de messages et de commandes enregistrés pendant la journée.',
                 inline: false
             }
         )
@@ -288,6 +299,46 @@ async function handleActivity(interaction: ChatInputCommandInteraction) {
         .setTimestamp();
 
     await interaction.editReply({ embeds: [embed], files: [activityAttachment] });
+}
+
+async function handleGrowth(interaction: ChatInputCommandInteraction) {
+    const days = resolveStatsDays(interaction, 30);
+    const periodLabel = formatStatsPeriod(days);
+    const flow = await getMemberFlowStats(interaction.guildId!, days);
+    const totalJoins = flow.reduce((total, day) => total + day.joins, 0);
+    const totalLeaves = flow.reduce((total, day) => total + day.leaves, 0);
+    const netGrowth = totalJoins - totalLeaves;
+    const chart = await renderLineChart(
+        'Arrivées et départs',
+        periodLabel,
+        flow.map(day => formatChartDate(day.date)),
+        [
+            { label: 'Arrivées', color: KEPLER_CHART_COLORS.joins, values: flow.map(day => day.joins) },
+            { label: 'Départs', color: KEPLER_CHART_COLORS.leaves, values: flow.map(day => day.leaves) }
+        ]
+    );
+    const attachment = new AttachmentBuilder(chart, { name: 'server-member-flow.webp' });
+    const sign = netGrowth > 0 ? '+' : '';
+    const embed = createKeplerEmbed('primary')
+        .setTitle('📈 Arrivées et départs')
+        .setDescription(
+            `Mouvements enregistrés sur **${periodLabel}**. ` +
+            'Les départs sont comptés uniquement pour les membres dont l’arrivée a été suivie par Kepler.'
+        )
+        .addFields(
+            { name: '📥 Arrivées', value: totalJoins.toLocaleString('fr-FR'), inline: true },
+            { name: '📤 Départs', value: totalLeaves.toLocaleString('fr-FR'), inline: true },
+            { name: 'Solde net', value: `**${sign}${netGrowth.toLocaleString('fr-FR')}** membre(s)`, inline: true },
+            {
+                name: 'Lecture du graphique',
+                value: 'La courbe verte représente les arrivées quotidiennes ; la rouge représente les départs quotidiens.',
+                inline: false
+            }
+        )
+        .setImage('attachment://server-member-flow.webp')
+        .setFooter({ text: `Demandé par ${interaction.user.username}` })
+        .setTimestamp();
+    await interaction.editReply({ embeds: [embed], files: [attachment] });
 }
 
 async function handleMembers(interaction: ChatInputCommandInteraction) {
@@ -321,7 +372,7 @@ async function handleMembers(interaction: ChatInputCommandInteraction) {
 
     const embed = createKeplerEmbed()
         .setColor(KEPLER_COLORS.accent)
-        .setTitle(`👥 Statistiques des membres`)
+        .setTitle('👥 État actuel des membres')
         .setThumbnail(guild.iconURL() || null)
         .addFields(
             {
@@ -386,21 +437,21 @@ async function handleChannels(interaction: ChatInputCommandInteraction) {
         const channel = interaction.guild!.channels.cache.get(channelStat.channel_id);
         const name = channel ? `#${channel.name}` : 'Canal supprimé';
         chartData.push({
-            label: name.slice(0, 15),
+            label: name,
             value: channelStat.message_count
         });
     }
 
-    const channelsBuffer = await renderBarChart('Canaux les plus actifs', periodLabel, chartData, KEPLER_CHART_COLORS.channels);
+    const channelsBuffer = await renderBarChart('Salons avec le plus de messages', periodLabel, chartData, KEPLER_CHART_COLORS.channels);
     const channelsAttachment = new AttachmentBuilder(channelsBuffer, { name: 'server-channels.webp' });
 
     const embed = createKeplerEmbed()
         .setColor(KEPLER_COLORS.danger)
-        .setTitle('📺 Canaux les plus actifs')
-        .setDescription(`Période: **${periodLabel}**`)
+        .setTitle('📺 Salons avec le plus de messages')
+        .setDescription(`Classement selon le nombre de messages envoyés sur **${periodLabel}**.`)
         .addFields({
-            name: '📊 Classement',
-            value: 'Graphique détaillé ci-dessous.',
+            name: 'Mesure utilisée',
+            value: 'Nombre de messages enregistrés dans chaque salon.',
             inline: false
         })
         .setImage('attachment://server-channels.webp')
@@ -439,17 +490,17 @@ async function handleUsers(interaction: ChatInputCommandInteraction) {
         return `${medal} **${user.username}** - ${user.message_count.toLocaleString()} messages`;
     });
     const chartData = resolvedUsers.map(user => ({
-        label: user.username.slice(0, 24),
+        label: user.username,
         value: user.message_count
     }));
 
-    const usersBuffer = await renderBarChart('Utilisateurs les plus actifs', periodLabel, chartData, KEPLER_CHART_COLORS.users);
+    const usersBuffer = await renderBarChart('Membres avec le plus de messages', periodLabel, chartData, KEPLER_CHART_COLORS.users);
     const usersAttachment = new AttachmentBuilder(usersBuffer, { name: 'server-users.webp' });
 
     const embed = createKeplerEmbed()
         .setColor(KEPLER_COLORS.highlight)
-        .setTitle('👑 Utilisateurs les plus actifs')
-        .setDescription(`Période: **${periodLabel}**\n\n${userLines.join('\n')}`)
+        .setTitle('👑 Membres avec le plus de messages')
+        .setDescription(`Classement sur **${periodLabel}**.\n\n${userLines.join('\n')}`)
         .setImage('attachment://server-users.webp')
         .setFooter({ text: `Demandé par ${interaction.user.username}` })
         .setTimestamp();
@@ -487,7 +538,7 @@ async function handleCommands(interaction: ChatInputCommandInteraction) {
     const embed = createKeplerEmbed()
         .setColor(KEPLER_COLORS.warning)
         .setTitle('⚡ Commandes les plus utilisées')
-        .setDescription(`Période: **${periodLabel}**`)
+        .setDescription(`Nombre d’exécutions sur **${periodLabel}**.`)
         .addFields(
             {
                 name: '📊 Résumé',
@@ -498,8 +549,8 @@ async function handleCommands(interaction: ChatInputCommandInteraction) {
                 inline: false
             },
             {
-                name: '🏆 Top 10',
-                value: 'Graphique détaillé ci-dessous.',
+                name: 'Mesure utilisée',
+                value: 'Nombre d’exécutions réussies ou tentées pour chaque commande.',
                 inline: false
             }
         )

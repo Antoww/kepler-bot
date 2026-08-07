@@ -1,15 +1,20 @@
 import {
     ChannelType,
+    ContainerBuilder,
     type Guild,
     type GuildMember,
-    type Message
+    type Message,
+    MessageFlags,
+    SectionBuilder,
+    TextDisplayBuilder,
+    ThumbnailBuilder
 } from 'discord.js';
 import { supabase } from '../../database/supabase.ts';
-import { createKeplerEmbed, setRequesterFooter } from '../theme.ts';
+import { KEPLER_COLORS } from '../theme.ts';
 import { logger } from '../logger.ts';
 import { sendXpLog } from './logger.ts';
 
-export const XP_COOLDOWN_SECONDS = 60;
+export const XP_COOLDOWN_SECONDS = 5;
 export const XP_MIN_GAIN = 15;
 export const XP_MAX_GAIN = 25;
 const SETTINGS_CACHE_TTL = 60_000;
@@ -92,9 +97,10 @@ export function xpProgress(xp: number): {
     };
 }
 
-export function progressBar(percentage: number, size = 12): string {
-    const filled = Math.round(Math.max(0, Math.min(100, percentage)) / 100 * size);
-    return `${'▰'.repeat(filled)}${'▱'.repeat(size - filled)}`;
+export function progressBar(percentage: number, size = 10): string {
+    const normalized = Math.max(0, Math.min(100, percentage));
+    const filled = normalized === 100 ? size : Math.floor(normalized / 100 * size);
+    return `${'█'.repeat(filled)}${'░'.repeat(size - filled)}`;
 }
 
 export async function getXpProfile(guildId: string, userId: string): Promise<XpProfile | null> {
@@ -322,18 +328,34 @@ export async function awardMessageXp(message: Message): Promise<void> {
         ]
     );
     const roleLine = addedRoles.length
-        ? `\nRécompense obtenue : ${addedRoles.map((id: string) => `<@&${id}>`).join(', ')}`
+        ? `\n🎁 Récompense obtenue : ${addedRoles.map((id: string) => `<@&${id}>`).join(', ')}`
         : '';
     if (!settings.announce_level_up) return;
-    const embed = setRequesterFooter(
-        createKeplerEmbed('success')
-            .setTitle(`Niveau ${result.level} atteint`)
-            .setDescription(
+    const announcementTimestamp = Math.floor(Date.now() / 1000);
+    const section = new SectionBuilder()
+        .addTextDisplayComponents(
+            new TextDisplayBuilder().setContent(
+                `-# KEPLER • PROGRESSION XP\n## Niveau ${result.level} atteint !\n` +
                 `Bravo ${message.author}, tu passes au **niveau ${result.level}**.${roleLine}`
-            ),
-        message.author,
-        'Progression Kepler'
-    );
+            )
+        )
+        .setThumbnailAccessory(
+            new ThumbnailBuilder().setURL(message.author.displayAvatarURL({ forceStatic: true }))
+        );
+    const announcement = {
+        components: [
+            new ContainerBuilder()
+                .setAccentColor(KEPLER_COLORS.success)
+                .addSectionComponents(section)
+                .addTextDisplayComponents(
+                    new TextDisplayBuilder().setContent(
+                        `-# Progression Kepler • <t:${announcementTimestamp}:R>`
+                    )
+                )
+        ],
+        flags: MessageFlags.IsComponentsV2 as MessageFlags.IsComponentsV2,
+        allowedMentions: { parse: [] as never[] }
+    };
     if (settings.level_up_channel_id && settings.level_up_channel_id !== message.channel.id) {
         try {
             const configuredChannel = await message.guild.channels.fetch(settings.level_up_channel_id);
@@ -342,7 +364,7 @@ export async function awardMessageXp(message: Message): Promise<void> {
                 (configuredChannel.type === ChannelType.GuildText ||
                     configuredChannel.type === ChannelType.GuildAnnouncement)
             ) {
-                await configuredChannel.send({ embeds: [embed] });
+                await configuredChannel.send(announcement);
                 return;
             }
             logger.warn('Salon d’annonce XP configuré introuvable ou invalide', undefined, 'XP');
@@ -350,7 +372,7 @@ export async function awardMessageXp(message: Message): Promise<void> {
             logger.warn('Envoi dans le salon d’annonce XP impossible, utilisation du salon courant', error, 'XP');
         }
     }
-    await message.channel.send({ embeds: [embed] });
+    await message.channel.send(announcement);
 }
 
 export function canManageRewardRole(guild: Guild, roleId: string): boolean {

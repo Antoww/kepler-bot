@@ -1,9 +1,12 @@
 import {
     ChannelType,
+    ContainerBuilder,
+    MessageFlags,
+    TextDisplayBuilder,
     type Guild
 } from 'discord.js';
 import { supabase } from '../../database/supabase.ts';
-import { createKeplerEmbed, type KeplerTone } from '../theme.ts';
+import { KEPLER_COLORS, type KeplerTone } from '../theme.ts';
 import { logger } from '../logger.ts';
 
 interface XpLogField {
@@ -38,12 +41,25 @@ export async function sendXpLog(
             return false;
         }
 
-        const embed = createKeplerEmbed(tone)
-            .setTitle(title)
-            .setDescription(description)
-            .setFooter({ text: `Journal XP · ${guild.name}` });
-        if (fields.length) embed.addFields(fields);
-        await channel.send({ embeds: [embed], allowedMentions: { parse: [] } });
+        const details = fields.length
+            ? `\n\n${fields.map(field => `**${field.name}** — ${field.value}`).join('\n')}`
+            : '';
+        const timestamp = Math.floor(Date.now() / 1000);
+        const container = new ContainerBuilder()
+            .setAccentColor(KEPLER_COLORS[tone])
+            .addTextDisplayComponents(
+                new TextDisplayBuilder().setContent(
+                    `-# KEPLER • JOURNAL XP\n## ${title}\n${description}${details}`
+                ),
+                new TextDisplayBuilder().setContent(
+                    `-# Journal XP • ${guild.name} • <t:${timestamp}:R>`
+                )
+            );
+        await channel.send({
+            components: [container],
+            flags: MessageFlags.IsComponentsV2,
+            allowedMentions: { parse: [] }
+        });
         return true;
     } catch (error) {
         logger.warn(`Impossible d’envoyer un log XP sur ${guild.id}`, error, 'XP');

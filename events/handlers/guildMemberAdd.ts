@@ -9,6 +9,11 @@ export const once = false;
 
 export async function execute(member: GuildMember) {
     try {
+        await member.client.moderationManager?.handleMemberJoin(member);
+    } catch (error) {
+        logger.error(`Erreur anti-raid pour ${member.id}`, error, 'AUTOMOD');
+    }
+    try {
         await member.client.inviteManager?.handleMemberJoin(member);
     } catch (error) {
         logger.error(`Erreur détection invitation de ${member.id}`, error, 'INVITES');

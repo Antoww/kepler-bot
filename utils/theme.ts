@@ -41,10 +41,12 @@ export const KEPLER_HEX = {
 
 export const KEPLER_CHART_COLORS = {
     messages: KEPLER_HEX.orbitalBlue,
-    commands: KEPLER_HEX.signalBlue,
+    commands: KEPLER_HEX.warning,
     members: KEPLER_HEX.deepBlue,
     channels: KEPLER_HEX.success,
     users: KEPLER_HEX.warning,
+    joins: KEPLER_HEX.success,
+    leaves: KEPLER_HEX.danger,
     neutral: KEPLER_HEX.silver
 } as const;
 

@@ -19,7 +19,9 @@ const client = new Client({
         GatewayIntentBits.GuildVoiceStates,
         GatewayIntentBits.GuildBans,
         GatewayIntentBits.GuildInvites,
-        GatewayIntentBits.GuildEmojisAndStickers
+        GatewayIntentBits.GuildEmojisAndStickers,
+        GatewayIntentBits.AutoModerationConfiguration,
+        GatewayIntentBits.AutoModerationExecution
     ] 
 });
 
@@ -84,6 +86,7 @@ async function loadEvents() {
         'events/handlers/messageDelete.ts',
         'events/handlers/messageDeleteBulk.ts',
         'events/handlers/messageUpdate.ts',
+        'events/handlers/autoModerationActionExecution.ts',
         'events/handlers/roleCreate.ts',
         'events/handlers/roleDelete.ts',
         'events/handlers/roleUpdate.ts',

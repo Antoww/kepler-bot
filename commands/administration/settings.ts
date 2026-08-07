@@ -7,11 +7,16 @@ import {
     ChannelSelectMenuBuilder,
     ChannelType,
     type ChatInputCommandInteraction,
+    ContainerBuilder,
+    type EmbedBuilder,
+    MessageFlags,
     ModalBuilder,
     PermissionFlagsBits,
     RoleSelectMenuBuilder,
     SlashCommandBuilder,
     StringSelectMenuBuilder,
+    SeparatorBuilder,
+    TextDisplayBuilder,
     TextInputBuilder,
     TextInputStyle,
     type Guild,
@@ -59,10 +64,12 @@ import {
 } from '../../utils/invites/service.ts';
 import {
     getAutoModSettings,
-    updateAutoModSettings
+    getAutoModStats,
+    updateAutoModSettings,
+    type AutoModEscalationStep
 } from '../../utils/moderation/automodService.ts';
 
-type ConfigSection = 'logs' | 'moderation' | 'birthdays' | 'mute' | 'reports' | 'tickets' | 'xp' | 'invites' | 'timezone';
+type ConfigSection = 'logs' | 'moderation' | 'birthdays' | 'mute' | 'reports' | 'tickets' | 'tickets-placement' | 'xp' | 'invites' | 'timezone';
 type InviteDisplayKey =
     | 'show_invite_code'
     | 'show_inviter'
@@ -76,10 +83,73 @@ type AutoModRuleKey =
     | 'anti_spam_enabled'
     | 'anti_duplicate_enabled'
     | 'anti_caps_enabled'
-    | 'anti_mention_enabled';
+    | 'anti_mention_enabled'
+    | 'anti_keyword_enabled'
+    | 'anti_raid_enabled';
 
 const PANEL_COLOR = KEPLER_COLORS.primary;
 const PANEL_TIMEOUT = 5 * 60 * 1000;
+
+type LegacySettingsView = {
+    content?: string;
+    embeds?: EmbedBuilder[];
+    components?: ActionRowBuilder<any>[];
+    groupFieldsWithComponents?: boolean;
+};
+
+function toComponentsV2(view: LegacySettingsView) {
+    const embed = view.embeds?.[0]?.toJSON();
+    const container = new ContainerBuilder().setAccentColor(embed?.color ?? PANEL_COLOR);
+    const heading = [
+        embed?.author?.name ? `-# ${embed.author.name.toUpperCase()}` : null,
+        embed?.title ? `## ${embed.title}` : null,
+        embed?.description || view.content || null
+    ].filter(Boolean).join('\n');
+
+    if (heading) container.addTextDisplayComponents(new TextDisplayBuilder().setContent(heading));
+
+    if (embed?.fields?.length && view.groupFieldsWithComponents) {
+        if (heading) container.addSeparatorComponents(new SeparatorBuilder().setDivider(true));
+        embed.fields.forEach((field, index) => {
+            container.addTextDisplayComponents(
+                new TextDisplayBuilder().setContent(`### ${field.name}\n${field.value}`)
+            );
+            const row = view.components?.[index];
+            if (row) container.addActionRowComponents(row);
+            if (index < embed.fields!.length - 1) {
+                container.addSeparatorComponents(new SeparatorBuilder().setDivider(true));
+            }
+        });
+    } else if (embed?.fields?.length) {
+        if (heading) container.addSeparatorComponents(new SeparatorBuilder().setDivider(true));
+        container.addTextDisplayComponents(
+            new TextDisplayBuilder().setContent(
+                embed.fields.map(field => `**${field.name}**\n${field.value}`).join('\n\n')
+            )
+        );
+    }
+
+    const remainingComponents = view.groupFieldsWithComponents
+        ? view.components?.slice(embed?.fields?.length ?? 0)
+        : view.components;
+    if (remainingComponents?.length) {
+        if (heading || embed?.fields?.length) {
+            container.addSeparatorComponents(new SeparatorBuilder().setDivider(true));
+        }
+        container.addActionRowComponents(...remainingComponents);
+    }
+
+    const footer = embed?.footer?.text;
+    if (footer) {
+        container.addSeparatorComponents(new SeparatorBuilder().setDivider(false));
+        container.addTextDisplayComponents(new TextDisplayBuilder().setContent(`-# ${footer}`));
+    }
+
+    return {
+        components: [container],
+        flags: MessageFlags.IsComponentsV2 as MessageFlags.IsComponentsV2
+    };
+}
 
 export const data = new SlashCommandBuilder()
     .setName('settings')
@@ -98,7 +168,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
     const response = await interaction.reply({
         ...(await buildOverview(interaction)),
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2,
         fetchReply: true
     });
 
@@ -132,7 +202,9 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
     collector.on('end', async () => {
         try {
-            await interaction.editReply({ components: [] });
+            await interaction.editReply(toComponentsV2({
+                content: '⌛ Ce panneau de configuration a expiré. Relancez `/settings` pour continuer.'
+            }));
         } catch {
             // Le message éphémère peut déjà avoir été fermé.
         }
@@ -148,7 +220,7 @@ async function handleComponent(component: MessageComponentInteraction, source: C
             return;
         }
         if (component.customId === 'settings:close') {
-            await component.update({ content: 'Panneau de configuration fermé.', embeds: [], components: [] });
+            await component.update(toComponentsV2({ content: '✅ Panneau de configuration fermé.' }));
             return;
         }
         if (component.customId.startsWith('settings:section:')) {
@@ -238,11 +310,23 @@ async function handleComponent(component: MessageComponentInteraction, source: C
             const settings = await getAutoModSettings(guild.id);
             await component.deferUpdate();
             await updateAutoModSettings(guild.id, { enabled: !settings.enabled });
-            await component.editReply(await buildAutoModHome(guild));
+            await component.editReply(await buildAutoModGeneral(guild));
             return;
         }
         if (component.customId === 'settings:automod:rules') {
             await component.update(await buildAutoModRules(guild));
+            return;
+        }
+        if (component.customId === 'settings:automod:general') {
+            await component.update(await buildAutoModGeneral(guild));
+            return;
+        }
+        if (component.customId === 'settings:automod:filters') {
+            await component.update(await buildAutoModFilters(guild));
+            return;
+        }
+        if (component.customId === 'settings:automod:sanctions-menu') {
+            await component.update(await buildAutoModSanctions(guild));
             return;
         }
         if (component.customId === 'settings:automod:home') {
@@ -261,7 +345,32 @@ async function handleComponent(component: MessageComponentInteraction, source: C
             const settings = await getAutoModSettings(guild.id);
             await component.deferUpdate();
             await updateAutoModSettings(guild.id, { allow_own_invites: !settings.allow_own_invites });
-            await component.editReply(await buildAutoModHome(guild));
+            await component.editReply(await buildAutoModGeneral(guild));
+            return;
+        }
+        if (component.customId === 'settings:moderation:hub') {
+            await component.update(await buildModerationHub(guild));
+            return;
+        }
+        if (component.customId === 'settings:moderation:automod') {
+            await component.update(await buildAutoModHome(guild));
+            return;
+        }
+        if (component.customId === 'settings:moderation:logs') {
+            await component.update(await buildModerationLogs(guild));
+            return;
+        }
+        if (component.customId === 'settings:moderation:clear-log') {
+            await component.deferUpdate();
+            await updateModerationChannel(guild.id, '');
+            await component.editReply(await buildModerationLogs(guild));
+            return;
+        }
+        if (component.customId === 'settings:automod:observation') {
+            const settings = await getAutoModSettings(guild.id);
+            await component.deferUpdate();
+            await updateAutoModSettings(guild.id, { observation_mode: !settings.observation_mode });
+            await component.editReply(await buildAutoModGeneral(guild));
             return;
         }
         if (component.customId === 'settings:automod:thresholds') {
@@ -272,8 +381,16 @@ async function handleComponent(component: MessageComponentInteraction, source: C
             await showAutoModActionModal(component, source);
             return;
         }
+        if (component.customId === 'settings:automod:rule-actions') {
+            await showAutoModRuleActionsModal(component, source);
+            return;
+        }
         if (component.customId === 'settings:automod:domains') {
             await showAutoModDomainsModal(component, source);
+            return;
+        }
+        if (component.customId === 'settings:automod:keywords') {
+            await showAutoModKeywordsModal(component, source);
             return;
         }
         if (component.customId === 'settings:automod:exemptions') {
@@ -296,35 +413,35 @@ async function handleComponent(component: MessageComponentInteraction, source: C
             const settings = await getInviteSettings(guild.id);
             await component.deferUpdate();
             await updateInviteSettings(guild.id, { enabled: !settings.enabled });
-            await component.editReply(await buildInviteSection(guild));
+            await component.editReply(await buildInviteGeneral(guild));
             return;
         }
         if (component.customId === 'settings:invites:welcome-toggle') {
             const settings = await getInviteSettings(guild.id);
             await component.deferUpdate();
             await updateInviteSettings(guild.id, { welcome_enabled: !settings.welcome_enabled });
-            await component.editReply(await buildInviteSection(guild));
+            await component.editReply(await buildInviteWelcome(guild));
             return;
         }
         if (component.customId === 'settings:invites:create-log-toggle') {
             const settings = await getInviteSettings(guild.id);
             await component.deferUpdate();
             await updateInviteSettings(guild.id, { log_invite_create: !settings.log_invite_create });
-            await component.editReply(await buildInviteSection(guild));
+            await component.editReply(await buildInviteLogs(guild));
             return;
         }
         if (component.customId === 'settings:invites:delete-log-toggle') {
             const settings = await getInviteSettings(guild.id);
             await component.deferUpdate();
             await updateInviteSettings(guild.id, { log_invite_delete: !settings.log_invite_delete });
-            await component.editReply(await buildInviteSection(guild));
+            await component.editReply(await buildInviteLogs(guild));
             return;
         }
         if (component.customId === 'settings:invites:use-log-toggle') {
             const settings = await getInviteSettings(guild.id);
             await component.deferUpdate();
             await updateInviteSettings(guild.id, { log_invite_use: !settings.log_invite_use });
-            await component.editReply(await buildInviteSection(guild));
+            await component.editReply(await buildInviteLogs(guild));
             return;
         }
         if (component.customId === 'settings:invites:customize') {
@@ -333,6 +450,22 @@ async function handleComponent(component: MessageComponentInteraction, source: C
         }
         if (component.customId === 'settings:invites:fields') {
             await component.update(await buildInviteFields(guild));
+            return;
+        }
+        if (component.customId === 'settings:invites:general') {
+            await component.update(await buildInviteGeneral(guild));
+            return;
+        }
+        if (component.customId === 'settings:invites:channels') {
+            await component.update(await buildInviteChannels(guild));
+            return;
+        }
+        if (component.customId === 'settings:invites:logs') {
+            await component.update(await buildInviteLogs(guild));
+            return;
+        }
+        if (component.customId === 'settings:invites:welcome') {
+            await component.update(await buildInviteWelcome(guild));
             return;
         }
         if (component.customId === 'settings:invites:home') {
@@ -354,7 +487,7 @@ async function handleComponent(component: MessageComponentInteraction, source: C
                 welcome_channel_id: null,
                 welcome_enabled: false
             });
-            await component.editReply(await buildInviteSection(guild));
+            await component.editReply(await buildInviteChannels(guild));
             return;
         }
         if (component.customId.startsWith('settings:disable:')) {
@@ -375,6 +508,10 @@ async function handleComponent(component: MessageComponentInteraction, source: C
         }
         if (component.customId === 'settings:tickets:customize') {
             await customizeTicketPanel(component, source);
+            return;
+        }
+        if (component.customId === 'settings:tickets:placement') {
+            await component.update(await buildSection('tickets-placement', guild));
             return;
         }
         if (component.customId === 'settings:tickets:publish') {
@@ -430,7 +567,7 @@ async function handleComponent(component: MessageComponentInteraction, source: C
         if (component.customId === 'settings:invites:log-channel') {
             await component.deferUpdate();
             await updateInviteSettings(guild.id, { log_channel_id: channelId });
-            await component.editReply(await buildInviteSection(guild));
+            await component.editReply(await buildInviteChannels(guild));
             return;
         }
         if (component.customId === 'settings:invites:welcome-channel') {
@@ -439,13 +576,13 @@ async function handleComponent(component: MessageComponentInteraction, source: C
                 welcome_channel_id: channelId,
                 welcome_enabled: true
             });
-            await component.editReply(await buildInviteSection(guild));
+            await component.editReply(await buildInviteChannels(guild));
             return;
         }
         if (component.customId === 'settings:automod:log-channel') {
             await component.deferUpdate();
             await updateModerationChannel(guild.id, channelId);
-            await component.editReply(await buildAutoModHome(guild));
+            await component.editReply(await buildModerationLogs(guild));
             return;
         }
         if (component.customId === 'settings:automod:excluded-channels') {
@@ -457,17 +594,17 @@ async function handleComponent(component: MessageComponentInteraction, source: C
         await component.deferUpdate();
         if (component.customId === 'settings:select:tickets-category') {
             await updateTicketConfig(guild.id, { ticket_category_id: channelId });
-            await confirmSettingChange(component, source, 'tickets', `Catégorie des tickets configurée sur <#${channelId}>.`);
+            await component.editReply(await buildSection('tickets-placement', guild));
             return;
         }
         if (component.customId === 'settings:select:tickets-logs') {
             await updateTicketConfig(guild.id, { ticket_log_channel_id: channelId });
-            await confirmSettingChange(component, source, 'tickets', `Salon des logs de tickets configuré sur <#${channelId}>.`);
+            await component.editReply(await buildSection('tickets-placement', guild));
             return;
         }
         if (component.customId === 'settings:select:tickets-channel') {
             await updateTicketConfig(guild.id, { ticket_panel_channel_id: channelId });
-            await confirmSettingChange(component, source, 'tickets', `Salon du panneau configuré sur <#${channelId}>.`);
+            await component.editReply(await buildSection('tickets-placement', guild));
             return;
         }
         if (component.customId === 'settings:select:reports-channel') {
@@ -518,7 +655,7 @@ async function handleComponent(component: MessageComponentInteraction, source: C
             }
             await component.deferUpdate();
             await updateTicketConfig(guild.id, { ticket_support_role_id: role.id });
-            await confirmSettingChange(component, source, 'tickets', `Rôle support configuré sur ${role}.`);
+            await component.editReply(await buildSection('tickets-placement', guild));
             return;
         }
         if (component.customId === 'settings:select:reports-role') {
@@ -547,7 +684,9 @@ async function handleComponent(component: MessageComponentInteraction, source: C
 
     if (component.isStringSelectMenu()) {
         await component.deferUpdate();
-        if (component.customId === 'settings:timezone:common') {
+        if (component.customId.startsWith('settings:navigate:')) {
+            await component.editReply(await buildSection(component.values[0] as ConfigSection, guild));
+        } else if (component.customId === 'settings:timezone:common') {
             await updateServerTimezone(guild.id, component.values[0]);
             await component.editReply(await buildTimezoneSection(guild));
         } else if (component.customId === 'settings:xp:remove-boost') {
@@ -560,20 +699,18 @@ async function handleComponent(component: MessageComponentInteraction, source: C
     }
 }
 
-async function buildOverview(interaction: ChatInputCommandInteraction, notice?: string) {
+async function buildOverviewLegacy(interaction: ChatInputCommandInteraction, notice?: string) {
     const guild = interaction.guild!;
     const dashboardUrl = getDashboardUrl(guild.id);
-    const [logs, moderation, automod, birthdays, mute, reports, reportRole, tickets, xpSettings, xpRewards, inviteSettings, timezone] = await Promise.all([
+    const [logs, moderation, automod, birthdays, mute, reports, tickets, xpSettings, inviteSettings, timezone] = await Promise.all([
         getLogChannel(guild.id),
         getModerationChannel(guild.id),
         getAutoModSettings(guild.id),
         getBirthdayChannel(guild.id),
         getMuteRole(guild.id),
         getReportChannel(guild.id),
-        getReportRole(guild.id),
         getTicketConfig(guild.id),
         getXpSettings(guild.id),
-        getXpRewards(guild.id),
         getInviteSettings(guild.id),
         getServerTimezone(guild.id)
     ]);
@@ -593,51 +730,62 @@ async function buildOverview(interaction: ChatInputCommandInteraction, notice?: 
                     : 'Sélectionnez une catégorie pour modifier sa configuration.'
         )
         .addFields(
-            { name: '📑 Logs serveur', value: formatChannel(guild, logs), inline: true },
             {
-                name: '🛡️ Modération',
-                value: `${automod.enabled ? '🟢 AutoMod actif' : '⚪ AutoMod désactivé'} · ${formatChannel(guild, moderation)}`,
-                inline: true
-            },
-            { name: '🎂 Anniversaires', value: formatChannel(guild, birthdays), inline: true },
-            { name: '🔇 Rôle de mute', value: formatRole(guild, mute), inline: true },
-            { name: '🚩 Salon des reports', value: formatChannel(guild, reports), inline: true },
-            { name: '📣 Rôle mentionné', value: formatOptionalRole(guild, reportRole), inline: true },
-            { name: '🎫 Panneau de tickets', value: formatChannel(guild, tickets.ticket_panel_channel_id), inline: true },
-            { name: '📁 Catégorie des tickets', value: formatChannel(guild, tickets.ticket_category_id), inline: true },
-            { name: '🧾 Logs des tickets', value: formatChannel(guild, tickets.ticket_log_channel_id), inline: true },
-            { name: '🧑‍💻 Rôle support', value: formatOptionalRole(guild, tickets.ticket_support_role_id), inline: true },
-            {
-                name: '✨ Expérience',
-                value: xpSettings.enabled
-                    ? `🟢 Actif · ${xpSettings.cooldown_seconds}s · ${xpRewards.length} récompense(s)`
-                    : '⚪ Désactivé',
-                inline: true
+                name: '🛡️ Modération et sécurité',
+                value:
+                    `${statusIcon(automod.enabled)} **AutoMod** — ${enabledLabel(automod.enabled)}\n` +
+                    `${configurationIcon(logs)} **Logs du serveur** — ${configurationLabel(logs)}\n` +
+                    `${configurationIcon(moderation)} **Journal de modération** — ${configurationLabel(moderation)}\n` +
+                    `${configurationIcon(reports)} **Signalements** — ${configurationLabel(reports)}\n` +
+                    `${mute ? '✅' : '◽'} **Sanctions longues** — ${mute ? 'Rôle configuré' : 'Timeouts Discord'}`,
+                inline: false
             },
             {
-                name: '🔗 Invitations',
-                value: inviteSettings.enabled
-                    ? `🟢 Actif · logs ${formatChannel(guild, inviteSettings.log_channel_id)}`
-                    : '⚪ Désactivé',
-                inline: true
+                name: '👥 Communauté et engagement',
+                value:
+                    `${configurationIcon(birthdays)} **Anniversaires** — ${configurationLabel(birthdays)}\n` +
+                    `${statusIcon(xpSettings.enabled)} **Expérience** — ${enabledLabel(xpSettings.enabled)}\n` +
+                    `${statusIcon(inviteSettings.enabled)} **Invitations** — ${enabledLabel(inviteSettings.enabled)}`,
+                inline: false
             },
-            { name: '🌍 Fuseau horaire', value: `\`${timezone}\``, inline: true }
+            {
+                name: '🧰 Gestion du serveur',
+                value:
+                    `${ticketConfigurationIcon(tickets)} **Tickets** — ${ticketConfigurationLabel(tickets)}\n` +
+                    `✅ **Fuseau horaire** — \`${timezone}\``,
+                inline: false
+            },
         )
         .setFooter({ text: 'Panneau privé • expiration dans 5 minutes' })
         .setTimestamp();
 
-    const categories = new ActionRowBuilder<ButtonBuilder>().addComponents(
-        new ButtonBuilder().setCustomId('settings:section:logs').setLabel('Logs').setEmoji('📑').setStyle(ButtonStyle.Secondary),
-        new ButtonBuilder().setCustomId('settings:section:moderation').setLabel('Modération').setEmoji('🛡️').setStyle(ButtonStyle.Secondary),
-        new ButtonBuilder().setCustomId('settings:section:birthdays').setLabel('Anniversaires').setEmoji('🎂').setStyle(ButtonStyle.Secondary),
-        new ButtonBuilder().setCustomId('settings:section:mute').setLabel('Mute').setEmoji('🔇').setStyle(ButtonStyle.Secondary),
-        new ButtonBuilder().setCustomId('settings:section:reports').setLabel('Reports').setEmoji('🚩').setStyle(ButtonStyle.Secondary)
+    const moderationMenu = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
+        new StringSelectMenuBuilder()
+            .setCustomId('settings:navigate:moderation')
+            .setPlaceholder('Configurer la modération et la sécurité')
+            .addOptions(
+                { label: 'Modération', description: 'AutoMod, journaux, mute et signalements', value: 'moderation', emoji: '🛡️' },
+                { label: 'Logs du serveur', description: 'Événements généraux du serveur', value: 'logs', emoji: '📑' }
+            )
     );
-    const modules = new ActionRowBuilder<ButtonBuilder>().addComponents(
-        new ButtonBuilder().setCustomId('settings:section:tickets').setLabel('Tickets').setEmoji('🎫').setStyle(ButtonStyle.Secondary),
-        new ButtonBuilder().setCustomId('settings:section:xp').setLabel('Expérience').setEmoji('✨').setStyle(ButtonStyle.Secondary),
-        new ButtonBuilder().setCustomId('settings:section:invites').setLabel('Invitations').setEmoji('🔗').setStyle(ButtonStyle.Secondary),
-        new ButtonBuilder().setCustomId('settings:section:timezone').setLabel('Fuseau').setEmoji('🌍').setStyle(ButtonStyle.Secondary)
+    const communityMenu = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
+        new StringSelectMenuBuilder()
+            .setCustomId('settings:navigate:community')
+            .setPlaceholder('Configurer la communauté et l’engagement')
+            .addOptions(
+                { label: 'Anniversaires', description: 'Salon des annonces d’anniversaire', value: 'birthdays', emoji: '🎂' },
+                { label: 'Expérience', description: 'Niveaux, récompenses et boosts', value: 'xp', emoji: '✨' },
+                { label: 'Invitations', description: 'Suivi des liens et arrivées', value: 'invites', emoji: '🔗' }
+            )
+    );
+    const serverMenu = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
+        new StringSelectMenuBuilder()
+            .setCustomId('settings:navigate:server')
+            .setPlaceholder('Configurer les outils du serveur')
+            .addOptions(
+                { label: 'Tickets', description: 'Panneau, accès et apparence', value: 'tickets', emoji: '🎫' },
+                { label: 'Fuseau horaire', description: 'Dates et planifications', value: 'timezone', emoji: '🌍' }
+            )
     );
     const actions = new ActionRowBuilder<ButtonBuilder>();
     if (dashboardUrl) {
@@ -654,7 +802,12 @@ async function buildOverview(interaction: ChatInputCommandInteraction, notice?: 
         new ButtonBuilder().setCustomId('settings:close').setEmoji('✖️').setStyle(ButtonStyle.Secondary)
     );
 
-    return { content: '', embeds: [embed], components: [categories, modules, actions] };
+    return {
+        content: '',
+        embeds: [embed],
+        components: [moderationMenu, communityMenu, serverMenu, actions],
+        groupFieldsWithComponents: true
+    };
 }
 
 function getDashboardUrl(guildId: string): string | null {
@@ -671,18 +824,53 @@ function getDashboardUrl(guildId: string): string | null {
     }
 }
 
-async function buildSection(section: ConfigSection, guild: Guild) {
-    if (section === 'xp') return buildXpHome(guild);
-    if (section === 'invites') return buildInviteSection(guild);
-    if (section === 'timezone') return buildTimezoneSection(guild);
-    if (section === 'moderation') return buildAutoModHome(guild);
+async function buildTicketHomeLegacy(guild: Guild) {
+    const config = await getTicketConfig(guild.id);
+    const ready = Boolean(
+        config.ticket_panel_channel_id && config.ticket_category_id &&
+        config.ticket_log_channel_id && config.ticket_support_role_id
+    );
+    return {
+        content: '',
+        embeds: [
+            createKeplerEmbed(ready ? 'primary' : 'neutral')
+                .setTitle('Tickets')
+                .setDescription('Préparez les emplacements et l’apparence du panneau, puis publiez-le lorsqu’il est prêt.')
+                .addFields(
+                    { name: 'État', value: ready ? '🟢 Configuration complète' : '🟠 Configuration incomplète', inline: false },
+                    { name: 'Panneau', value: formatChannel(guild, config.ticket_panel_channel_id), inline: true },
+                    { name: 'Catégorie', value: formatChannel(guild, config.ticket_category_id), inline: true },
+                    { name: 'Journal', value: formatChannel(guild, config.ticket_log_channel_id), inline: true },
+                    { name: 'Rôle support', value: formatOptionalRole(guild, config.ticket_support_role_id), inline: true },
+                    { name: 'Titre du panneau', value: config.ticket_panel_title, inline: false }
+                )
+                .setFooter({ text: guild.name })
+        ],
+        components: [
+            new ActionRowBuilder<ButtonBuilder>().addComponents(
+                new ButtonBuilder().setCustomId('settings:tickets:placement').setLabel('Emplacements et accès').setEmoji('📍').setStyle(ButtonStyle.Primary),
+                new ButtonBuilder().setCustomId('settings:tickets:customize').setLabel('Apparence du panneau').setEmoji('✏️').setStyle(ButtonStyle.Secondary),
+                new ButtonBuilder().setCustomId('settings:tickets:publish').setLabel('Publier le panneau').setEmoji('📨').setStyle(ButtonStyle.Success),
+                new ButtonBuilder().setCustomId('settings:disable:tickets').setLabel('Désactiver').setStyle(ButtonStyle.Danger)
+            ),
+            new ActionRowBuilder<ButtonBuilder>().addComponents(backButton())
+        ]
+    };
+}
+
+async function buildSectionLegacy(section: ConfigSection, guild: Guild) {
+    if (section === 'xp') return buildXpHomeLegacy(guild);
+    if (section === 'invites') return buildInviteSectionLegacy(guild);
+    if (section === 'timezone') return buildTimezoneSectionLegacy(guild);
+    if (section === 'moderation') return buildModerationHubLegacy(guild);
+    if (section === 'tickets') return buildTicketHomeLegacy(guild);
     const embed = createKeplerEmbed()
         .setColor(PANEL_COLOR)
         .setTitle(sectionLabel(section))
         .setDescription(sectionDescription(section))
         .setFooter({ text: guild.name });
 
-    if (section === 'tickets') {
+    if (section === 'tickets-placement') {
         const config = await getTicketConfig(guild.id);
         const channelSelect = new ChannelSelectMenuBuilder()
             .setCustomId('settings:select:tickets-channel')
@@ -728,10 +916,7 @@ async function buildSection(section: ConfigSection, guild: Guild) {
                 new ActionRowBuilder<RoleSelectMenuBuilder>().addComponents(roleSelect),
                 new ActionRowBuilder<ChannelSelectMenuBuilder>().addComponents(logChannelSelect),
                 new ActionRowBuilder<ButtonBuilder>().addComponents(
-                    new ButtonBuilder().setCustomId('settings:tickets:customize').setLabel('Personnaliser').setEmoji('✏️').setStyle(ButtonStyle.Primary),
-                    new ButtonBuilder().setCustomId('settings:tickets:publish').setLabel('Publier').setEmoji('📨').setStyle(ButtonStyle.Success),
-                    new ButtonBuilder().setCustomId('settings:disable:tickets').setLabel('Désactiver').setStyle(ButtonStyle.Danger),
-                    backButton()
+                    ticketBackButton()
                 )
             ]
         };
@@ -768,7 +953,7 @@ async function buildSection(section: ConfigSection, guild: Guild) {
                 new ActionRowBuilder<ButtonBuilder>().addComponents(
                     new ButtonBuilder().setCustomId('settings:clear-report-role').setLabel('Retirer le rôle').setStyle(ButtonStyle.Secondary),
                     new ButtonBuilder().setCustomId('settings:disable:reports').setLabel('Désactiver').setStyle(ButtonStyle.Danger),
-                    backButton()
+                    moderationBackButton()
                 )
             ]
         };
@@ -792,7 +977,7 @@ async function buildSection(section: ConfigSection, guild: Guild) {
                 new ActionRowBuilder<ButtonBuilder>().addComponents(
                     new ButtonBuilder().setCustomId('settings:create-mute').setLabel('Créer le rôle').setEmoji('➕').setStyle(ButtonStyle.Primary),
                     new ButtonBuilder().setCustomId('settings:disable:mute').setLabel('Utiliser les timeouts').setStyle(ButtonStyle.Danger),
-                    backButton()
+                    moderationBackButton()
                 )
             ]
         };
@@ -800,9 +985,7 @@ async function buildSection(section: ConfigSection, guild: Guild) {
 
     const configuredChannelId = section === 'logs'
         ? await getLogChannel(guild.id)
-        : section === 'moderation'
-            ? await getModerationChannel(guild.id)
-            : await getBirthdayChannel(guild.id);
+        : await getBirthdayChannel(guild.id);
     const select = new ChannelSelectMenuBuilder()
         .setCustomId(`settings:select:${section}`)
         .setPlaceholder('Choisir un salon textuel')
@@ -825,7 +1008,7 @@ async function buildSection(section: ConfigSection, guild: Guild) {
     };
 }
 
-async function buildTimezoneSection(guild: Guild) {
+async function buildTimezoneSectionLegacy(guild: Guild) {
     const timezone = await getServerTimezone(guild.id);
     const now = new Date();
     const select = new StringSelectMenuBuilder()
@@ -862,80 +1045,113 @@ async function buildTimezoneSection(guild: Guild) {
     };
 }
 
-async function buildInviteSection(guild: Guild) {
+async function buildInviteSectionLegacy(guild: Guild) {
     const settings = await getInviteSettings(guild.id);
-    const logChannel = new ChannelSelectMenuBuilder()
-        .setCustomId('settings:invites:log-channel')
-        .setPlaceholder('Choisir le salon des logs d’invitations')
-        .addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement)
-        .setMinValues(1)
-        .setMaxValues(1);
-    const welcomeChannel = new ChannelSelectMenuBuilder()
-        .setCustomId('settings:invites:welcome-channel')
-        .setPlaceholder('Choisir le salon des messages d’arrivée')
-        .addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement)
-        .setMinValues(1)
-        .setMaxValues(1);
-    const embed = createKeplerEmbed(settings.enabled ? 'primary' : 'neutral')
-        .setTitle('Manager d’invitations')
-        .setDescription(
-            'Kepler compare les utilisations des liens lors de chaque arrivée. ' +
-            'Il faut lui accorder la permission **Gérer le serveur** pour consulter les invitations.\n\n' +
-            'Variables du message : `{membre}`, `{membre_nom}`, `{serveur}`, `{code}`, `{inviteur}`, ' +
-            '`{utilisations}`, `{membres}`, `{canal}`.'
-        )
-        .addFields(
-            { name: 'Système', value: settings.enabled ? '🟢 Actif' : '⚪ Désactivé', inline: true },
-            { name: 'Logs', value: formatChannel(guild, settings.log_channel_id), inline: true },
-            {
-                name: 'Annonce d’arrivée',
-                value: settings.welcome_enabled
-                    ? formatChannel(guild, settings.welcome_channel_id)
-                    : '⚪ Désactivée',
-                inline: true
-            },
-            { name: 'Message', value: settings.welcome_message.slice(0, 1024), inline: false }
-        )
-        .setFooter({ text: guild.name });
     return {
         content: '',
-        embeds: [embed],
+        embeds: [
+            createKeplerEmbed(settings.enabled ? 'primary' : 'neutral')
+                .setTitle('Invitations')
+                .setDescription('Configurez le suivi des liens et les annonces d’arrivée depuis les rubriques ci-dessous.')
+                .addFields(
+                    { name: 'Système', value: settings.enabled ? '🟢 Actif' : '⚪ Désactivé', inline: true },
+                    { name: 'Journal', value: formatChannel(guild, settings.log_channel_id), inline: true },
+                    {
+                        name: 'Annonce d’arrivée',
+                        value: settings.welcome_enabled ? formatChannel(guild, settings.welcome_channel_id) : '⚪ Désactivée',
+                        inline: true
+                    }
+                )
+                .setFooter({ text: guild.name })
+        ],
         components: [
-            new ActionRowBuilder<ChannelSelectMenuBuilder>().addComponents(logChannel),
-            new ActionRowBuilder<ChannelSelectMenuBuilder>().addComponents(welcomeChannel),
             new ActionRowBuilder<ButtonBuilder>().addComponents(
-                new ButtonBuilder()
-                    .setCustomId('settings:invites:toggle')
-                    .setLabel(settings.enabled ? 'Désactiver le manager' : 'Activer le manager')
-                    .setStyle(settings.enabled ? ButtonStyle.Danger : ButtonStyle.Success),
-                new ButtonBuilder()
-                    .setCustomId('settings:invites:welcome-toggle')
-                    .setLabel(settings.welcome_enabled ? 'Couper les annonces' : 'Activer les annonces')
-                    .setStyle(settings.welcome_enabled ? ButtonStyle.Secondary : ButtonStyle.Success),
-                new ButtonBuilder()
-                    .setCustomId('settings:invites:create-log-toggle')
-                    .setLabel('Logs création')
-                    .setStyle(settings.log_invite_create ? ButtonStyle.Success : ButtonStyle.Secondary),
-                new ButtonBuilder()
-                    .setCustomId('settings:invites:delete-log-toggle')
-                    .setLabel('Logs suppression')
-                    .setStyle(settings.log_invite_delete ? ButtonStyle.Success : ButtonStyle.Secondary),
-                new ButtonBuilder()
-                    .setCustomId('settings:invites:use-log-toggle')
-                    .setLabel('Logs arrivée')
-                    .setStyle(settings.log_invite_use ? ButtonStyle.Success : ButtonStyle.Secondary)
-            ),
-            new ActionRowBuilder<ButtonBuilder>().addComponents(
-                new ButtonBuilder().setCustomId('settings:invites:customize').setLabel('Personnaliser').setEmoji('✏️').setStyle(ButtonStyle.Primary),
-                new ButtonBuilder().setCustomId('settings:invites:fields').setLabel('Informations affichées').setEmoji('🧩').setStyle(ButtonStyle.Secondary),
-                new ButtonBuilder().setCustomId('settings:invites:clear-channels').setLabel('Retirer les salons').setStyle(ButtonStyle.Danger)
+                new ButtonBuilder().setCustomId('settings:invites:general').setLabel('Général').setEmoji('⚙️').setStyle(ButtonStyle.Primary),
+                new ButtonBuilder().setCustomId('settings:invites:channels').setLabel('Salons').setEmoji('📍').setStyle(ButtonStyle.Secondary),
+                new ButtonBuilder().setCustomId('settings:invites:logs').setLabel('Événements journalisés').setEmoji('🧾').setStyle(ButtonStyle.Secondary),
+                new ButtonBuilder().setCustomId('settings:invites:welcome').setLabel('Annonce d’arrivée').setEmoji('👋').setStyle(ButtonStyle.Secondary)
             ),
             new ActionRowBuilder<ButtonBuilder>().addComponents(backButton())
         ]
     };
 }
 
-async function buildInviteFields(guild: Guild) {
+async function buildInviteGeneralLegacy(guild: Guild) {
+    const settings = await getInviteSettings(guild.id);
+    return {
+        content: '',
+        embeds: [createKeplerEmbed(settings.enabled ? 'primary' : 'neutral')
+            .setTitle('Invitations · Général')
+            .setDescription('Le bot doit disposer de la permission **Gérer le serveur** pour comparer les utilisations des liens.')
+            .addFields({ name: 'Manager', value: settings.enabled ? '🟢 Actif' : '⚪ Désactivé', inline: true })
+            .setFooter({ text: guild.name })],
+        components: [new ActionRowBuilder<ButtonBuilder>().addComponents(
+            new ButtonBuilder().setCustomId('settings:invites:toggle').setLabel(settings.enabled ? 'Désactiver' : 'Activer').setStyle(settings.enabled ? ButtonStyle.Danger : ButtonStyle.Success),
+            inviteBackButton()
+        )]
+    };
+}
+
+async function buildInviteChannelsLegacy(guild: Guild) {
+    const settings = await getInviteSettings(guild.id);
+    const logChannel = new ChannelSelectMenuBuilder().setCustomId('settings:invites:log-channel')
+        .setPlaceholder('Salon du journal d’invitations').addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement).setMinValues(1).setMaxValues(1);
+    const welcomeChannel = new ChannelSelectMenuBuilder().setCustomId('settings:invites:welcome-channel')
+        .setPlaceholder('Salon des annonces d’arrivée').addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement).setMinValues(1).setMaxValues(1);
+    if (settings.log_channel_id && guild.channels.cache.has(settings.log_channel_id)) logChannel.setDefaultChannels(settings.log_channel_id);
+    if (settings.welcome_channel_id && guild.channels.cache.has(settings.welcome_channel_id)) welcomeChannel.setDefaultChannels(settings.welcome_channel_id);
+    return {
+        content: '',
+        embeds: [createKeplerEmbed('primary').setTitle('Invitations · Salons').addFields(
+            { name: 'Journal', value: formatChannel(guild, settings.log_channel_id), inline: true },
+            { name: 'Annonces', value: formatChannel(guild, settings.welcome_channel_id), inline: true }
+        ).setFooter({ text: guild.name })],
+        components: [
+            new ActionRowBuilder<ChannelSelectMenuBuilder>().addComponents(logChannel),
+            new ActionRowBuilder<ChannelSelectMenuBuilder>().addComponents(welcomeChannel),
+            new ActionRowBuilder<ButtonBuilder>().addComponents(
+                new ButtonBuilder().setCustomId('settings:invites:clear-channels').setLabel('Retirer les salons').setStyle(ButtonStyle.Danger),
+                inviteBackButton()
+            )
+        ]
+    };
+}
+
+async function buildInviteLogsLegacy(guild: Guild) {
+    const settings = await getInviteSettings(guild.id);
+    return {
+        content: '',
+        embeds: [createKeplerEmbed('primary').setTitle('Invitations · Événements journalisés')
+            .setDescription('Choisissez précisément les événements envoyés dans le journal d’invitations.')
+            .setFooter({ text: guild.name })],
+        components: [new ActionRowBuilder<ButtonBuilder>().addComponents(
+            new ButtonBuilder().setCustomId('settings:invites:create-log-toggle').setLabel('Création de lien').setStyle(settings.log_invite_create ? ButtonStyle.Success : ButtonStyle.Secondary),
+            new ButtonBuilder().setCustomId('settings:invites:delete-log-toggle').setLabel('Suppression de lien').setStyle(settings.log_invite_delete ? ButtonStyle.Success : ButtonStyle.Secondary),
+            new ButtonBuilder().setCustomId('settings:invites:use-log-toggle').setLabel('Arrivée détectée').setStyle(settings.log_invite_use ? ButtonStyle.Success : ButtonStyle.Secondary),
+            inviteBackButton()
+        )]
+    };
+}
+
+async function buildInviteWelcomeLegacy(guild: Guild) {
+    const settings = await getInviteSettings(guild.id);
+    return {
+        content: '',
+        embeds: [createKeplerEmbed(settings.welcome_enabled ? 'primary' : 'neutral').setTitle('Invitations · Annonce d’arrivée')
+            .setDescription(settings.welcome_message.slice(0, 1500)).addFields(
+                { name: 'État', value: settings.welcome_enabled ? '🟢 Active' : '⚪ Désactivée', inline: true },
+                { name: 'Salon', value: formatChannel(guild, settings.welcome_channel_id), inline: true }
+            ).setFooter({ text: guild.name })],
+        components: [new ActionRowBuilder<ButtonBuilder>().addComponents(
+            new ButtonBuilder().setCustomId('settings:invites:welcome-toggle').setLabel(settings.welcome_enabled ? 'Désactiver' : 'Activer').setStyle(settings.welcome_enabled ? ButtonStyle.Danger : ButtonStyle.Success),
+            new ButtonBuilder().setCustomId('settings:invites:customize').setLabel('Modifier le message').setEmoji('✏️').setStyle(ButtonStyle.Primary),
+            new ButtonBuilder().setCustomId('settings:invites:fields').setLabel('Informations affichées').setEmoji('🧩').setStyle(ButtonStyle.Secondary),
+            inviteBackButton()
+        )]
+    };
+}
+
+async function buildInviteFieldsLegacy(guild: Guild) {
     const settings = await getInviteSettings(guild.id);
     const choices: Array<[InviteDisplayKey, string, string]> = [
         ['show_invite_code', 'Fin du lien', '🔗'],
@@ -966,16 +1182,95 @@ async function buildInviteFields(guild: Guild) {
             new ActionRowBuilder<ButtonBuilder>().addComponents(...choices.slice(0, 3).map(button)),
             new ActionRowBuilder<ButtonBuilder>().addComponents(...choices.slice(3).map(button)),
             new ActionRowBuilder<ButtonBuilder>().addComponents(
-                new ButtonBuilder().setCustomId('settings:invites:home').setLabel('Retour aux invitations').setEmoji('↩️').setStyle(ButtonStyle.Secondary)
+                new ButtonBuilder().setCustomId('settings:invites:welcome').setLabel('Retour à l’annonce').setEmoji('↩️').setStyle(ButtonStyle.Secondary)
             )
         ]
     };
 }
 
-async function buildAutoModHome(guild: Guild) {
-    const [settings, logChannelId] = await Promise.all([
+async function buildModerationHubLegacy(guild: Guild) {
+    const [settings, moderationChannelId, muteRoleId, reportChannelId, reportRoleId] = await Promise.all([
         getAutoModSettings(guild.id),
-        getModerationChannel(guild.id)
+        getModerationChannel(guild.id),
+        getMuteRole(guild.id),
+        getReportChannel(guild.id),
+        getReportRole(guild.id)
+    ]);
+    return {
+        content: '',
+        embeds: [
+            createKeplerEmbed(settings.enabled ? 'primary' : 'neutral')
+                .setTitle('Modération')
+                .setDescription(
+                    'Tous les outils de sécurité du serveur sont regroupés ici. ' +
+                    'Choisissez une rubrique pour modifier ses réglages.'
+                )
+                .addFields(
+                    {
+                        name: '🛡️ Auto-modération',
+                        value: settings.enabled
+                            ? `🟢 Active · ${settings.observation_mode ? 'observation' : 'sanctions actives'}`
+                            : '⚪ Désactivée',
+                        inline: true
+                    },
+                    { name: '⚖️ Sanctions et mute', value: formatRole(guild, muteRoleId), inline: true },
+                    {
+                        name: '🚩 Signalements',
+                        value: `${formatChannel(guild, reportChannelId)} · ${formatOptionalRole(guild, reportRoleId)}`,
+                        inline: true
+                    },
+                    { name: '🧾 Journal de modération', value: formatChannel(guild, moderationChannelId), inline: false }
+                )
+                .setFooter({ text: guild.name })
+        ],
+        components: [
+            new ActionRowBuilder<ButtonBuilder>().addComponents(
+                new ButtonBuilder().setCustomId('settings:moderation:automod').setLabel('Auto-modération').setEmoji('🛡️').setStyle(ButtonStyle.Primary),
+                new ButtonBuilder().setCustomId('settings:section:mute').setLabel('Sanctions et mute').setEmoji('⚖️').setStyle(ButtonStyle.Secondary),
+                new ButtonBuilder().setCustomId('settings:section:reports').setLabel('Signalements').setEmoji('🚩').setStyle(ButtonStyle.Secondary),
+                new ButtonBuilder().setCustomId('settings:moderation:logs').setLabel('Journal').setEmoji('🧾').setStyle(ButtonStyle.Secondary)
+            ),
+            new ActionRowBuilder<ButtonBuilder>().addComponents(backButton())
+        ]
+    };
+}
+
+async function buildModerationLogsLegacy(guild: Guild) {
+    const channelId = await getModerationChannel(guild.id);
+    const select = new ChannelSelectMenuBuilder()
+        .setCustomId('settings:automod:log-channel')
+        .setPlaceholder('Choisir le journal de modération')
+        .addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement)
+        .setMinValues(1)
+        .setMaxValues(1);
+    if (channelId && guild.channels.cache.has(channelId)) select.setDefaultChannels(channelId);
+    return {
+        content: '',
+        embeds: [
+            createKeplerEmbed('primary')
+                .setTitle('Modération · Journal')
+                .setDescription(
+                    'Ce salon reçoit les sanctions manuelles, les détections AutoMod, ' +
+                    'les timeouts et les alertes anti-raid.'
+                )
+                .addFields({ name: 'Salon actuel', value: formatChannel(guild, channelId), inline: false })
+                .setFooter({ text: guild.name })
+        ],
+        components: [
+            new ActionRowBuilder<ChannelSelectMenuBuilder>().addComponents(select),
+            new ActionRowBuilder<ButtonBuilder>().addComponents(
+                new ButtonBuilder().setCustomId('settings:moderation:clear-log').setLabel('Retirer le salon').setStyle(ButtonStyle.Danger),
+                moderationBackButton()
+            )
+        ]
+    };
+}
+
+async function buildAutoModHomeLegacy(guild: Guild) {
+    const [settings, logChannelId, stats] = await Promise.all([
+        getAutoModSettings(guild.id),
+        getModerationChannel(guild.id),
+        getAutoModStats(guild.id).catch(() => ({ total: 0, observed: 0, byRule: {} }))
     ]);
     const activeRules = [
         settings.anti_link_enabled,
@@ -983,14 +1278,10 @@ async function buildAutoModHome(guild: Guild) {
         settings.anti_spam_enabled,
         settings.anti_duplicate_enabled,
         settings.anti_caps_enabled,
-        settings.anti_mention_enabled
+        settings.anti_mention_enabled,
+        settings.anti_keyword_enabled,
+        settings.anti_raid_enabled
     ].filter(Boolean).length;
-    const logSelect = new ChannelSelectMenuBuilder()
-        .setCustomId('settings:automod:log-channel')
-        .setPlaceholder('Choisir le salon des logs de modération')
-        .addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement)
-        .setMinValues(1)
-        .setMaxValues(1);
     const embed = createKeplerEmbed(settings.enabled ? 'primary' : 'neutral')
         .setTitle('Auto-modération')
         .setDescription(
@@ -999,7 +1290,7 @@ async function buildAutoModHome(guild: Guild) {
         )
         .addFields(
             { name: 'Moteur', value: settings.enabled ? '🟢 Actif' : '⚪ Désactivé', inline: true },
-            { name: 'Protections', value: `${activeRules}/6 actives`, inline: true },
+            { name: 'Protections', value: `${activeRules}/8 actives`, inline: true },
             { name: 'Logs', value: formatChannel(guild, logChannelId), inline: true },
             {
                 name: 'Réponse',
@@ -1013,6 +1304,11 @@ async function buildAutoModHome(guild: Guild) {
                 value: `${settings.allowed_domains.length} domaine(s) · ` +
                     `${settings.excluded_channel_ids.length} salon(s) · ${settings.excluded_role_ids.length} rôle(s)`,
                 inline: false
+            },
+            {
+                name: '7 derniers jours',
+                value: `${stats.total} détection(s) · ${stats.observed} observée(s) sans sanction`,
+                inline: false
             }
         )
         .setFooter({ text: guild.name });
@@ -1020,30 +1316,109 @@ async function buildAutoModHome(guild: Guild) {
         content: '',
         embeds: [embed],
         components: [
-            new ActionRowBuilder<ChannelSelectMenuBuilder>().addComponents(logSelect),
+            new ActionRowBuilder<ButtonBuilder>().addComponents(
+                new ButtonBuilder().setCustomId('settings:automod:general').setLabel('Général').setEmoji('⚙️').setStyle(ButtonStyle.Primary),
+                new ButtonBuilder().setCustomId('settings:automod:rules').setLabel('Protections').setEmoji('🛡️').setStyle(ButtonStyle.Primary),
+                new ButtonBuilder().setCustomId('settings:automod:filters').setLabel('Filtres et seuils').setEmoji('🎚️').setStyle(ButtonStyle.Secondary),
+                new ButtonBuilder().setCustomId('settings:automod:sanctions-menu').setLabel('Sanctions').setEmoji('⚖️').setStyle(ButtonStyle.Secondary),
+                new ButtonBuilder().setCustomId('settings:automod:exemptions').setLabel('Exemptions').setEmoji('🕊️').setStyle(ButtonStyle.Secondary)
+            ),
+            new ActionRowBuilder<ButtonBuilder>().addComponents(moderationBackButton())
+        ]
+    };
+}
+
+async function buildAutoModGeneralLegacy(guild: Guild) {
+    const settings = await getAutoModSettings(guild.id);
+    return {
+        content: '',
+        embeds: [
+            createKeplerEmbed(settings.enabled ? 'primary' : 'neutral')
+                .setTitle('AutoMod · Général')
+                .setDescription('Contrôlez l’état global du moteur et son comportement de déploiement.')
+                .addFields(
+                    { name: 'Moteur', value: settings.enabled ? '🟢 Actif' : '⚪ Désactivé', inline: true },
+                    { name: 'Mode', value: settings.observation_mode ? '👁️ Observation' : '⚖️ Sanctions actives', inline: true },
+                    {
+                        name: 'Invitations internes',
+                        value: settings.allow_own_invites ? '🟢 Autorisées' : '⚪ Bloquées',
+                        inline: true
+                    }
+                )
+                .setFooter({ text: guild.name })
+        ],
+        components: [
             new ActionRowBuilder<ButtonBuilder>().addComponents(
                 new ButtonBuilder()
                     .setCustomId('settings:automod:toggle')
-                    .setLabel(settings.enabled ? 'Désactiver' : 'Activer')
+                    .setLabel(settings.enabled ? 'Désactiver le moteur' : 'Activer le moteur')
                     .setStyle(settings.enabled ? ButtonStyle.Danger : ButtonStyle.Success),
-                new ButtonBuilder().setCustomId('settings:automod:rules').setLabel('Protections').setEmoji('🛡️').setStyle(ButtonStyle.Primary),
-                new ButtonBuilder().setCustomId('settings:automod:thresholds').setLabel('Seuils').setEmoji('🎚️').setStyle(ButtonStyle.Secondary),
-                new ButtonBuilder().setCustomId('settings:automod:action').setLabel('Sanctions').setEmoji('⚖️').setStyle(ButtonStyle.Secondary),
-                new ButtonBuilder().setCustomId('settings:automod:exemptions').setLabel('Exemptions').setEmoji('🕊️').setStyle(ButtonStyle.Secondary)
-            ),
-            new ActionRowBuilder<ButtonBuilder>().addComponents(
-                new ButtonBuilder().setCustomId('settings:automod:domains').setLabel('Domaines autorisés').setEmoji('🌐').setStyle(ButtonStyle.Secondary),
+                new ButtonBuilder()
+                    .setCustomId('settings:automod:observation')
+                    .setLabel(settings.observation_mode ? 'Activer les sanctions' : 'Passer en observation')
+                    .setStyle(settings.observation_mode ? ButtonStyle.Success : ButtonStyle.Secondary),
                 new ButtonBuilder()
                     .setCustomId('settings:automod:own-invites')
-                    .setLabel(settings.allow_own_invites ? 'Invitations du serveur autorisées' : 'Toutes les invitations bloquées')
-                    .setStyle(settings.allow_own_invites ? ButtonStyle.Success : ButtonStyle.Secondary),
-                backButton()
+                    .setLabel(settings.allow_own_invites ? 'Bloquer les invitations internes' : 'Autoriser les invitations internes')
+                    .setStyle(ButtonStyle.Secondary)
+            ),
+            new ActionRowBuilder<ButtonBuilder>().addComponents(autoModBackButton())
+        ]
+    };
+}
+
+async function buildAutoModFiltersLegacy(guild: Guild) {
+    const settings = await getAutoModSettings(guild.id);
+    return {
+        content: '',
+        embeds: [
+            createKeplerEmbed('primary')
+                .setTitle('AutoMod · Filtres et seuils')
+                .setDescription('Personnalisez ce que Kepler accepte et les seuils déclenchant chaque protection.')
+                .addFields(
+                    { name: 'Domaines autorisés', value: String(settings.allowed_domains.length), inline: true },
+                    { name: 'Termes interdits', value: String(settings.blocked_keywords.length), inline: true },
+                    { name: 'Expressions régulières', value: String(settings.regex_patterns.length), inline: true }
+                )
+                .setFooter({ text: guild.name })
+        ],
+        components: [
+            new ActionRowBuilder<ButtonBuilder>().addComponents(
+                new ButtonBuilder().setCustomId('settings:automod:thresholds').setLabel('Seuils numériques').setEmoji('🎚️').setStyle(ButtonStyle.Primary),
+                new ButtonBuilder().setCustomId('settings:automod:domains').setLabel('Domaines autorisés').setEmoji('🌐').setStyle(ButtonStyle.Secondary),
+                new ButtonBuilder().setCustomId('settings:automod:keywords').setLabel('Mots et regex').setEmoji('📝').setStyle(ButtonStyle.Secondary),
+                autoModBackButton()
             )
         ]
     };
 }
 
-async function buildAutoModRules(guild: Guild) {
+async function buildAutoModSanctionsLegacy(guild: Guild) {
+    const settings = await getAutoModSettings(guild.id);
+    return {
+        content: '',
+        embeds: [
+            createKeplerEmbed('warning')
+                .setTitle('AutoMod · Sanctions')
+                .setDescription('Définissez l’action générale, les paliers de récidive et les exceptions par règle.')
+                .addFields(
+                    { name: 'Action par défaut', value: settings.action, inline: true },
+                    { name: 'Paliers', value: `${settings.escalation_steps.length} configuré(s)`, inline: true },
+                    { name: 'Actions spécifiques', value: `${Object.keys(settings.rule_actions).length} règle(s)`, inline: true }
+                )
+                .setFooter({ text: guild.name })
+        ],
+        components: [
+            new ActionRowBuilder<ButtonBuilder>().addComponents(
+                new ButtonBuilder().setCustomId('settings:automod:action').setLabel('Action et progression').setEmoji('📈').setStyle(ButtonStyle.Primary),
+                new ButtonBuilder().setCustomId('settings:automod:rule-actions').setLabel('Actions par règle').setEmoji('⚖️').setStyle(ButtonStyle.Secondary),
+                autoModBackButton()
+            )
+        ]
+    };
+}
+
+async function buildAutoModRulesLegacy(guild: Guild) {
     const settings = await getAutoModSettings(guild.id);
     const rules: Array<[AutoModRuleKey, string, string]> = [
         ['anti_link_enabled', 'Liens externes', '🌐'],
@@ -1051,7 +1426,9 @@ async function buildAutoModRules(guild: Guild) {
         ['anti_spam_enabled', 'Rafales', '⚡'],
         ['anti_duplicate_enabled', 'Doublons', '📋'],
         ['anti_caps_enabled', 'Majuscules', '🔠'],
-        ['anti_mention_enabled', 'Mentions', '📣']
+        ['anti_mention_enabled', 'Mentions', '📣'],
+        ['anti_keyword_enabled', 'Mots interdits', '📝'],
+        ['anti_raid_enabled', 'Anti-raid', '🚨']
     ];
     const makeButton = ([key, label, emoji]: [AutoModRuleKey, string, string]) =>
         new ButtonBuilder()
@@ -1074,13 +1451,14 @@ async function buildAutoModRules(guild: Guild) {
             new ActionRowBuilder<ButtonBuilder>().addComponents(...rules.slice(0, 3).map(makeButton)),
             new ActionRowBuilder<ButtonBuilder>().addComponents(...rules.slice(3).map(makeButton)),
             new ActionRowBuilder<ButtonBuilder>().addComponents(
+                new ButtonBuilder().setCustomId('settings:automod:rule-actions').setLabel('Actions par règle').setEmoji('⚖️').setStyle(ButtonStyle.Primary),
                 new ButtonBuilder().setCustomId('settings:automod:home').setLabel('Retour à l’AutoMod').setEmoji('↩️').setStyle(ButtonStyle.Secondary)
             )
         ]
     };
 }
 
-async function buildAutoModExemptions(guild: Guild) {
+async function buildAutoModExemptionsLegacy(guild: Guild) {
     const settings = await getAutoModSettings(guild.id);
     const channels = new ChannelSelectMenuBuilder()
         .setCustomId('settings:automod:excluded-channels')
@@ -1121,7 +1499,7 @@ async function buildAutoModExemptions(guild: Guild) {
     };
 }
 
-async function buildXpHome(guild: Guild) {
+async function buildXpHomeLegacy(guild: Guild) {
     const [settings, rewards, boosts] = await Promise.all([
         getXpSettings(guild.id),
         getXpRewards(guild.id),
@@ -1162,7 +1540,7 @@ async function buildXpHome(guild: Guild) {
     };
 }
 
-async function buildXpGeneral(guild: Guild) {
+async function buildXpGeneralLegacy(guild: Guild) {
     const settings = await getXpSettings(guild.id);
     const levelChannelSelect = new ChannelSelectMenuBuilder()
         .setCustomId('settings:xp:level-channel')
@@ -1210,7 +1588,7 @@ async function buildXpGeneral(guild: Guild) {
     };
 }
 
-async function buildXpBoosts(guild: Guild) {
+async function buildXpBoostsLegacy(guild: Guild) {
     const [settings, boosts] = await Promise.all([
         getXpSettings(guild.id),
         getXpRoleBoosts(guild.id)
@@ -1258,7 +1636,7 @@ async function buildXpBoosts(guild: Guild) {
     };
 }
 
-async function buildXpRewards(guild: Guild) {
+async function buildXpRewardsLegacy(guild: Guild) {
     const rewards = await getXpRewards(guild.id);
     const components: ActionRowBuilder<any>[] = [
         new ActionRowBuilder<RoleSelectMenuBuilder>().addComponents(
@@ -1296,7 +1674,7 @@ async function buildXpRewards(guild: Guild) {
     };
 }
 
-async function buildXpExclusions(guild: Guild) {
+async function buildXpExclusionsLegacy(guild: Guild) {
     const settings = await getXpSettings(guild.id);
     const channelSelect = new ChannelSelectMenuBuilder()
         .setCustomId('settings:xp:excluded-channels')
@@ -1337,7 +1715,7 @@ async function buildXpExclusions(guild: Guild) {
     };
 }
 
-async function buildXpLogs(guild: Guild) {
+async function buildXpLogsLegacy(guild: Guild) {
     const settings = await getXpSettings(guild.id);
     const select = new ChannelSelectMenuBuilder()
         .setCustomId('settings:xp:log-channel')
@@ -1371,7 +1749,7 @@ async function buildXpLogs(guild: Guild) {
     };
 }
 
-function buildDisableConfirmation(section: ConfigSection) {
+function buildDisableConfirmationLegacy(section: ConfigSection) {
     const embed = createKeplerEmbed()
         .setColor(KEPLER_COLORS.danger)
         .setTitle('Confirmer la désactivation')
@@ -1383,7 +1761,7 @@ function buildDisableConfirmation(section: ConfigSection) {
     return { content: '', embeds: [embed], components: [row] };
 }
 
-function buildMuteCreationConfirmation() {
+function buildMuteCreationConfirmationLegacy() {
     const embed = createKeplerEmbed()
         .setColor(KEPLER_COLORS.warning)
         .setTitle('Créer un rôle de mute')
@@ -1393,6 +1771,110 @@ function buildMuteCreationConfirmation() {
         new ButtonBuilder().setCustomId('settings:section:mute').setLabel('Annuler').setStyle(ButtonStyle.Secondary)
     );
     return { content: '', embeds: [embed], components: [row] };
+}
+
+async function buildOverview(interaction: ChatInputCommandInteraction, notice?: string) {
+    return toComponentsV2(await buildOverviewLegacy(interaction, notice));
+}
+
+async function buildTicketHome(guild: Guild) {
+    return toComponentsV2(await buildTicketHomeLegacy(guild));
+}
+
+async function buildSection(section: ConfigSection, guild: Guild) {
+    return toComponentsV2(await buildSectionLegacy(section, guild));
+}
+
+async function buildTimezoneSection(guild: Guild) {
+    return toComponentsV2(await buildTimezoneSectionLegacy(guild));
+}
+
+async function buildInviteSection(guild: Guild) {
+    return toComponentsV2(await buildInviteSectionLegacy(guild));
+}
+
+async function buildInviteGeneral(guild: Guild) {
+    return toComponentsV2(await buildInviteGeneralLegacy(guild));
+}
+
+async function buildInviteChannels(guild: Guild) {
+    return toComponentsV2(await buildInviteChannelsLegacy(guild));
+}
+
+async function buildInviteLogs(guild: Guild) {
+    return toComponentsV2(await buildInviteLogsLegacy(guild));
+}
+
+async function buildInviteWelcome(guild: Guild) {
+    return toComponentsV2(await buildInviteWelcomeLegacy(guild));
+}
+
+async function buildInviteFields(guild: Guild) {
+    return toComponentsV2(await buildInviteFieldsLegacy(guild));
+}
+
+async function buildModerationHub(guild: Guild) {
+    return toComponentsV2(await buildModerationHubLegacy(guild));
+}
+
+async function buildModerationLogs(guild: Guild) {
+    return toComponentsV2(await buildModerationLogsLegacy(guild));
+}
+
+async function buildAutoModHome(guild: Guild) {
+    return toComponentsV2(await buildAutoModHomeLegacy(guild));
+}
+
+async function buildAutoModGeneral(guild: Guild) {
+    return toComponentsV2(await buildAutoModGeneralLegacy(guild));
+}
+
+async function buildAutoModFilters(guild: Guild) {
+    return toComponentsV2(await buildAutoModFiltersLegacy(guild));
+}
+
+async function buildAutoModSanctions(guild: Guild) {
+    return toComponentsV2(await buildAutoModSanctionsLegacy(guild));
+}
+
+async function buildAutoModRules(guild: Guild) {
+    return toComponentsV2(await buildAutoModRulesLegacy(guild));
+}
+
+async function buildAutoModExemptions(guild: Guild) {
+    return toComponentsV2(await buildAutoModExemptionsLegacy(guild));
+}
+
+async function buildXpHome(guild: Guild) {
+    return toComponentsV2(await buildXpHomeLegacy(guild));
+}
+
+async function buildXpGeneral(guild: Guild) {
+    return toComponentsV2(await buildXpGeneralLegacy(guild));
+}
+
+async function buildXpBoosts(guild: Guild) {
+    return toComponentsV2(await buildXpBoostsLegacy(guild));
+}
+
+async function buildXpRewards(guild: Guild) {
+    return toComponentsV2(await buildXpRewardsLegacy(guild));
+}
+
+async function buildXpExclusions(guild: Guild) {
+    return toComponentsV2(await buildXpExclusionsLegacy(guild));
+}
+
+async function buildXpLogs(guild: Guild) {
+    return toComponentsV2(await buildXpLogsLegacy(guild));
+}
+
+function buildDisableConfirmation(section: ConfigSection) {
+    return toComponentsV2(buildDisableConfirmationLegacy(section));
+}
+
+function buildMuteCreationConfirmation() {
+    return toComponentsV2(buildMuteCreationConfirmationLegacy());
 }
 
 async function updateChannelSection(section: ConfigSection, guildId: string, channelId: string) {
@@ -1492,7 +1974,7 @@ async function showAutoModThresholdsModal(component: ButtonInteraction, source: 
         caps_min_letters: caps![1],
         mention_limit: mentions
     });
-    await submission.editReply(await buildAutoModHome(source.guild!));
+    await submission.editReply(await buildAutoModFilters(source.guild!));
 }
 
 async function showAutoModActionModal(component: ButtonInteraction, source: ChatInputCommandInteraction) {
@@ -1505,7 +1987,14 @@ async function showAutoModActionModal(component: ButtonInteraction, source: Chat
             settingsTextInput('action', 'Action : delete, warn ou timeout', settings.action, 'timeout'),
             settingsTextInput('strikes', 'Infractions / fenêtre en secondes', `${settings.strike_threshold}/${settings.strike_window_seconds}`, '3/3600'),
             settingsTextInput('timeout', 'Durée du timeout en secondes', String(settings.timeout_seconds), '600'),
-            settingsTextInput('notify', 'Notifier l’utilisateur en MP ? oui/non', settings.notify_user ? 'oui' : 'non', 'oui')
+            settingsTextInput('notify', 'Notifier l’utilisateur en MP ? oui/non', settings.notify_user ? 'oui' : 'non', 'oui'),
+            settingsTextInput(
+                'policy',
+                'Paliers : seuil=action[:secondes]',
+                settings.escalation_steps.map(step => `${step.strikes}=${step.action}${step.timeout_seconds ? `:${step.timeout_seconds}` : ''}`).join(','),
+                '1=delete,2=warn,3=timeout:600',
+                false
+            )
         );
     await component.showModal(modal);
     const submission = await awaitSettingsModal(component, source, modalId);
@@ -1514,14 +2003,15 @@ async function showAutoModActionModal(component: ButtonInteraction, source: Chat
     const strikes = parseNumberPair(submission.fields.getTextInputValue('strikes'));
     const timeout = Number(submission.fields.getTextInputValue('timeout'));
     const notify = submission.fields.getTextInputValue('notify').trim().toLowerCase();
+    const policy = parseEscalationPolicy(submission.fields.getTextInputValue('policy'));
     if (
         !['delete', 'warn', 'timeout'].includes(action) ||
         !strikes || strikes[0] < 1 || strikes[0] > 20 || strikes[1] < 60 || strikes[1] > 604800 ||
         !Number.isInteger(timeout) || timeout < 10 || timeout > 2419200 ||
-        !['oui', 'non'].includes(notify)
+        !['oui', 'non'].includes(notify) || policy === null
     ) {
         await submission.reply({
-            content: '❌ Utilisez `delete`, `warn` ou `timeout`, une progression `1-20/60-604800`, un timeout de 10 à 2419200 secondes et `oui`/`non`.',
+            content: '❌ Paramètres invalides. Exemple de paliers : `1=delete,2=warn,3=timeout:600`.',
             ephemeral: true
         });
         return;
@@ -1532,9 +2022,112 @@ async function showAutoModActionModal(component: ButtonInteraction, source: Chat
         strike_threshold: strikes[0],
         strike_window_seconds: strikes[1],
         timeout_seconds: timeout,
-        notify_user: notify === 'oui'
+        notify_user: notify === 'oui',
+        escalation_steps: policy
     });
-    await submission.editReply(await buildAutoModHome(source.guild!));
+    await submission.editReply(await buildAutoModSanctions(source.guild!));
+}
+
+async function showAutoModKeywordsModal(component: ButtonInteraction, source: ChatInputCommandInteraction) {
+    const settings = await getAutoModSettings(source.guildId!);
+    const modalId = `settings:automod:keywords-modal:${source.id}`;
+    const paragraph = (id: string, label: string, values: string[], placeholder: string) =>
+        new ActionRowBuilder<TextInputBuilder>().addComponents(
+            new TextInputBuilder()
+                .setCustomId(id)
+                .setLabel(label)
+                .setPlaceholder(placeholder)
+                .setStyle(TextInputStyle.Paragraph)
+                .setValue(values.join('\n').slice(0, 4000))
+                .setMaxLength(4000)
+                .setRequired(false)
+        );
+    const modal = new ModalBuilder()
+        .setCustomId(modalId)
+        .setTitle('Filtres personnalisés')
+        .addComponents(
+            paragraph('blocked', 'Termes interdits, un par ligne', settings.blocked_keywords, 'terme interdit'),
+            paragraph('allowed', 'Exceptions, une par ligne', settings.allowed_keywords, 'expression autorisée'),
+            paragraph('regex', 'Expressions régulières, une par ligne', settings.regex_patterns, '^exemple\\d+$')
+        );
+    await component.showModal(modal);
+    const submission = await awaitSettingsModal(component, source, modalId);
+    if (!submission) return;
+    const lines = (id: string) => [...new Set(submission.fields.getTextInputValue(id)
+        .split('\n').map(value => value.trim()).filter(Boolean))];
+    const blocked = lines('blocked');
+    const allowed = lines('allowed');
+    const regex = lines('regex');
+    if (blocked.length > 250 || allowed.length > 100 || regex.length > 10 || regex.some(pattern => {
+        try { new RegExp(pattern, 'iu'); return false; } catch { return true; }
+    })) {
+        await submission.reply({ content: '❌ Maximum : 250 termes, 100 exceptions et 10 expressions régulières valides.', ephemeral: true });
+        return;
+    }
+    await submission.deferUpdate();
+    await updateAutoModSettings(source.guildId!, {
+        blocked_keywords: blocked,
+        allowed_keywords: allowed,
+        regex_patterns: regex
+    });
+    await submission.editReply(await buildAutoModFilters(source.guild!));
+}
+
+function parseEscalationPolicy(value: string): AutoModEscalationStep[] | null {
+    if (!value.trim()) return [];
+    const steps: AutoModEscalationStep[] = [];
+    for (const raw of value.split(',')) {
+        const match = raw.trim().match(/^(\d+)=(delete|warn|timeout)(?::(\d+))?$/i);
+        if (!match) return null;
+        const strikes = Number(match[1]);
+        const action = match[2].toLowerCase() as 'delete' | 'warn' | 'timeout';
+        const timeout_seconds = match[3] ? Number(match[3]) : undefined;
+        if (strikes < 1 || strikes > 20 || (action === 'timeout' && timeout_seconds !== undefined && (timeout_seconds < 10 || timeout_seconds > 2419200))) return null;
+        steps.push({ strikes, action, ...(timeout_seconds ? { timeout_seconds } : {}) });
+    }
+    return steps;
+}
+
+async function showAutoModRuleActionsModal(component: ButtonInteraction, source: ChatInputCommandInteraction) {
+    const settings = await getAutoModSettings(source.guildId!);
+    const modalId = `settings:automod:rule-actions-modal:${source.id}`;
+    const value = Object.entries(settings.rule_actions).map(([rule, action]) => `${rule}=${action}`).join(',');
+    const modal = new ModalBuilder()
+        .setCustomId(modalId)
+        .setTitle('Actions par règle')
+        .addComponents(settingsTextInput(
+            'actions',
+            'règle=action, séparées par virgule',
+            value,
+            'link=delete,spam=warn,mentions=timeout',
+            false
+        ));
+    await component.showModal(modal);
+    const submission = await awaitSettingsModal(component, source, modalId);
+    if (!submission) return;
+    const parsed = parseRuleActions(submission.fields.getTextInputValue('actions'));
+    if (!parsed) {
+        await submission.reply({
+            content: '❌ Règles : `link`, `invite`, `spam`, `duplicate`, `caps`, `mentions`, `keyword`. Actions : `delete`, `warn`, `timeout`.',
+            ephemeral: true
+        });
+        return;
+    }
+    await submission.deferUpdate();
+    await updateAutoModSettings(source.guildId!, { rule_actions: parsed });
+    await submission.editReply(await buildAutoModSanctions(source.guild!));
+}
+
+function parseRuleActions(value: string) {
+    const result: Record<string, 'delete' | 'warn' | 'timeout'> = {};
+    if (!value.trim()) return result;
+    const validRules = new Set(['link', 'invite', 'spam', 'duplicate', 'caps', 'mentions', 'keyword']);
+    for (const raw of value.split(',')) {
+        const match = raw.trim().match(/^(\w+)=(delete|warn|timeout)$/i);
+        if (!match || !validRules.has(match[1].toLowerCase())) return null;
+        result[match[1].toLowerCase()] = match[2].toLowerCase() as 'delete' | 'warn' | 'timeout';
+    }
+    return result;
 }
 
 async function showAutoModDomainsModal(component: ButtonInteraction, source: ChatInputCommandInteraction) {
@@ -1571,19 +2164,18 @@ async function showAutoModDomainsModal(component: ButtonInteraction, source: Cha
     }
     await submission.deferUpdate();
     await updateAutoModSettings(source.guildId!, { allowed_domains: domains });
-    await submission.editReply(await buildAutoModHome(source.guild!));
+    await submission.editReply(await buildAutoModFilters(source.guild!));
 }
 
-function settingsTextInput(customId: string, label: string, value: string, placeholder: string) {
-    return new ActionRowBuilder<TextInputBuilder>().addComponents(
-        new TextInputBuilder()
-            .setCustomId(customId)
-            .setLabel(label)
-            .setStyle(TextInputStyle.Short)
-            .setValue(value)
-            .setPlaceholder(placeholder)
-            .setRequired(true)
-    );
+function settingsTextInput(customId: string, label: string, value: string, placeholder: string, required = true) {
+    const input = new TextInputBuilder()
+        .setCustomId(customId)
+        .setLabel(label)
+        .setStyle(TextInputStyle.Short)
+        .setPlaceholder(placeholder)
+        .setRequired(required);
+    if (value) input.setValue(value);
+    return new ActionRowBuilder<TextInputBuilder>().addComponents(input);
 }
 
 function parseNumberPair(value: string): [number, number] | null {
@@ -1616,7 +2208,7 @@ async function showInviteMessageModal(component: ButtonInteraction, source: Chat
     const message = submission.fields.getTextInputValue('message').trim();
     await submission.deferUpdate();
     await updateInviteSettings(source.guildId!, { welcome_message: message });
-    await submission.editReply(await buildInviteSection(source.guild!));
+    await submission.editReply(await buildInviteWelcome(source.guild!));
 }
 
 async function showXpGeneralModal(component: ButtonInteraction, source: ChatInputCommandInteraction) {
@@ -2070,6 +2662,7 @@ function sectionLabel(section: ConfigSection): string {
         mute: 'Rôle de mute',
         reports: 'Signalements',
         tickets: 'Tickets',
+        'tickets-placement': 'Tickets · Emplacements et accès',
         xp: 'Expérience et niveaux',
         invites: 'Manager d’invitations',
         timezone: 'Fuseau horaire'
@@ -2084,6 +2677,7 @@ function sectionDescription(section: ConfigSection): string {
         mute: 'Sélectionnez un rôle existant, créez-en un automatiquement ou utilisez les timeouts Discord.',
         reports: 'Choisissez le salon qui recevra les signalements et, si nécessaire, le rôle de modération à mentionner.',
         tickets: 'Choisissez où publier le panneau, le rôle support, puis personnalisez son message et son bouton.',
+        'tickets-placement': 'Choisissez les salons, la catégorie et le rôle autorisé à traiter les tickets.',
         xp: 'Configurez la progression, les boosts, les récompenses et les exclusions du serveur.',
         invites: 'Configurez le suivi des liens, les journaux et les annonces d’arrivée.',
         timezone: 'Choisissez le fuseau utilisé pour les dates et planifications du serveur.'
@@ -2105,6 +2699,39 @@ function formatOptionalRole(guild: Guild, roleId: string | null): string {
     return guild.roles.cache.has(roleId) ? `🟢 <@&${roleId}>` : '🟠 Rôle introuvable';
 }
 
+function statusIcon(enabled: boolean): string {
+    return enabled ? '✅' : '❌';
+}
+
+function enabledLabel(enabled: boolean): string {
+    return enabled ? 'Activé' : 'Désactivé';
+}
+
+function configurationIcon(value: string | null): string {
+    return value ? '✅' : '❌';
+}
+
+function configurationLabel(value: string | null): string {
+    return value ? 'Configuré' : 'Non configuré';
+}
+
+function isTicketConfigurationComplete(config: Awaited<ReturnType<typeof getTicketConfig>>): boolean {
+    return Boolean(
+        config.ticket_panel_channel_id &&
+        config.ticket_category_id &&
+        config.ticket_log_channel_id &&
+        config.ticket_support_role_id
+    );
+}
+
+function ticketConfigurationIcon(config: Awaited<ReturnType<typeof getTicketConfig>>): string {
+    return isTicketConfigurationComplete(config) ? '✅' : '⚠️';
+}
+
+function ticketConfigurationLabel(config: Awaited<ReturnType<typeof getTicketConfig>>): string {
+    return isTicketConfigurationComplete(config) ? 'Système prêt' : 'Configuration incomplète';
+}
+
 function formatSeconds(totalSeconds: number): string {
     if (totalSeconds % 86400 === 0) return `${totalSeconds / 86400}j`;
     if (totalSeconds % 3600 === 0) return `${totalSeconds / 3600}h`;
@@ -2114,6 +2741,38 @@ function formatSeconds(totalSeconds: number): string {
 
 function backButton(): ButtonBuilder {
     return new ButtonBuilder().setCustomId('settings:home').setLabel('Retour').setEmoji('↩️').setStyle(ButtonStyle.Secondary);
+}
+
+function moderationBackButton(): ButtonBuilder {
+    return new ButtonBuilder()
+        .setCustomId('settings:moderation:hub')
+        .setLabel('Retour à la modération')
+        .setEmoji('↩️')
+        .setStyle(ButtonStyle.Secondary);
+}
+
+function autoModBackButton(): ButtonBuilder {
+    return new ButtonBuilder()
+        .setCustomId('settings:automod:home')
+        .setLabel('Retour à l’AutoMod')
+        .setEmoji('↩️')
+        .setStyle(ButtonStyle.Secondary);
+}
+
+function inviteBackButton(): ButtonBuilder {
+    return new ButtonBuilder()
+        .setCustomId('settings:invites:home')
+        .setLabel('Retour aux invitations')
+        .setEmoji('↩️')
+        .setStyle(ButtonStyle.Secondary);
+}
+
+function ticketBackButton(): ButtonBuilder {
+    return new ButtonBuilder()
+        .setCustomId('settings:section:tickets')
+        .setLabel('Retour aux tickets')
+        .setEmoji('↩️')
+        .setStyle(ButtonStyle.Secondary);
 }
 
 function xpBackButton(): ButtonBuilder {

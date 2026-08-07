@@ -1,14 +1,15 @@
-import { Client, type Message } from 'discord.js';
+import { Client, type GuildMember, type Message } from 'discord.js';
 import { getExpiredTempBans, getExpiredTempMutes, removeTempBan, removeTempMute } from '../database/db.ts';
 import { logModeration } from '../utils/moderation/logger.ts';
 import { isNetworkError, isMaintenanceError, dbCircuitBreaker } from '../utils/retryHelper.ts';
 import { logger } from '../utils/logger.ts';
 import { AutoModeration } from '../utils/moderation/automod.ts';
 import { getAutoModSettings } from '../utils/moderation/automodService.ts';
+import type { AutoModSource } from '../utils/moderation/automodService.ts';
 
 export class ModerationManager {
     private client: Client;
-    private checkInterval: NodeJS.Timeout | null = null;
+    private checkInterval: ReturnType<typeof setInterval> | null = null;
     private lastMaintenanceLog: number = 0;
     private readonly autoModeration: AutoModeration;
 
@@ -17,8 +18,12 @@ export class ModerationManager {
         this.autoModeration = new AutoModeration(client);
     }
 
-    async handleMessage(message: Message): Promise<boolean> {
-        return this.autoModeration.handleMessage(message);
+    async handleMessage(message: Message, source: AutoModSource = 'message_create'): Promise<boolean> {
+        return this.autoModeration.handleMessage(message, source);
+    }
+
+    async handleMemberJoin(member: GuildMember): Promise<void> {
+        await this.autoModeration.handleMemberJoin(member);
     }
 
     async start(): Promise<void> {

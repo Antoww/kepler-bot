@@ -49,6 +49,12 @@ couleur produite par un utilisateur, un rôle Discord ou un contenu externe.
 ## Graphiques
 
 - Format 16:9, fond graphite, panneau sombre et filet bleu orbital.
+- Les séries simultanées doivent combiner couleurs contrastées et styles de
+  trait distincts ; la seconde série est affichée en pointillés.
+- Les axes affichent au maximum sept libellés régulièrement espacés afin
+  d’éviter tout chevauchement.
+- Les libellés sont tronqués par graphème et utilisent Noto Color Emoji dans
+  l’image Docker pour ne pas couper les séquences emoji.
 - Blanc lunaire pour les valeurs, argent pour les axes et légendes.
 - Séries fixes : messages en bleu orbital, commandes en bleu signal.
 - Les autres classements utilisent les tokens de `KEPLER_CHART_COLORS`.

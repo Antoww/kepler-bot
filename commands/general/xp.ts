@@ -1,6 +1,15 @@
 import {
+    type ActionRowBuilder,
+    type ButtonBuilder,
+    ContainerBuilder,
+    type InteractionEditReplyOptions,
+    MessageFlags,
+    SeparatorBuilder,
+    SectionBuilder,
     type ChatInputCommandInteraction,
-    SlashCommandBuilder
+    SlashCommandBuilder,
+    TextDisplayBuilder,
+    ThumbnailBuilder
 } from 'discord.js';
 import {
     getXpLeaderboard,
@@ -10,10 +19,36 @@ import {
     xpProgress
 } from '../../utils/xp/system.ts';
 import {
-    createKeplerEmbed,
+    KEPLER_COLORS,
     KEPLER_MESSAGES,
-    setRequesterFooter
 } from '../../utils/theme.ts';
+import {
+    attachLeaderboardPagination,
+    leaderboardControls,
+    LEADERBOARD_PAGE_SIZE
+} from '../../utils/leaderboardPagination.ts';
+
+function xpMessage(
+    container: ContainerBuilder,
+    controls?: ActionRowBuilder<ButtonBuilder>
+): InteractionEditReplyOptions {
+    return {
+        components: controls ? [container, controls] : [container],
+        flags: MessageFlags.IsComponentsV2,
+        allowedMentions: { parse: [] }
+    };
+}
+
+function xpContainer(tone: keyof typeof KEPLER_COLORS = 'primary') {
+    return new ContainerBuilder().setAccentColor(KEPLER_COLORS[tone]);
+}
+
+function requesterFooter(interaction: ChatInputCommandInteraction) {
+    const timestamp = Math.floor(Date.now() / 1000);
+    return new TextDisplayBuilder().setContent(
+        `-# Demandé par ${interaction.user.username} • <t:${timestamp}:R>`
+    );
+}
 
 export const data = new SlashCommandBuilder()
     .setName('xp')
@@ -43,7 +78,11 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         }
     } catch (error) {
         console.error('[XP] Erreur commande:', error);
-        await interaction.editReply({ content: KEPLER_MESSAGES.unexpectedError });
+        await interaction.editReply(xpMessage(
+            xpContainer('danger').addTextDisplayComponents(
+                new TextDisplayBuilder().setContent(KEPLER_MESSAGES.unexpectedError)
+            )
+        ));
     }
 }
 
@@ -52,63 +91,102 @@ async function showProfile(interaction: ChatInputCommandInteraction) {
     const profile = await getXpProfile(interaction.guildId!, user.id);
 
     if (!profile) {
-        await interaction.editReply({
-            embeds: [
-                createKeplerEmbed('neutral')
-                    .setTitle(`Profil XP de ${user.username}`)
-                    .setDescription('Ce membre n’a pas encore gagné d’XP sur ce serveur.')
-                    .setThumbnail(user.displayAvatarURL({ forceStatic: true }))
-            ]
-        });
+        const section = new SectionBuilder()
+            .addTextDisplayComponents(
+                new TextDisplayBuilder().setContent(
+                    `-# KEPLER • PROGRESSION XP\n## Profil de ${user.username}\n` +
+                    'Ce membre n’a pas encore gagné d’XP sur ce serveur.'
+                )
+            )
+            .setThumbnailAccessory(
+                new ThumbnailBuilder().setURL(user.displayAvatarURL({ forceStatic: true }))
+            );
+        await interaction.editReply(xpMessage(
+            xpContainer('neutral')
+                .addSectionComponents(section)
+                .addSeparatorComponents(new SeparatorBuilder().setDivider(false))
+                .addTextDisplayComponents(requesterFooter(interaction))
+        ));
         return;
     }
 
     const progress = xpProgress(profile.xp);
     const rank = await getXpRank(interaction.guildId!, profile.xp);
-    const embed = setRequesterFooter(
-        createKeplerEmbed('primary')
-            .setTitle(`Progression de ${user.username}`)
-            .setThumbnail(user.displayAvatarURL({ forceStatic: true }))
-            .setDescription(
-                `**Niveau ${progress.level}** · Rang **#${rank}**\n` +
-                `${progressBar(progress.percentage)} **${progress.percentage}%**`
+    const section = new SectionBuilder()
+        .addTextDisplayComponents(
+            new TextDisplayBuilder().setContent(
+                `-# KEPLER • PROGRESSION XP\n## Progression de ${user.username}\n` +
+                `**Niveau ${progress.level}**  •  Rang **#${rank}**`
             )
-            .addFields(
-                {
-                    name: 'Progression',
-                    value: `${progress.current.toLocaleString('fr-FR')} / ${progress.required.toLocaleString('fr-FR')} XP`,
-                    inline: true
-                },
-                {
-                    name: 'XP total',
-                    value: profile.xp.toLocaleString('fr-FR'),
-                    inline: true
-                },
-                {
-                    name: 'Messages récompensés',
-                    value: profile.message_count.toLocaleString('fr-FR'),
-                    inline: true
-                }
-            ),
-        interaction.user
-    );
-    await interaction.editReply({ embeds: [embed] });
+        )
+        .setThumbnailAccessory(
+            new ThumbnailBuilder().setURL(user.displayAvatarURL({ forceStatic: true }))
+        );
+    const bar = progressBar(progress.percentage, 10);
+    const container = xpContainer('primary')
+        .addSectionComponents(section)
+        .addSeparatorComponents(new SeparatorBuilder().setDivider(true))
+        .addTextDisplayComponents(
+            new TextDisplayBuilder().setContent(
+                `### Niveau ${progress.level} → ${progress.level + 1}\n` +
+                `\`${bar}\` **${progress.percentage}%**\n` +
+                `${progress.current.toLocaleString('fr-FR')} / ${progress.required.toLocaleString('fr-FR')} XP`
+            )
+        )
+        .addSeparatorComponents(new SeparatorBuilder().setDivider(false))
+        .addTextDisplayComponents(
+            new TextDisplayBuilder().setContent(
+                `**XP total**\n${profile.xp.toLocaleString('fr-FR')}\n\n` +
+                `**Messages récompensés**\n${profile.message_count.toLocaleString('fr-FR')}`
+            )
+        )
+        .addSeparatorComponents(new SeparatorBuilder().setDivider(false))
+        .addTextDisplayComponents(
+            requesterFooter(interaction)
+        );
+    await interaction.editReply(xpMessage(container));
 }
 
 async function showLeaderboard(interaction: ChatInputCommandInteraction) {
-    const profiles = await getXpLeaderboard(interaction.guildId!, 10);
+    const profiles = await getXpLeaderboard(interaction.guildId!, 100);
     const medals = ['🥇', '🥈', '🥉'];
-    const rows = profiles.map((profile, index) => {
-        const marker = medals[index] ?? `**${index + 1}.**`;
-        return `${marker} <@${profile.user_id}> — niveau **${profile.level}** · ${profile.xp.toLocaleString('fr-FR')} XP`;
-    });
-
-    const embed = setRequesterFooter(
-        createKeplerEmbed('primary')
-            .setTitle(`Classement XP · ${interaction.guild!.name}`)
-            .setDescription(rows.join('\n') || KEPLER_MESSAGES.noData)
-            .setThumbnail(interaction.guild!.iconURL({ forceStatic: true })),
-        interaction.user
-    );
-    await interaction.editReply({ embeds: [embed] });
+    const totalPages = Math.max(1, Math.ceil(profiles.length / LEADERBOARD_PAGE_SIZE));
+    const renderPage = (page: number, disabled = false) => {
+        const start = page * LEADERBOARD_PAGE_SIZE;
+        const rows = profiles.slice(start, start + LEADERBOARD_PAGE_SIZE).map((profile, index) => {
+            const position = start + index;
+            const marker = medals[position] ?? `**${position + 1}.**`;
+            return `${marker} <@${profile.user_id}> — niveau **${profile.level}** · ${profile.xp.toLocaleString('fr-FR')} XP`;
+        });
+        const headingContent = new TextDisplayBuilder().setContent(
+            `-# KEPLER • CLASSEMENT XP\n## ${interaction.guild!.name}\n` +
+            `${profiles.length} membre(s) classé(s).`
+        );
+        const iconUrl = interaction.guild!.iconURL({ forceStatic: true });
+        const container = xpContainer('primary');
+        if (iconUrl) {
+            container.addSectionComponents(
+                new SectionBuilder()
+                    .addTextDisplayComponents(headingContent)
+                    .setThumbnailAccessory(new ThumbnailBuilder().setURL(iconUrl))
+            );
+        } else {
+            container.addTextDisplayComponents(headingContent);
+        }
+        container
+            .addSeparatorComponents(new SeparatorBuilder().setDivider(true))
+            .addTextDisplayComponents(
+                new TextDisplayBuilder().setContent(rows.join('\n') || KEPLER_MESSAGES.noData)
+            )
+            .addSeparatorComponents(new SeparatorBuilder().setDivider(false))
+            .addTextDisplayComponents(requesterFooter(interaction));
+        return xpMessage(
+            container,
+            totalPages > 1
+                ? leaderboardControls('xp:leaderboard', page, totalPages, disabled)
+                : undefined
+        );
+    };
+    const response = await interaction.editReply(renderPage(0));
+    attachLeaderboardPagination(interaction, response, 'xp:leaderboard', totalPages, renderPage);
 }

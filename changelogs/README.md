@@ -15,7 +15,11 @@ Chaque version a son propre fichier markdown avec :
 ## 🗂️ Index des versions
 
 ### Stable
-- [v1.0.1](v1.0.1.md) - 31 juillet 2026 - **Correctif 1.0.1** ✅ Actuelle
+- [v1.1.0](v1.1.0.md) - 7 août 2026 - **Version 1.1 actuelle** ✅
+  - AutoMod enrichi et centre `/settings` en Components V2
+  - Nouveaux graphiques serveur et suivi des mouvements de membres
+  - XP et invitations modernisés avec classements paginés
+- [v1.0.1](v1.0.1.md) - 31 juillet 2026 - **Correctif 1.0.1**
   - Récupération des invitations déjà présentes
   - Classement et statistiques corrigés sans double comptage
   - Identité visuelle des embeds harmonisée
