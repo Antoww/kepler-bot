@@ -1,7 +1,7 @@
 # Kepler — Centre de contrôle Discord 🚀
 
-> **Beta publique :** Kepler est en développement actif. Des changements
-> d'interface et des interruptions ponctuelles peuvent encore survenir.
+> **Version stable :** Kepler 1.1 est disponible. Le projet poursuit son
+> évolution avec de nouvelles fonctionnalités prévues jusqu'à la version 2.0.
 
 Kepler est un bot Discord polyvalent conçu pour administrer, automatiser et
 analyser des communautés. Il réunit les outils courants d'un bot tout-en-un et
