@@ -29,7 +29,7 @@ l'approche de Kepler 2.0.
 
 ## V1.1 — Modération, statistiques et expérience
 
-**Période visée : août 2026 — qualification en cours**
+**Publiée le 7 août 2026 — qualification terminée**
 
 - Auto-modération enrichie : observation, filtres personnalisés, seuils,
   exemptions et sanctions par règle.
